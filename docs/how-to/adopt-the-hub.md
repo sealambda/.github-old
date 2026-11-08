@@ -93,12 +93,17 @@ the hub's version of each file into the repository.
    [ hub.devShells.<system>.docs ]`, or add the same Vale package to it.
 
    If an earlier `vale sync` left a style directory such as
-   `.vale/styles/Microsoft`, Git now shows it as untracked. Delete each style
-   directory but keep `config`: `rm -rf -- .vale/styles/Microsoft
-   .vale/styles/Readability`. Vale takes a rule from the Nix style when both
-   paths hold a rule of the same name, but a stale rule that only the old
-   directory has still runs. Remove any `.vale/styles/*` rule from
-   `.gitignore`, because nothing writes there any more.
+   `.vale/styles/Microsoft`, delete each style directory but keep `config`:
+   `rm -rf -- .vale/styles/Microsoft .vale/styles/Readability`. Vale takes a
+   rule from the Nix style when both paths hold a rule of the same name, but a
+   stale rule that only the old directory has still runs. Keep, or add, these
+   two rules in the repository's `.gitignore`, so that nobody commits a
+   leftover style directory:
+
+   ```gitignore
+   .vale/styles/*
+   !.vale/styles/config/
+   ```
 
    Outside `nix develop` or direnv, for example in an editor extension, Vale
    finds no styles and reports the same error. Start the editor from the dev
