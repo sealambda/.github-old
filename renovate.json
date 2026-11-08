@@ -1,15 +1,4 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>sealambda/.github"],
-  "customManagers": [
-    {
-      "customType": "regex",
-      "description": "Update the Vale package pins in config/vale.ini and in .vale.ini, the copy that sync-config writes.",
-      "managerFilePatterns": ["/^config/vale\\.ini$/", "/^\\.vale\\.ini$/"],
-      "matchStrings": [
-        "https://github\\.com/(?<packageName>vale-cli/[^/]+)/releases/download/(?<currentValue>v[^/]+)/"
-      ],
-      "datasourceTemplate": "github-releases"
-    }
-  ]
+  "extends": ["github>sealambda/.github"]
 }

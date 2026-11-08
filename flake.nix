@@ -56,6 +56,21 @@
 
       treefmtFor = eachSystem (pkgs: mkTreefmt pkgs [ ]);
 
+      # The Vale tool of the `docs` dev shell.
+      docsToolsFor = eachSystem (pkgs: {
+        # Vale and the styles that `BasedOnStyles` in `config/vale.ini` names:
+        # keep both lists the same. A difference fails loudly, because Vale
+        # reports "Style isn't on StylesPath". The styles come from nixpkgs, so
+        # `flake.lock` pins them and no run downloads them. `withStyles` sets
+        # `VALE_STYLES_PATH` to its `share/vale/styles`, and Vale finds the
+        # styles there. The project `StylesPath` holds only the vocabularies.
+        # Vale ignores that variable when it runs with `--no-global`.
+        valeWithStyles = pkgs.vale.withStyles (styles: [
+          styles.microsoft
+          styles.readability
+        ]);
+      });
+
       # Tool configuration that a tool reads only from a file in the
       # repository. Each name is the path in the consumer; each value is the
       # hub's copy. `sync-config` writes the copies and `mkConfigCheck`
@@ -166,10 +181,10 @@
 
         docs = pkgs.mkShell {
           inputsFrom = [ base ];
-          packages = with pkgs; [
-            lychee
-            markdownlint-cli2
-            vale
+          packages = [
+            pkgs.lychee
+            pkgs.markdownlint-cli2
+            docsToolsFor.${pkgs.stdenv.hostPlatform.system}.valeWithStyles
           ];
         };
       });

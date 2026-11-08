@@ -7,7 +7,10 @@ name: Docs
 # - Grant `contents: read`.
 # - Expose a `docs` dev shell in the flake, for example `inputsFrom =
 #   [ hub.devShells.<system>.docs ]`. The caller's `flake.lock` pins the tool
-#   versions.
+#   versions, the Vale styles included. The Vale in that shell is the hub's
+#   `vale.withStyles` package, so the job downloads no style package. Vale
+#   finds the styles through VALE_STYLES_PATH, which that package sets: the
+#   job must not run Vale with `--no-global`.
 # - Keep the files that `sync-config` writes, because the tools read them.
 
 on:
@@ -38,4 +41,4 @@ jobs:
       - name: lychee
         run: nix develop .#docs -c lychee --no-progress "**/*.md"
       - name: Vale
-        run: nix develop .#docs -c sh -c 'vale sync && vale --no-global --minAlertLevel=error .'
+        run: nix develop .#docs -c vale --minAlertLevel=error .

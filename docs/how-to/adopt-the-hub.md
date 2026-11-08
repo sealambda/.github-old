@@ -77,9 +77,33 @@ the hub's version of each file into the repository.
    `.vale/styles/config/vocabularies/Repository/accept.txt`, with one term per
    line. An empty file is valid. The synced `.vale.ini` lists this vocabulary,
    and Vale stops with an error when a listed vocabulary is missing.
-3. Run `vale sync` once to install the Vale packages. Add `.vale/styles/*` and
-   `!.vale/styles/config/` to `.gitignore`, so that Git ignores the packages
-   and tracks the vocabularies.
+3. Run Vale in the hub's `docs` dev shell. Its Vale comes from the hub's
+   `vale.withStyles` package, which sets `VALE_STYLES_PATH`, so Vale finds the
+   Microsoft and Readability styles in the Nix store. The project `StylesPath`,
+   `.vale/styles`, holds only the tracked vocabularies. Don't run
+   `vale sync`: the synced `.vale.ini` lists no packages. Don't pass
+   `--no-global`: that flag makes Vale ignore `VALE_STYLES_PATH`, and Vale
+   then stops with the error "Style isn't on StylesPath."
+
+   ```sh
+   nix develop .#docs -c vale --minAlertLevel=error .
+   ```
+
+   Define the repository's own `docs` shell with `inputsFrom =
+   [ hub.devShells.<system>.docs ]`, or add the same Vale package to it.
+
+   If an earlier `vale sync` left a style directory such as
+   `.vale/styles/Microsoft`, Git now shows it as untracked. Delete each style
+   directory but keep `config`: `rm -rf -- .vale/styles/Microsoft
+   .vale/styles/Readability`. Vale takes a rule from the Nix style when both
+   paths hold a rule of the same name, but a stale rule that only the old
+   directory has still runs. Remove any `.vale/styles/*` rule from
+   `.gitignore`, because nothing writes there any more.
+
+   Outside `nix develop` or direnv, for example in an editor extension, Vale
+   finds no styles and reports the same error. Start the editor from the dev
+   shell, or use direnv with the flake.
+
 4. To fail CI when a copy differs from the hub, add the check to the
    repository's `flake.nix`:
 
