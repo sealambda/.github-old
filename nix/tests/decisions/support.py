@@ -5,8 +5,9 @@ import io
 import subprocess
 import tempfile
 import unittest
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path, PurePosixPath
 from unittest import mock
 
@@ -30,8 +31,12 @@ FRONT_MATTER = (
 def record_text(body: str = "") -> str:
     """Return a record with valid front matter and a title, followed by `body`.
 
-    The title is on line 7, so the first line of a non-empty `body` is line 9.
+    A `body` that starts with a level-1 heading brings its own title. Otherwise
+    the title is `A decision` on line 7, and the first line of a non-empty
+    `body` is line 9.
     """
+    if body.startswith("# "):
+        return FRONT_MATTER + body
     return FRONT_MATTER + "# A decision\n" + (f"\n{body}" if body else "")
 
 
@@ -102,11 +107,20 @@ class TreeTestCase(unittest.TestCase):
         """Turn the root into a Git work tree, with no commit and no identity."""
         self.git("init", "--quiet")
 
-    def git(self, *args: str) -> None:
-        """Run `git` with `args` in the root and fail the test on an error."""
-        subprocess.run(
-            ["git", *args], cwd=self.root, check=True, capture_output=True, text=True
+    def git(self, *args: str) -> str:
+        """Run `git` with `args` in the root and return its trimmed output.
+
+        Raises:
+            subprocess.CalledProcessError: Git exited with a nonzero status.
+        """
+        completed = subprocess.run(
+            ["git", *args],
+            cwd=self.root,
+            check=True,
+            capture_output=True,
+            encoding="utf-8",
         )
+        return completed.stdout.strip()
 
     def findings(self, exclude: Sequence[str] = ()) -> list[str]:
         """Run all checks on the tree and return the findings as text."""
@@ -115,16 +129,21 @@ class TreeTestCase(unittest.TestCase):
             finding.format() for finding in run_checks(self.root, REPOSITORY, excludes)
         ]
 
-    def run_cli(self, *args: str) -> CliResult:
-        """Run `decisions.cli.main` with `args` and capture its output."""
+    def run_cli(self, *args: str, today: Callable[[], date] = date.today) -> CliResult:
+        """Run `decisions.cli.main` with `args` and capture its output.
+
+        Args:
+            *args: The command line after the program name.
+            today: The clock for `retire`.
+        """
         stdout, stderr = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-            code = cli.main(list(args))
+            code = cli.main(list(args), today=today)
         return CliResult(code, stdout.getvalue(), stderr.getvalue())
 
     def run_cli_on_root(self, *extra: str) -> CliResult:
-        """Run the command line on the tree root as `REPOSITORY`."""
-        return self.run_cli("--repository", REPOSITORY, *extra, str(self.root))
+        """Run `decisions check` on the tree root as `REPOSITORY`."""
+        return self.run_cli("check", "--repository", REPOSITORY, *extra, str(self.root))
 
 
 def posix(path: str) -> PurePosixPath:

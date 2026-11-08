@@ -31,15 +31,17 @@ and keeps its own facts.
   flake check `lib.mkDocsCheck` (markdownlint-cli2, lychee and Vale), and the
   flake check `lib.mkDecisionsCheck`, which validates the decision records and
   every citation of a record, a spec or a page. The JSON Schemas of the records
-  and the ledger are in `schemas/`.
+  and the ledger are in `schemas/`. The `decisions` app retires a record into
+  the ledger.
 
 ## Documentation
 
 The pages follow [Diátaxis](https://diataxis.fr/).
 
 - **How-to guides.**
-  [Adopt the hub in a repository](docs/how-to/adopt-the-hub.md) and
-  [Change a toolchain version](docs/how-to/change-a-toolchain-version.md).
+  [Adopt the hub in a repository](docs/how-to/adopt-the-hub.md),
+  [Change a toolchain version](docs/how-to/change-a-toolchain-version.md) and
+  [Retire a decision record](docs/how-to/retire-a-decision-record.md).
 - **Reference.** [Toolchain versions](docs/reference/versions.md),
   [Elixir quality checks](docs/reference/elixir-qa.md), the
   [Renovate preset](docs/reference/renovate-preset.md) and

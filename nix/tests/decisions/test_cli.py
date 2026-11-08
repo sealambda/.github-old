@@ -39,26 +39,34 @@ class ExitStatusTest(TreeTestCase):
 
     def test_missing_root_exits_2(self) -> None:
         """A root that is not a directory is a usage error."""
-        result = self.run_cli("--repository", REPOSITORY, str(self.root / "missing"))
+        result = self.run_cli(
+            "check", "--repository", REPOSITORY, str(self.root / "missing")
+        )
         self.assertEqual(result.code, 2)
         self.assertIn("ROOT is not a directory", result.stderr)
         self.assertEqual(result.stdout, "")
 
     def test_missing_repository_exits_2(self) -> None:
         """`--repository` is required."""
-        result = self.run_cli(str(self.root))
+        result = self.run_cli("check", str(self.root))
         self.assertEqual(result.code, 2)
         self.assertIn("--repository", result.stderr)
 
     def test_malformed_repository_exits_2(self) -> None:
         """The repository must look like `owner/name`."""
-        result = self.run_cli("--repository", "just-a-name", str(self.root))
+        result = self.run_cli("check", "--repository", "just-a-name", str(self.root))
         self.assertEqual(result.code, 2)
         self.assertIn("OWNER/NAME", result.stderr)
 
     def test_no_arguments_exits_2(self) -> None:
         """Without arguments the command prints the usage and exits 2."""
         result = self.run_cli()
+        self.assertEqual(result.code, 2)
+        self.assertIn("usage: decisions", result.stderr)
+
+    def test_unknown_command_exits_2(self) -> None:
+        """The first argument must be a command: the old bare form is gone."""
+        result = self.run_cli("--repository", REPOSITORY, str(self.root))
         self.assertEqual(result.code, 2)
         self.assertIn("usage: decisions", result.stderr)
 

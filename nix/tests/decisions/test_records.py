@@ -292,6 +292,20 @@ class RecordTitleTest(unittest.TestCase):
         """A block without a closing fence holds the rest of the text."""
         self.assertIsNone(record_title("```\n# a\n# b\n"))
 
+    def test_later_headings_are_not_the_title(self) -> None:
+        """The first level-1 heading after the front matter is the title."""
+        text = FRONT_MATTER + "# The title\n\n## Context\n\n# Another\n"
+        self.assertEqual(record_title(text), "The title")
+
+    def test_closing_hashes_and_spaces_are_not_part_of_the_title(self) -> None:
+        """`# Title ##` is the title `Title`; a `#` inside a word stays."""
+        self.assertEqual(record_title(FRONT_MATTER + "# Title ##  \n"), "Title")
+        self.assertEqual(record_title(FRONT_MATTER + "# Use C#\n"), "Use C#")
+
+    def test_text_without_front_matter_is_read_whole(self) -> None:
+        """The function does not require the front matter."""
+        self.assertEqual(record_title("# Bare\n"), "Bare")
+
 
 if __name__ == "__main__":
     unittest.main()

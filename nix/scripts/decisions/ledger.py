@@ -60,9 +60,27 @@ def load_ledger(
     if not ledger_file.is_file():
         return [], []
     try:
-        document = parse_yaml(ledger_file.read_text(encoding="utf-8"))
+        text = ledger_file.read_text(encoding="utf-8")
     except UnicodeDecodeError:
         return [], [Finding(LEDGER_PATH, 1, "the file is not valid UTF-8 text")]
+    return parse_ledger(text, schema)
+
+
+def parse_ledger(
+    text: str, schema: Mapping[str, Any]
+) -> tuple[list[LedgerEntry], list[Finding]]:
+    """Parse the text of a ledger and validate it against its schema.
+
+    Args:
+        text: The text of the ledger file.
+        schema: The JSON Schema of the ledger.
+
+    Returns:
+        The entries with a readable number, and the findings of the YAML
+        syntax and of the schema validation.
+    """
+    try:
+        document = parse_yaml(text)
     except yaml.YAMLError as error:
         line, problem = describe_error(error)
         message = f"the ledger is not valid YAML: {problem}"

@@ -255,7 +255,8 @@
 
       # The `decisions` command: `python -m decisions`, the code in
       # `nix/scripts/decisions`, with the schemas in `schemas`. `git` lists the
-      # files of a work tree, so the check skips the ignored ones.
+      # files of a work tree, so the check skips the ignored ones, and it is
+      # for the `retire` subcommand.
       mkDecisionsTool =
         pkgs:
         pkgs.writeShellApplication {
@@ -326,7 +327,7 @@
           ) exclude;
         in
         hubPkgs.runCommand "decisions" { } ''
-          ${nixpkgs.lib.getExe (mkDecisionsTool hubPkgs)} \
+          ${nixpkgs.lib.getExe (mkDecisionsTool hubPkgs)} check \
             --repository ${nixpkgs.lib.escapeShellArg repository} \
             ${excludeFlags} ${src}
           touch "$out"
@@ -346,6 +347,13 @@
         sync-config = {
           type = "app";
           program = nixpkgs.lib.getExe (mkSyncConfig pkgs);
+        };
+
+        # `decisions check` and `decisions retire` in the current repository.
+        # The tool comes from the hub's nixpkgs, like `mkDecisionsCheck`.
+        decisions = {
+          type = "app";
+          program = nixpkgs.lib.getExe (mkDecisionsTool pkgs);
         };
       });
 

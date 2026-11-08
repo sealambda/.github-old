@@ -68,8 +68,8 @@ The repository's `flake.lock` pins the hub. To take a newer hub revision, run
 
 ## Run a hub app
 
-The hub offers the app `sync-config`. Run an app in the repository, with the
-option `--inputs-from .`:
+The hub offers the apps `sync-config` and `decisions`. Run an app in the
+repository, with the option `--inputs-from .`:
 
 ```sh
 nix run --inputs-from . hub#<app>
@@ -83,7 +83,9 @@ the hub, which can differ from the pinned revision.
 The command needs the `hub` input and its lock, which
 [Add the toolchain](#add-the-toolchain) creates. A repository without a `hub`
 input has no pinned revision, and Nix stops with the error `cannot find flake
-'flake:hub' in the flake registries`. Add the input first.
+'flake:hub' in the flake registries`. Add the input first. The `decisions` app also
+runs from a named hub commit, as
+[Retire a decision record](retire-a-decision-record.md) shows.
 
 ## Extend the Renovate preset
 
@@ -227,6 +229,9 @@ defines each rule. The check reads no network and no personal configuration.
    replaced record and list it in the ledger, as the reference says.
 4. Add a path to `exclude` for a file that holds citations on purpose, such as a
    test fixture. The path is relative to the root of the repository.
+5. To delete a replaced record later, run the hub's `decisions` app, as
+   [Retire a decision record](retire-a-decision-record.md) shows. No flake
+   change is needed.
 
 The check builds its tool from the hub's own nixpkgs, whatever nixpkgs the
 repository follows. Every repository then runs the same version of the tool, and
