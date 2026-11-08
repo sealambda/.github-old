@@ -61,7 +61,9 @@ holds.
 
 `docs/decisions/superseded.yaml` lists each record that a pull request
 deleted. The first deletion creates the file. It holds a YAML list with one
-entry for each deleted record, in the order of deletion.
+entry for each deleted record, in the order of deletion. The
+[`retire` command](#retire-command) writes the entries. A ledger that it
+creates starts with a three-line comment that names the command and this page.
 
 ```yaml
 - number: "NNNN"
@@ -184,7 +186,8 @@ ledger are in `schemas/` in the hub. Each finding prints as
 `path:line: message`, and one run prints all of them. The exit status is 0 when
 nothing is wrong, 1 for findings, 2 for a usage error and 3 for an internal
 error. An internal error is a bug in the tool: it prints the traceback to
-standard error, and it's never a finding.
+standard error, and it's never a finding. The same checks run from the command
+line as `decisions check`, described in [Command line](#command-line).
 
 The check reports:
 
@@ -267,4 +270,117 @@ https://github.com/<owner>/<repo>/blob/<commit>/docs/decisions/<file>
   another name at that commit, use the `path` as written.
 
 Before the deletion, `git log -1 --format=%H origin/main -- <path>` prints the
-commit of the last text of a record that reached `main`.
+commit of the last text of a record that reached `main`. The
+[`retire` command](#retire-command) runs it and builds the permalink.
+
+## Command line
+
+The hub's `decisions` app runs the tool. It has two commands.
+
+```sh
+nix run --inputs-from . hub#decisions -- <command> <arguments>
+```
+
+The command needs the `hub` input of the repository's `flake.nix` and runs the
+pinned revision, as [Run a hub app](../how-to/adopt-the-hub.md#run-a-hub-app)
+explains. A repository without a `hub` input names a hub commit instead, as
+[Retire a decision record](../how-to/retire-a-decision-record.md) shows. The
+tool comes from the hub's nixpkgs, as it does in the `decisions` check.
+
+### Check command
+
+```text
+decisions check --repository OWNER/NAME [--exclude PATH]... ROOT
+```
+
+The command runs the checks of the [Check](#check) section on the directory
+`ROOT` and prints the findings. `--repository` is the `owner/name` of the
+repository that holds `ROOT`. Each `--exclude` is a path to skip. The exit
+status is 0 when no check finds a problem, 1 when one does, 2 for a usage
+error, and 3 for an internal error. The flake check `decisions` runs this
+command.
+
+### Retire command
+
+```text
+decisions retire NNNN (--by MMMM | --withdrawn) [--exclude PATH]... [--root DIR]
+```
+
+The command deletes record `NNNN` into the ledger. The guide
+[Retire a decision record](../how-to/retire-a-decision-record.md) shows how to
+use it.
+
+| Argument | Meaning |
+| -------- | ------- |
+| `NNNN` | The four-digit number of the record to retire. |
+| `--by MMMM` | The record in force that replaces it. |
+| `--withdrawn` | The record no longer applies and has no replacement. |
+| `--exclude PATH` | A path that the final check skips, as in the check command. |
+| `--root DIR` | A directory inside the repository. The default is the current directory. The command works on the top of that work tree. |
+
+Give exactly one of `--by` and `--withdrawn`.
+
+The command refuses, and changes nothing, when any of these holds:
+
+- The ledger has an entry for `NNNN`, or no file `docs/decisions/NNNN-*.md`
+  exists, or two files share the number.
+- `--by` names `NNNN` itself, or a number that has no record file.
+- With `--withdrawn`, a ledger entry names `NNNN` as its successor. The entry
+  would keep a successor that isn't in force.
+- The local ref `origin/main` doesn't exist, or the record has no file on it,
+  at its path here or at an earlier path.
+- The record has staged, unstaged or untracked changes, or its text on `HEAD`
+  differs from its text on `origin/main` at the published path.
+- The record has no level-1 heading, so the command can't read its title.
+- The `origin` remote isn't a `github.com` repository. The message shows the
+  URL without its user name and password.
+- The existing ledger breaks the schema, or an edit of its text can't produce a
+  valid ledger.
+
+When no rule refuses, the command does these steps in order. Steps 1 to 4 only
+read, and compute the new ledger. Step 5 is the first that changes the tree.
+
+1. It finds the published path of the record: the path of the record here, or
+   when `origin/main` has no file there, the first earlier name of the file
+   that `origin/main` has. The earlier names come from the renames in the
+   history of `HEAD`, as `git log --follow` lists them, and they include
+   renames that `origin/main` doesn't have yet. A parent pull request that
+   isn't merged yet can have moved the record, for example from `docs/adr` to
+   `docs/decisions`. The text on `HEAD` must equal the text on `origin/main` at
+   the published path. This is the text that the command deletes, so the
+   permalink shows the last text of the record. The command compares with
+   `HEAD` and not with the merge base, because a branch that edited the record
+   would then link to the text before its edit. Then it reads the commit with
+   `git log -1 --format=%H origin/main -- <published path>`. The command
+   doesn't fetch, so run `git fetch` first when the record was merged lately.
+   The ledger entry holds this commit and the published path.
+2. It reads the title from the first level-1 heading after the front matter,
+   outside fenced code. It reads the date from the clock of the machine: the
+   local calendar day, `YYYY-MM-DD`.
+3. It reads the repository from the URL of `origin`:
+   `git@github.com:owner/repo.git`, `https://github.com/owner/repo` and
+   `ssh://git@github.com/owner/repo.git`, each with or without `.git`.
+4. It computes the ledger edit and validates the result. It adds the entry as
+   text after the last line of the ledger, and it creates the file when it's
+   missing. It doesn't rewrite other lines, so the other entries and comments
+   keep their bytes. With `--by`, it also changes the number on the `successor`
+   line of every entry that named the retired record. It leaves quotes and
+   comments on that line as they were.
+5. It applies the edit. It writes the ledger to a temporary file and renames it,
+   so the ledger is never half written. Then it runs `git rm` on the record and
+   stages the ledger with `git add`, so a `git commit` without `-a` keeps the
+   deletion and its entry. When `git rm` or `git add` fails, the command
+   restores the ledger text and the record, in the index and in the work tree,
+   and reports the failure.
+6. It runs the [checks](#check) on the repository, with that repository name.
+   The citations of the retired record outside the ledger and its successor are
+   among the findings. When the checks can't read the tree, because of an I/O
+   error, the record is already retired. The command then reports why the
+   checks didn't run and still exits with status 0.
+7. It prints the permalink and the findings.
+
+The exit status is 0 when the command retires the record, even when the final
+check has findings or can't run: the findings are the work that remains. The
+status is 2 for a usage error, a refusal or a failed step, and a refusal
+changes nothing. The status is 3 for an internal error, a bug in the tool, which
+prints the traceback to standard error: check the work tree with `git status`.
