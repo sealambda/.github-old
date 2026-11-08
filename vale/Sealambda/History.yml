@@ -1,0 +1,22 @@
+# A page states what is true now. The words flag a sentence about the past of
+# the system: that history belongs in git and in decision records
+# (docs/reference/writing-style.md).
+#
+# The match is case-insensitive and word-bounded, and code spans and code
+# blocks aren't checked. The words are a hint, not a verdict: "is used to" has
+# a true present meaning. That is why the level is suggestion. The docs check
+# runs Vale with `--minAlertLevel=error`, so this rule shows only in an editor
+# or in a run of Vale without that flag.
+# Level: suggestion. Tests: History.test.yml.
+extends: existence
+message: "'%s' may describe history. State what is true now, and keep the history in git or in a decision record."
+link: https://github.com/sealambda/.github/blob/main/docs/reference/writing-style.md#history
+level: suggestion
+ignorecase: true
+tokens:
+  - previously
+  - formerly
+  - no longer
+  - used to
+  - superseded
+  - was renamed

@@ -3,9 +3,11 @@
 #
 # Usage: bash nix/tests/check-docs.sh
 #
-# The commands `check-docs` and `sync-config` must be on PATH. They must be
-# the `writeShellApplication` wrappers that `flake.nix` builds, because they
-# carry their own tools. The flake check `check-docs-tests` runs this file.
+# The commands `check-docs`, `sync-config` and `vale` must be on PATH. They
+# must be the packages that `flake.nix` builds, because they carry their own
+# tools: `vale` is the one that has the style `Sealambda`. The flake check
+# `check-docs-tests` runs this file. The test cases of the style rules are in
+# `vale/Sealambda/*.test.yml`, and the flake check `vale-style-tests` runs them.
 #
 # Each case generates a small project under a temporary directory. The project
 # gets the hub's tool configuration from `sync-config`, so the test needs no
@@ -100,6 +102,24 @@ add_unknown_term() {
 # Writes a page with a broken relative link into the project.
 add_broken_link() {
   printf '# Link\n\nRead [the missing page](missing-page.md).\n' >"$PROJECT/link.md"
+}
+
+# Writes the page $1, a path relative to the project, with the title `Title`
+# and the body text $2. The function creates the parent directories. Pass a
+# body that only the rule under test flags, so that a failure names that rule.
+write_page() {
+  mkdir -p "$(dirname -- "$PROJECT/$1")"
+  printf '# Title\n\n%s\n' "$2" >"$PROJECT/$1"
+}
+
+# Writes the pages `README.md` and `other.md`, which hold the cases of the
+# anchor check. `other.md` has the heading `Real heading`, whose anchor is
+# `real-heading`. `README.md` links to that anchor and to its own title, so
+# both links are valid. The links to a missing anchor are added by the case.
+add_anchor_pages() {
+  printf '# Other\n\n## Real heading\n\nThe text.\n' >"$PROJECT/other.md"
+  printf '# Title\n\nRead [the heading](other.md#real-heading) and [this title](#title).\n' \
+    >"$PROJECT/README.md"
 }
 
 # --- Cases -----------------------------------------------------------------
@@ -208,6 +228,117 @@ case_nested_markdownlint_config_applies_to_its_directory() {
   assert_output_lacks "docs/lint.md"
 }
 
+# A word of a plan fails the check and names the rule. The rule name also
+# proves that Vale found the hub's own style `Sealambda`, which Nix adds to
+# `VALE_STYLES_PATH`. The test cases of each listed word are in
+# `vale/Sealambda/CurrentState.test.yml`.
+case_current_state_term_fails() {
+  new_project current-state
+  write_page guide.md "The server currently runs NixOS."
+
+  run_check "$PROJECT"
+
+  assert_status 1
+  assert_output_contains "Sealambda.CurrentState"
+  assert_output_contains "'currently' describes a plan or a gap"
+  assert_output_contains "check-docs: vale failed"
+}
+
+# Text in the present tense passes. So do the words that the rule leaves out on
+# purpose, `planned` and `target`, and a listed word in a code span or a code
+# block: these are the expected non-hits of the rule of `sealambda/infra`.
+case_current_state_non_hits_pass() {
+  new_project non-hits
+  cat >"$PROJECT/guide.md" <<'EOF'
+# Title
+
+The planned window is part of the contract. The target group routes the
+traffic. Run `tofu apply -target=aws_iam_role.this`.
+
+```text
+TODO is a word in a code block.
+```
+EOF
+
+  run_check "$PROJECT"
+
+  assert_status 0
+  assert_output_lacks "Sealambda.CurrentState"
+}
+
+# A word of a history doesn't fail the check, because `Sealambda.History` has
+# the level suggestion and the script runs Vale with `--minAlertLevel=error`.
+# The same word in a Vale run without that flag proves that the rule is loaded:
+# the check passes because of the level and not because the rule is missing.
+case_history_term_does_not_fail() {
+  new_project history
+  write_page guide.md "The service previously ran on Fly."
+
+  run_check "$PROJECT"
+
+  assert_status 0
+  assert_output_lacks "Sealambda.History"
+
+  # Vale prints a suggestion when no level is set.
+  STATUS=0
+  (cd "$PROJECT" && vale --output=line guide.md) >"$OUT" 2>&1 || STATUS=$?
+
+  assert_status 0
+  assert_output_contains "Sealambda.History:'previously' may describe history"
+}
+
+# The rule `Sealambda.CurrentState` is off for the decision records and the
+# specs, also under another folder, and on for any other page. The first run
+# lists a page of each off folder, and passes. The second run adds a page with
+# the same text in `docs/`, and fails for that page only: the off sections, and
+# not the folder name `docs`, change the result.
+case_current_state_is_off_for_decisions_and_specs() {
+  new_project off-sections
+  write_page docs/decisions/0001-record.md "The tool will be replaced."
+  write_page docs/specs/0001-spec.md "The tool will be replaced."
+  write_page services/api/docs/specs/0002-spec.md "The tool will be replaced."
+
+  run_check "$PROJECT"
+  assert_status 0
+
+  write_page docs/guide.md "The tool will be replaced."
+
+  run_check "$PROJECT"
+  assert_status 1
+  assert_output_contains "docs/guide.md"
+  assert_output_contains "Sealambda.CurrentState"
+  assert_output_lacks "decisions/"
+  assert_output_lacks "specs/"
+}
+
+# The shipped lychee configuration checks the anchors of local links, also
+# offline. A link to a heading that exists passes, in another page and in the
+# same page. A link to a missing heading fails, in another page and in the same
+# page. The project gets its `lychee.toml` from `sync-config`, so this case
+# fails when the hub's file lacks `include_fragments`.
+case_local_anchors_are_checked() {
+  new_project anchors
+  add_anchor_pages
+
+  run_check "$PROJECT"
+  assert_status 0
+
+  printf '\nRead [no heading](other.md#missing-heading).\n' >>"$PROJECT/README.md"
+
+  run_check "$PROJECT"
+  assert_status 1
+  assert_output_contains "other.md#missing-heading"
+  assert_output_contains "check-docs: lychee failed"
+
+  add_anchor_pages
+  printf '\nRead [no title](#missing-title).\n' >>"$PROJECT/README.md"
+
+  run_check "$PROJECT"
+  assert_status 1
+  assert_output_contains "README.md#missing-title"
+  assert_output_contains "check-docs: lychee failed"
+}
+
 # A wrong argument count or a missing directory prints a message and exits 2.
 case_wrong_arguments_exit_2() {
   new_project arguments
@@ -238,6 +369,11 @@ main() {
     case_every_tool_runs_after_a_failure
     case_project_vocabulary_is_read
     case_nested_markdownlint_config_applies_to_its_directory
+    case_current_state_term_fails
+    case_current_state_non_hits_pass
+    case_history_term_does_not_fail
+    case_current_state_is_off_for_decisions_and_specs
+    case_local_anchors_are_checked
     case_wrong_arguments_exit_2
   )
   local name
