@@ -61,10 +61,46 @@ Commit lock files. Don't write update scripts.
 ## Documentation
 
 Follow [Diátaxis](https://diataxis.fr/): tutorials, how-to guides, reference
-and explanation are separate pages. Write about the current state. Record an
-architecturally significant decision as a
-[MADR 4.0.0](https://adr.github.io/madr/) record in `docs/decisions/`. Write
-short sentences in the active voice, and use one term for one concept.
+and explanation are separate pages. Write short sentences in the active voice,
+and use one term for one concept.
+
+### Current state only
+
+- A document describes what exists now. Plans and open questions are issues.
+  History lives in git and in decision records.
+- Delete a dead document in the pull request that makes it dead.
+- A design spec (`docs/specs/`) describes work that isn't built yet. The pull
+  request that implements a spec moves its verified behavior into reference or
+  explanation pages, moves its decisions into decision records, opens issues
+  for what remains, and deletes the spec. Code cites the current pages, never a
+  spec.
+
+### Decision records
+
+[Decision records](https://github.com/sealambda/.github/blob/main/docs/reference/decision-records.md)
+defines the format of a record and of the ledger. These rules apply:
+
+- Record only an architecturally significant decision, as a
+  [MADR 4.0.0](https://adr.github.io/madr/) file named
+  `docs/decisions/NNNN-slug.md`. The `status` is `proposed`, `accepted` or
+  `rejected`.
+- An accepted record is immutable, except for its `status`, its `date` and a
+  correction that keeps the decision, such as a renamed path or a removed
+  example. A correction updates `date`.
+- A changed decision is a new record that restates the whole current decision.
+  Delete the old record, and list it in `docs/decisions/superseded.yaml` with
+  the commit of its last text and its successor.
+- A decision that no longer applies, with no replacement, is deleted into the
+  ledger as withdrawn.
+- A `rejected` record stays only while it holds reasoning that no other record
+  holds.
+- A record states a decision, not an inventory. A list that changes, such as
+  modules, layers or owners, lives in its source of truth, a code file or a
+  reference page, and the record links to it.
+
+The hub explains this deviation from the usual practice of keeping a replaced
+record in
+[ADR 0004](https://github.com/sealambda/.github/blob/main/docs/decisions/0004-delete-a-replaced-decision-record-into-a-ledger.md).
 
 ## Agents
 

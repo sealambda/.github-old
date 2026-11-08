@@ -38,8 +38,9 @@ The pages follow [Diátaxis](https://diataxis.fr/).
   [Adopt the hub in a repository](docs/how-to/adopt-the-hub.md) and
   [Change a toolchain version](docs/how-to/change-a-toolchain-version.md).
 - **Reference.** [Toolchain versions](docs/reference/versions.md),
-  [Elixir quality checks](docs/reference/elixir-qa.md) and the
-  [Renovate preset](docs/reference/renovate-preset.md).
+  [Elixir quality checks](docs/reference/elixir-qa.md), the
+  [Renovate preset](docs/reference/renovate-preset.md) and
+  [decision records](docs/reference/decision-records.md).
 - **Explanation.** The [decision records](docs/decisions/) say why the hub
   works as it does.
 - **Templates.** [Templates](templates/README.md) for decision records and
