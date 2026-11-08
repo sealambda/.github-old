@@ -56,20 +56,63 @@
 
       treefmtFor = eachSystem (pkgs: mkTreefmt pkgs [ ]);
 
-      # The Vale tool of the `docs` dev shell.
-      docsToolsFor = eachSystem (pkgs: {
-        # Vale and the styles that `BasedOnStyles` in `config/vale.ini` names:
-        # keep both lists the same. A difference fails loudly, because Vale
-        # reports "Style isn't on StylesPath". The styles come from nixpkgs, so
-        # `flake.lock` pins them and no run downloads them. `withStyles` sets
-        # `VALE_STYLES_PATH` to its `share/vale/styles`, and Vale finds the
-        # styles there. The project `StylesPath` holds only the vocabularies.
-        # Vale ignores that variable when it runs with `--no-global`.
-        valeWithStyles = pkgs.vale.withStyles (styles: [
-          styles.microsoft
-          styles.readability
-        ]);
-      });
+      /**
+        Builds the documentation tools from one package set: the three tools of
+        the `docs` dev shell and of `mkDocsCheck`, and the `check-docs` command
+        that runs them. A consumer whose nixpkgs follows `hub/nixpkgs` gets the
+        hub's versions.
+
+        # Inputs
+
+        `pkgs`
+        : The package set of one system.
+
+        # Type
+
+        ```
+        mkDocsTools :: AttrSet -> { valeWithStyles :: Derivation; checkDocs :: Derivation; tools :: [Derivation]; }
+        ```
+      */
+      mkDocsTools =
+        pkgs:
+        let
+          # Vale and the styles that `BasedOnStyles` in `config/vale.ini` names:
+          # keep both lists the same. A difference fails loudly, because Vale
+          # reports "Style isn't on StylesPath". The styles come from nixpkgs, so
+          # `flake.lock` pins them and no run downloads them. `withStyles` sets
+          # `VALE_STYLES_PATH` to its `share/vale/styles`, and Vale finds the
+          # styles there. The project `StylesPath` holds only the vocabularies.
+          # Vale ignores that variable when it runs with `--no-global`.
+          valeWithStyles = pkgs.vale.withStyles (styles: [
+            styles.microsoft
+            styles.readability
+          ]);
+
+          # The three documentation tools, listed once for `checkDocs` and for
+          # the `docs` dev shell.
+          tools = [
+            pkgs.lychee
+            pkgs.markdownlint-cli2
+            valeWithStyles
+          ];
+
+          # The `check-docs` command: the three tools with the flags in
+          # `nix/scripts/check-docs.sh`. `writeShellApplication` lints the script
+          # with shellcheck, and its header describes the script.
+          checkDocs = pkgs.writeShellApplication {
+            name = "check-docs";
+            runtimeInputs = tools;
+            # The trust store that lychee needs at startup. The reason is in the
+            # header of `nix/scripts/check-docs.sh`.
+            runtimeEnv.SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+            text = builtins.readFile ./nix/scripts/check-docs.sh;
+          };
+        in
+        {
+          inherit valeWithStyles checkDocs tools;
+        };
+
+      docsToolsFor = eachSystem mkDocsTools;
 
       # Tool configuration that a tool reads only from a file in the
       # repository. Each name is the path in the consumer; each value is the
@@ -132,9 +175,48 @@
           touch "$out"
           exit "$status"
         '';
+
+      /**
+        Builds a check that lints the Markdown files of a source tree with
+        markdownlint-cli2, lychee and Vale, and fails when a tool reports a
+        problem. The tools come from the given `pkgs`, so a consumer whose
+        nixpkgs follows `hub/nixpkgs` gets the hub's versions. Where the Nix
+        sandbox is enabled, which it always is on Linux CI, the check reads each
+        tool's configuration from `src` and no personal configuration of the
+        user, and it needs no network: lychee runs offline, the Vale styles are
+        in the Nix store, and the trust store that lychee loads at startup comes
+        from Nix too. The same command runs locally and in CI:
+        `nix flake check`, or `nix build .#checks.<system>.docs -L`. A local
+        re-run on an unchanged `src` reuses the result by the hash of `src`.
+
+        Pass the whole `self` of the calling flake, not a set of Markdown
+        files, because lychee also checks links to files that are not
+        Markdown. The calling repository needs the files that `sync-config`
+        writes, and the `Repository` Vale vocabulary.
+
+        # Inputs
+
+        `pkgs`
+        : The package set of one system.
+
+        `src`
+        : The source tree to check, normally the `self` of the calling flake.
+
+        # Type
+
+        ```
+        mkDocsCheck :: AttrSet -> (Path | AttrSet) -> Derivation
+        ```
+      */
+      mkDocsCheck =
+        pkgs: src:
+        pkgs.runCommand "docs" { } ''
+          HOME="$TMPDIR" ${nixpkgs.lib.getExe (mkDocsTools pkgs).checkDocs} ${src}
+          touch "$out"
+        '';
     in
     {
-      lib = { inherit mkTreefmt mkConfigCheck; };
+      lib = { inherit mkTreefmt mkConfigCheck mkDocsCheck; };
 
       apps = eachSystem (pkgs: {
         sync-config = {
@@ -181,11 +263,7 @@
 
         docs = pkgs.mkShell {
           inputsFrom = [ base ];
-          packages = [
-            pkgs.lychee
-            pkgs.markdownlint-cli2
-            docsToolsFor.${pkgs.stdenv.hostPlatform.system}.valeWithStyles
-          ];
+          packages = docsToolsFor.${pkgs.stdenv.hostPlatform.system}.tools;
         };
       });
 
@@ -193,7 +271,23 @@
 
       checks = eachSystem (pkgs: {
         config-in-sync = mkConfigCheck pkgs self;
+        docs = mkDocsCheck pkgs self;
         formatting = treefmtFor.${pkgs.stdenv.hostPlatform.system}.config.build.check self;
+
+        # Runs the tests of `nix/scripts/check-docs.sh`. The tests need a
+        # writable HOME and the commands `check-docs` and `sync-config` on PATH.
+        check-docs-tests =
+          pkgs.runCommand "check-docs-tests"
+            {
+              nativeBuildInputs = [
+                docsToolsFor.${pkgs.stdenv.hostPlatform.system}.checkDocs
+                (mkSyncConfig pkgs)
+              ];
+            }
+            ''
+              HOME="$TMPDIR" bash ${./nix/tests/check-docs.sh}
+              touch "$out"
+            '';
       });
     };
 }

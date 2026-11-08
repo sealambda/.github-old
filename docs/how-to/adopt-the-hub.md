@@ -85,8 +85,13 @@ the hub's version of each file into the repository.
    `--no-global`: that flag makes Vale ignore `VALE_STYLES_PATH`, and Vale
    then stops with the error "Style isn't on StylesPath."
 
+   To reproduce the gate, run `nix build .#checks.<system>.docs -L`, as
+   [Gate the documentation](#gate-the-documentation) describes. For an
+   interactive run, enter the dev shell and run Vale on a file, with no flags:
+
    ```sh
-   nix develop .#docs -c vale --minAlertLevel=error .
+   nix develop .#docs
+   vale <file>
    ```
 
    Define the repository's own `docs` shell with `inputsFrom =
@@ -123,19 +128,51 @@ To relax a markdownlint rule for one directory, add a `.markdownlint-cli2.yaml`
 to it. markdownlint-cli2 merges that file with the synced one at the root, as
 the hub does in `.github`.
 
-## Call the reusable workflows
+## Gate the documentation
 
-The hub offers `secrets.yml` and `docs.yml`. Each workflow runs its tools from
-the repository's flake. The comment at the top of the workflow file states what
-the flake must expose.
+The `docs` check lints every Markdown file with markdownlint-cli2, lychee and
+Vale. Where the Nix sandbox is enabled, which it always is on Linux CI, the
+check reads no personal configuration and needs no network. Every tool reads
+its configuration from the repository, so the repository needs the files that
+`sync-config` writes and the `Repository` Vale vocabulary
+([Sync the tool configuration](#sync-the-tool-configuration)).
+
+1. Add the check to the repository's `flake.nix`. Pass `self`, not a list of
+   Markdown files, because lychee also checks links to files that aren't
+   Markdown.
+
+   ```nix
+   checks.aarch64-darwin.docs = hub.lib.mkDocsCheck pkgs self;
+   ```
+
+2. Run `nix flake check`. To run only this check, run
+   `nix build .#checks.aarch64-darwin.docs -L`. CI needs no separate job: the
+   job that runs `nix flake check` runs this check too.
+3. If the repository called the hub's earlier `docs.yml` workflow, remove that
+   call. The hub no longer offers the workflow.
+   - Delete the `docs` job and its entry in the `needs` of the `ci` job.
+   - Update any branch protection or ruleset that requires the status check of
+     the `docs` job.
+   - Replace each documented docs command, for example in `AGENTS.md`, with
+     `nix flake check`.
+
+For an interactive run or an editor, use the `docs` dev shell. A personal
+global Vale configuration can change the result there. The check is the
+reference result.
+
+## Call the reusable workflow
+
+The hub offers the reusable workflow `secrets.yml`. It runs its tool from the
+repository's flake. The comment at the top of the workflow file states what the
+flake must expose.
 
 1. Call the workflow from a job. Pin it to a commit SHA, which Renovate bumps.
    The `runs-on` input is optional. It takes JSON.
 
    ```yaml
    jobs:
-     docs:
-       uses: sealambda/.github/.github/workflows/docs.yml@<sha>
+     secrets:
+       uses: sealambda/.github/.github/workflows/secrets.yml@<sha>
        permissions:
          contents: read
        with:
