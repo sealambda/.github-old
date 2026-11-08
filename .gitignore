@@ -1,8 +1,2 @@
-# Packages that `vale sync` installs. The vocabularies in
-# .vale/styles/config are tracked: Sealambda is a copy from the hub and
-# Repository holds the terms of this repository.
-.vale/styles/*
-!.vale/styles/config/
-
 # Cache of lychee.
 .lycheecache
