@@ -27,8 +27,8 @@ and keeps its own facts.
   repository: EditorConfig, markdownlint-cli2, Vale and lychee. The
   `sync-config` app copies the files, and the `config-in-sync` check fails
   when a copy differs.
-- **CI building blocks.** The reusable workflows `secrets.yml` (gitleaks) and
-  `docs.yml` (markdownlint-cli2, lychee and Vale).
+- **CI building blocks.** The reusable workflow `secrets.yml` (gitleaks) and
+  the flake check `lib.mkDocsCheck` (markdownlint-cli2, lychee and Vale).
 
 ## Documentation
 
