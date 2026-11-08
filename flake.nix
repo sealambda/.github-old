@@ -144,7 +144,8 @@
       /**
         Builds a check that fails when a synced tool configuration file of a
         repository differs from the hub's file or is missing. The failure
-        message names the `sync-config` command that repairs it.
+        message names the `sync-config` command that repairs it: the pinned hub
+        app of a calling repository, and the local app of the hub itself.
 
         # Inputs
 
@@ -170,7 +171,9 @@
             ) configFiles
           )}
           if [ "$status" -ne 0 ]; then
-            echo "A tool configuration differs from the hub. Run: nix run github:sealambda/.github#sync-config" >&2
+            echo "A tool configuration differs from the hub." >&2
+            echo "Run: nix run --inputs-from . hub#sync-config" >&2
+            echo "In the hub repository itself, run: nix run .#sync-config" >&2
           fi
           touch "$out"
           exit "$status"
@@ -214,9 +217,130 @@
           HOME="$TMPDIR" ${nixpkgs.lib.getExe (mkDocsTools pkgs).checkDocs} ${src}
           touch "$out"
         '';
+
+      # The Python package `decisions` without the rest of `nix/scripts`, so a
+      # change to `check-docs.sh` does not rebuild the decisions tool.
+      decisionsSource = nixpkgs.lib.fileset.toSource {
+        root = ./nix/scripts;
+        fileset = ./nix/scripts/decisions;
+      };
+
+      # What `python-quality` reads: the package, its tests and the ruff and mypy
+      # settings. A change to any other file of the hub does not rerun the check.
+      pythonQualitySource = nixpkgs.lib.fileset.toSource {
+        root = ./.;
+        fileset = nixpkgs.lib.fileset.unions [
+          ./nix/scripts/decisions
+          ./nix/tests/decisions
+          ./pyproject.toml
+        ];
+      };
+
+      # What the package finds at run time: itself, and the JSON Schemas. Python
+      # cannot write byte code into the Nix store.
+      decisionsEnv = {
+        PYTHONPATH = "${decisionsSource}";
+        DECISIONS_SCHEMA_DIR = "${./schemas}";
+        PYTHONDONTWRITEBYTECODE = "1";
+      };
+
+      # The Python with the two libraries that `decisions` imports. The quality
+      # check adds mypy and the type stubs of both libraries.
+      decisionsPython =
+        pkgs:
+        pkgs.python3.withPackages (ps: [
+          ps.pyyaml
+          ps.jsonschema
+        ]);
+
+      # The `decisions` command: `python -m decisions`, the code in
+      # `nix/scripts/decisions`, with the schemas in `schemas`. `git` lists the
+      # files of a work tree, so the check skips the ignored ones.
+      mkDecisionsTool =
+        pkgs:
+        pkgs.writeShellApplication {
+          name = "decisions";
+          runtimeInputs = [
+            (decisionsPython pkgs)
+            pkgs.git
+          ];
+          runtimeEnv = decisionsEnv;
+          text = ''exec python -m decisions "$@"'';
+        };
+
+      /**
+        Builds a check that fails when the decision records, the specs or the
+        citations of a source tree are wrong. It reads the records in
+        `docs/decisions/` and the ledger `docs/decisions/superseded.yaml`, and it
+        reads every text file for citations of records, specs and `docs/` pages.
+        Each finding prints as `path:line: message`, and one run prints all of
+        them. The checks and the citation forms are in
+        `docs/reference/decision-records.md`. The check needs no network. The
+        same command runs locally and in CI: `nix flake check`, or
+        `nix build .#checks.<system>.decisions -L`.
+
+        The tool comes from the hub's own nixpkgs, whatever nixpkgs the calling
+        flake uses: the function takes only the system from `pkgs`. Every
+        consumer then gets one version of the tool and of its Python libraries.
+        This differs from `mkDocsCheck`, which builds its tools from the given
+        `pkgs`.
+
+        Pass the whole `self` of the calling flake.
+
+        # Inputs
+
+        `pkgs`
+        : The package set of one system. Only its system is used.
+
+        `src`
+        : The source tree to check, normally the `self` of the calling flake.
+
+        `repository`
+        : The `owner/name` of the repository that holds `src`, for example
+          `sealambda/.github`. A citation that another repository qualifies, as
+          in `sealambda/infra ADR 0038`, is about that repository, and the check
+          skips it.
+
+        `exclude`
+        : A list of paths relative to the root of `src`, default empty. The
+          citation scan skips each path and the files below it. A path matches
+          whole components, so `a/b` skips `a/b/c.py` and not `a/bc.py`. Use it
+          for files that hold citations on purpose, such as test fixtures.
+
+        # Type
+
+        ```
+        mkDecisionsCheck :: AttrSet -> (Path | AttrSet) -> { repository :: String; exclude :: [String]; } -> Derivation
+        ```
+      */
+      mkDecisionsCheck =
+        pkgs: src:
+        {
+          repository,
+          exclude ? [ ],
+        }:
+        let
+          hubPkgs = nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+          excludeFlags = nixpkgs.lib.concatMapStringsSep " " (
+            path: "--exclude ${nixpkgs.lib.escapeShellArg path}"
+          ) exclude;
+        in
+        hubPkgs.runCommand "decisions" { } ''
+          ${nixpkgs.lib.getExe (mkDecisionsTool hubPkgs)} \
+            --repository ${nixpkgs.lib.escapeShellArg repository} \
+            ${excludeFlags} ${src}
+          touch "$out"
+        '';
     in
     {
-      lib = { inherit mkTreefmt mkConfigCheck mkDocsCheck; };
+      lib = {
+        inherit
+          mkTreefmt
+          mkConfigCheck
+          mkDocsCheck
+          mkDecisionsCheck
+          ;
+      };
 
       apps = eachSystem (pkgs: {
         sync-config = {
@@ -286,6 +410,59 @@
             }
             ''
               HOME="$TMPDIR" bash ${./nix/tests/check-docs.sh}
+              touch "$out"
+            '';
+
+        # The hub checks its own records and citations. The fixtures of the
+        # decisions tests cite records on purpose, and `check-docs.sh` names a
+        # page that its test creates at run time.
+        decisions = mkDecisionsCheck pkgs self {
+          repository = "sealambda/.github";
+          exclude = [
+            "nix/tests/decisions"
+            "nix/tests/check-docs.sh"
+          ];
+        };
+
+        # Runs the unit tests of `nix/scripts/decisions`. Some tests make a Git
+        # work tree, so they need `git` and a writable HOME.
+        check-decisions-tests =
+          pkgs.runCommand "check-decisions-tests"
+            {
+              nativeBuildInputs = [
+                (decisionsPython pkgs)
+                pkgs.git
+              ];
+              env = decisionsEnv;
+            }
+            ''
+              export HOME="$TMPDIR"
+              python -m unittest discover -v -s ${./nix/tests/decisions}
+              touch "$out"
+            '';
+
+        # Formats, lints and type-checks the hub's Python with ruff and mypy,
+        # configured in `pyproject.toml`. Only the hub runs this check: it is
+        # not part of `mkTreefmt`.
+        python-quality =
+          pkgs.runCommand "python-quality"
+            {
+              nativeBuildInputs = [
+                pkgs.ruff
+                (pkgs.python3.withPackages (ps: [
+                  ps.jsonschema
+                  ps.mypy
+                  ps.pyyaml
+                  ps.types-jsonschema
+                  ps.types-pyyaml
+                ]))
+              ];
+            }
+            ''
+              cd ${pythonQualitySource}
+              ruff format --check --no-cache nix
+              ruff check --no-cache nix
+              mypy --cache-dir "$TMPDIR/mypy" nix/scripts/decisions nix/tests/decisions
               touch "$out"
             '';
       });
