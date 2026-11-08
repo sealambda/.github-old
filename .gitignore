@@ -1,2 +1,8 @@
+# Vale reads the styles from the Nix store through VALE_STYLES_PATH.
+# Everything under .vale/styles except the tracked config vocabularies is a
+# leftover, for example of `vale sync`, and must not be committed.
+.vale/styles/*
+!.vale/styles/config/
+
 # Cache of lychee.
 .lycheecache
