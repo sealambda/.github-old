@@ -27,8 +27,11 @@ and keeps its own facts.
   repository: EditorConfig, markdownlint-cli2, Vale and lychee. The
   `sync-config` app copies the files, and the `config-in-sync` check fails
   when a copy differs.
-- **CI building blocks.** The reusable workflow `secrets.yml` (gitleaks) and
-  the flake check `lib.mkDocsCheck` (markdownlint-cli2, lychee and Vale).
+- **CI building blocks.** The reusable workflow `secrets.yml` (gitleaks), the
+  flake check `lib.mkDocsCheck` (markdownlint-cli2, lychee and Vale), and the
+  flake check `lib.mkDecisionsCheck`, which validates the decision records and
+  every citation of a record, a spec or a page. The JSON Schemas of the records
+  and the ledger are in `schemas/`.
 
 ## Documentation
 
@@ -42,7 +45,8 @@ The pages follow [Diátaxis](https://diataxis.fr/).
   [Renovate preset](docs/reference/renovate-preset.md) and
   [decision records](docs/reference/decision-records.md).
 - **Explanation.** The [decision records](docs/decisions/) say why the hub
-  works as it does.
+  works as it does. [ADR 0005](docs/decisions/0005-check-decision-records-with-a-hermetic-flake-check.md)
+  explains the decision records check.
 - **Templates.** [Templates](templates/README.md) for decision records and
   pages.
 

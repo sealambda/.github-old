@@ -1,0 +1,33 @@
+# Tool configuration for the hub's own Python: the decisions checker in
+# `nix/scripts/decisions` and its tests in `nix/tests/decisions`. This is not
+# a Python project: there is no `[project]` table, and no consumer reads this
+# file. The flake check `python-quality` runs ruff and mypy with it.
+
+[tool.ruff]
+target-version = "py314"
+line-length = 88
+src = ["nix/scripts", "nix/tests/decisions"]
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "W",   # pycodestyle warnings
+  "F",   # pyflakes
+  "I",   # import order
+  "B",   # flake8-bugbear
+  "UP",  # pyupgrade
+  "SIM", # flake8-simplify
+  "D",   # pydocstyle: a docstring on every module, class and function
+  "C90", # McCabe complexity
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 8
+
+[tool.mypy]
+strict = true
+mypy_path = "nix/scripts"
+python_version = "3.14"

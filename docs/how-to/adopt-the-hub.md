@@ -1,8 +1,9 @@
 # Adopt the hub in a repository
 
-Use the hub's parts in a Sealambda repository. Each section below is
-independent: adopt the parts the repository needs. The community files need no
-step, because GitHub applies them.
+Use the hub's parts in a Sealambda repository. Adopt the parts the repository
+needs. The sections that add a check or run a hub app use the hub input of
+[Add the toolchain](#add-the-toolchain). The community files need no step,
+because GitHub applies them.
 
 ## Add the toolchain
 
@@ -13,6 +14,12 @@ every repository evaluates one nixpkgs revision.
    check to the repository's `flake.nix`. Replace `node` with a dev shell from
    [Toolchain versions](../reference/versions.md). Put the repository's own
    treefmt-nix modules in the list that `mkTreefmt` takes.
+
+   The snippet defines every output for the three systems that the hub
+   supports. `forAllSystems` applies a function to the package set of each
+   system, and the later snippets of this page add their checks to the set that
+   `checks` builds with it. CI runs `nix flake check` on Linux, so a check that
+   only `aarch64-darwin` defines doesn't run there.
 
    ```nix
    {
@@ -29,15 +36,27 @@ every repository evaluates one nixpkgs revision.
          ...
        }:
        let
-         pkgs = nixpkgs.legacyPackages.aarch64-darwin;
-         treefmt = hub.lib.mkTreefmt pkgs [ ];
+         systems = [
+           "x86_64-linux"
+           "aarch64-linux"
+           "aarch64-darwin"
+         ];
+         forAllSystems =
+           f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
+         treefmtFor = forAllSystems (pkgs: hub.lib.mkTreefmt pkgs [ ]);
        in
        {
-         devShells.aarch64-darwin.default = pkgs.mkShell {
-           inputsFrom = [ hub.devShells.aarch64-darwin.node ];
-         };
-         formatter.aarch64-darwin = treefmt.config.build.wrapper;
-         checks.aarch64-darwin.formatting = treefmt.config.build.check self;
+         devShells = forAllSystems (pkgs: {
+           default = pkgs.mkShell {
+             inputsFrom = [ hub.devShells.${pkgs.stdenv.hostPlatform.system}.node ];
+           };
+         });
+         formatter = forAllSystems (
+           pkgs: treefmtFor.${pkgs.stdenv.hostPlatform.system}.config.build.wrapper
+         );
+         checks = forAllSystems (pkgs: {
+           formatting = treefmtFor.${pkgs.stdenv.hostPlatform.system}.config.build.check self;
+         });
        };
    }
    ```
@@ -46,6 +65,25 @@ every repository evaluates one nixpkgs revision.
 
 The repository's `flake.lock` pins the hub. To take a newer hub revision, run
 `nix flake update hub`. Renovate opens the same update as a pull request.
+
+## Run a hub app
+
+The hub offers the app `sync-config`. Run an app in the repository, with the
+option `--inputs-from .`:
+
+```sh
+nix run --inputs-from . hub#<app>
+```
+
+The option makes `hub` mean the hub revision that the repository's `flake.lock`
+pins, so the app is the version that the checks run. The address
+`github:sealambda/.github#<app>` without the option runs the latest `main` of
+the hub, which can differ from the pinned revision.
+
+The command needs the `hub` input and its lock, which
+[Add the toolchain](#add-the-toolchain) creates. A repository without a `hub`
+input has no pinned revision, and Nix stops with the error `cannot find flake
+'flake:hub' in the flake registries`. Add the input first.
 
 ## Extend the Renovate preset
 
@@ -71,8 +109,8 @@ the hub.
 Some tools read only a file in the repository. The `sync-config` app copies
 the hub's version of each file into the repository.
 
-1. Run `nix run github:sealambda/.github#sync-config` in the repository root.
-   Commit the files that it writes.
+1. Run `nix run --inputs-from . hub#sync-config` in the repository root, as
+   [Run a hub app](#run-a-hub-app) explains. Commit the files that it writes.
 2. Create the `Repository` Vale vocabulary,
    `.vale/styles/config/vocabularies/Repository/accept.txt`, with one term per
    line. An empty file is valid. The synced `.vale.ini` lists this vocabulary,
@@ -114,11 +152,12 @@ the hub's version of each file into the repository.
    finds no styles and reports the same error. Start the editor from the dev
    shell, or use direnv with the flake.
 
-4. To fail CI when a copy differs from the hub, add the check to the
-   repository's `flake.nix`:
+4. To fail CI when a copy differs from the hub, add this attribute next to
+   `formatting` in the set that `checks` defines through `forAllSystems`
+   ([Add the toolchain](#add-the-toolchain)):
 
    ```nix
-   checks.aarch64-darwin.config-in-sync = hub.lib.mkConfigCheck pkgs self;
+   config-in-sync = hub.lib.mkConfigCheck pkgs self;
    ```
 
 The check compares the copies with the hub revision that `flake.lock` pins. To
@@ -137,16 +176,17 @@ its configuration from the repository, so the repository needs the files that
 `sync-config` writes and the `Repository` Vale vocabulary
 ([Sync the tool configuration](#sync-the-tool-configuration)).
 
-1. Add the check to the repository's `flake.nix`. Pass `self`, not a list of
-   Markdown files, because lychee also checks links to files that aren't
-   Markdown.
+1. Add the check to the set that `checks` defines through `forAllSystems` in the
+   repository's `flake.nix`. Pass `self`, not a list of Markdown files, because
+   lychee also checks links to files that aren't Markdown.
 
    ```nix
-   checks.aarch64-darwin.docs = hub.lib.mkDocsCheck pkgs self;
+   docs = hub.lib.mkDocsCheck pkgs self;
    ```
 
 2. Run `nix flake check`. To run only this check, run
-   `nix build .#checks.aarch64-darwin.docs -L`. CI needs no separate job: the
+   `nix build .#checks.<system>.docs -L`, with your system for `<system>`, such
+   as `aarch64-darwin`. CI needs no separate job: the
    job that runs `nix flake check` runs this check too.
 3. If the repository called the hub's earlier `docs.yml` workflow, remove that
    call. The hub no longer offers the workflow.
@@ -159,6 +199,39 @@ its configuration from the repository, so the repository needs the files that
 For an interactive run or an editor, use the `docs` dev shell. A personal
 global Vale configuration can change the result there. The check is the
 reference result.
+
+## Gate the decision records
+
+The `decisions` check validates the front matter of the decision records and
+the ledger of deleted records, and it fails on a citation of a record, a spec or
+a page that doesn't resolve. [Decision records](../reference/decision-records.md)
+defines each rule. The check reads no network and no personal configuration.
+
+1. Add the check to the set that `checks` defines through `forAllSystems` in the
+   repository's `flake.nix`. Pass `self`, because the check reads every text
+   file. Set `repository` to the name of the repository on GitHub. The check
+   uses it to tell a citation of this repository from a citation of another one.
+
+   ```nix
+   decisions = hub.lib.mkDecisionsCheck pkgs self {
+     repository = "sealambda/<repo>";
+     exclude = [ ];
+   };
+   ```
+
+2. Run `nix build .#checks.<system>.decisions -L`. Each finding is a line
+   `path:line: message`. CI needs no separate job: the job that runs
+   `nix flake check` runs this check too.
+3. Fix the findings of the first run. A record often has the status
+   `superseded` or `deprecated`, which the schema doesn't allow: delete a
+   replaced record and list it in the ledger, as the reference says.
+4. Add a path to `exclude` for a file that holds citations on purpose, such as a
+   test fixture. The path is relative to the root of the repository.
+
+The check builds its tool from the hub's own nixpkgs, whatever nixpkgs the
+repository follows. Every repository then runs the same version of the tool, and
+`nix flake update hub` updates it. [ADR 0005](../decisions/0005-check-decision-records-with-a-hermetic-flake-check.md)
+gives the reasons.
 
 ## Call the reusable workflow
 
