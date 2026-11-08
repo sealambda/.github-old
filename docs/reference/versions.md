@@ -25,6 +25,7 @@ shell is `base`.
 | `docs` | Vale | `vale` |
 | `docs` | Vale style Microsoft | `valeStyles.microsoft` |
 | `docs` | Vale style Readability | `valeStyles.readability` |
+| `docs` | Vale style Sealambda | The hub's `vale/Sealambda` folder |
 
 ## Rules
 

@@ -28,6 +28,13 @@
       # Applies `f` to the package set of each supported system.
       eachSystem = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
 
+      # The hub's own package set for the system of the caller's `pkgs`. A check
+      # that builds its tools from this set, and not from the caller's `pkgs`,
+      # runs the same tool versions in every consumer, whatever nixpkgs the
+      # consumer follows. `mkDocsCheck` and `mkDecisionsCheck` use it. Only the
+      # system is taken from `pkgs`, so the call of a consumer keeps working.
+      hubPackagesFor = pkgs: nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+
       /**
         Evaluates the organization's treefmt module and returns the treefmt-nix
         evaluation. Use `.config.build.wrapper` as `formatter` and
@@ -56,16 +63,36 @@
 
       treefmtFor = eachSystem (pkgs: mkTreefmt pkgs [ ]);
 
+      # The rule files of the Sealambda Vale style, without their test cases.
+      # A change to a test case then doesn't rebuild the style.
+      valeStyleRules = nixpkgs.lib.fileset.toSource {
+        root = ./vale/Sealambda;
+        fileset = nixpkgs.lib.fileset.fileFilter (
+          file: file.hasExt "yml" && !(nixpkgs.lib.hasSuffix ".test.yml" file.name)
+        ) ./vale/Sealambda;
+      };
+
+      # The Sealambda Vale style as a package with the layout of the styles in
+      # nixpkgs: `share/vale/styles/Sealambda`. `vale.withStyles` links it next
+      # to the styles of nixpkgs. The source is `vale/Sealambda`, because
+      # `.gitignore` hides the style directories under `.vale/styles`.
+      mkValeStyleSealambda =
+        pkgs:
+        pkgs.runCommand "vale-style-sealambda" { } ''
+          install -D -m 644 -t "$out/share/vale/styles/Sealambda" ${valeStyleRules}/*.yml
+        '';
+
       /**
         Builds the documentation tools from one package set: the three tools of
         the `docs` dev shell and of `mkDocsCheck`, and the `check-docs` command
-        that runs them. A consumer whose nixpkgs follows `hub/nixpkgs` gets the
-        hub's versions.
+        that runs them. The Vale of these tools has the styles Microsoft and
+        Readability from nixpkgs and the hub's own style Sealambda.
 
         # Inputs
 
         `pkgs`
-        : The package set of one system.
+        : The package set of one system. The hub's `docs` shell and
+          `mkDocsCheck` pass the hub's own package set.
 
         # Type
 
@@ -78,14 +105,16 @@
         let
           # Vale and the styles that `BasedOnStyles` in `config/vale.ini` names:
           # keep both lists the same. A difference fails loudly, because Vale
-          # reports "Style isn't on StylesPath". The styles come from nixpkgs, so
-          # `flake.lock` pins them and no run downloads them. `withStyles` sets
-          # `VALE_STYLES_PATH` to its `share/vale/styles`, and Vale finds the
-          # styles there. The project `StylesPath` holds only the vocabularies.
-          # Vale ignores that variable when it runs with `--no-global`.
+          # reports "Style isn't on StylesPath". The styles of nixpkgs are
+          # pinned by `flake.lock`, the style Sealambda is in this repository,
+          # and no run downloads a style. `withStyles` sets `VALE_STYLES_PATH` to
+          # its `share/vale/styles`, and Vale finds the styles there. The
+          # project `StylesPath` holds only the vocabularies. Vale ignores that
+          # variable when it runs with `--no-global`.
           valeWithStyles = pkgs.vale.withStyles (styles: [
             styles.microsoft
             styles.readability
+            (mkValeStyleSealambda pkgs)
           ]);
 
           # The three documentation tools, listed once for `checkDocs` and for
@@ -182,15 +211,20 @@
       /**
         Builds a check that lints the Markdown files of a source tree with
         markdownlint-cli2, lychee and Vale, and fails when a tool reports a
-        problem. The tools come from the given `pkgs`, so a consumer whose
-        nixpkgs follows `hub/nixpkgs` gets the hub's versions. Where the Nix
-        sandbox is enabled, which it always is on Linux CI, the check reads each
-        tool's configuration from `src` and no personal configuration of the
-        user, and it needs no network: lychee runs offline, the Vale styles are
-        in the Nix store, and the trust store that lychee loads at startup comes
-        from Nix too. The same command runs locally and in CI:
-        `nix flake check`, or `nix build .#checks.<system>.docs -L`. A local
-        re-run on an unchanged `src` reuses the result by the hash of `src`.
+        problem. The tools come from the hub's own nixpkgs, whatever nixpkgs the
+        calling flake uses: the function takes only the system from `pkgs`, the
+        same as `mkDecisionsCheck`. Every consumer then runs one version of each
+        tool and of each Vale style, so the same page gets the same result in
+        every repository, and a consumer needs no `nixpkgs.follows =
+        "hub/nixpkgs"` for this check. A bump of the hub in `flake.lock` updates
+        the tools. Where the Nix sandbox is enabled, which it always is on Linux
+        CI, the check reads each tool's configuration from `src` and no personal
+        configuration of the user, and it needs no network: lychee runs offline,
+        the Vale styles are in the Nix store, and the trust store that lychee
+        loads at startup comes from Nix too. The same command runs locally and
+        in CI: `nix flake check`, or `nix build .#checks.<system>.docs -L`. A
+        local re-run on an unchanged `src` reuses the result by the hash of
+        `src`.
 
         Pass the whole `self` of the calling flake, not a set of Markdown
         files, because lychee also checks links to files that are not
@@ -200,7 +234,7 @@
         # Inputs
 
         `pkgs`
-        : The package set of one system.
+        : The package set of one system. Only its system is used.
 
         `src`
         : The source tree to check, normally the `self` of the calling flake.
@@ -213,8 +247,11 @@
       */
       mkDocsCheck =
         pkgs: src:
-        pkgs.runCommand "docs" { } ''
-          HOME="$TMPDIR" ${nixpkgs.lib.getExe (mkDocsTools pkgs).checkDocs} ${src}
+        let
+          hubPkgs = hubPackagesFor pkgs;
+        in
+        hubPkgs.runCommand "docs" { } ''
+          HOME="$TMPDIR" ${nixpkgs.lib.getExe (mkDocsTools hubPkgs).checkDocs} ${src}
           touch "$out"
         '';
 
@@ -283,8 +320,7 @@
         The tool comes from the hub's own nixpkgs, whatever nixpkgs the calling
         flake uses: the function takes only the system from `pkgs`. Every
         consumer then gets one version of the tool and of its Python libraries.
-        This differs from `mkDocsCheck`, which builds its tools from the given
-        `pkgs`.
+        `mkDocsCheck` does the same.
 
         Pass the whole `self` of the calling flake.
 
@@ -321,7 +357,7 @@
           exclude ? [ ],
         }:
         let
-          hubPkgs = nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+          hubPkgs = hubPackagesFor pkgs;
           excludeFlags = nixpkgs.lib.concatMapStringsSep " " (
             path: "--exclude ${nixpkgs.lib.escapeShellArg path}"
           ) exclude;
@@ -407,17 +443,33 @@
         formatting = treefmtFor.${pkgs.stdenv.hostPlatform.system}.config.build.check self;
 
         # Runs the tests of `nix/scripts/check-docs.sh`. The tests need a
-        # writable HOME and the commands `check-docs` and `sync-config` on PATH.
+        # writable HOME and the commands `check-docs`, `sync-config` and `vale`
+        # on PATH. `vale` is the Vale with the hub's styles.
         check-docs-tests =
           pkgs.runCommand "check-docs-tests"
             {
               nativeBuildInputs = [
                 docsToolsFor.${pkgs.stdenv.hostPlatform.system}.checkDocs
+                docsToolsFor.${pkgs.stdenv.hostPlatform.system}.valeWithStyles
                 (mkSyncConfig pkgs)
               ];
             }
             ''
               HOME="$TMPDIR" bash ${./nix/tests/check-docs.sh}
+              touch "$out"
+            '';
+
+        # Runs the test cases of the Sealambda Vale style,
+        # `vale/Sealambda/*.test.yml`. `--coverage` makes a rule without a test
+        # case fail. The cases hold the words of the rules in a YAML file, so the
+        # hub's own `docs` check never lints them.
+        vale-style-tests =
+          pkgs.runCommand "vale-style-tests"
+            {
+              nativeBuildInputs = [ pkgs.vale ];
+            }
+            ''
+              HOME="$TMPDIR" vale test --coverage --no-wrap ${./vale/Sealambda}
               touch "$out"
             '';
 

@@ -74,6 +74,11 @@ and use one term for one concept.
   explanation pages, moves its decisions into decision records, opens issues
   for what remains, and deletes the spec. Code cites the current pages, never a
   spec.
+- The Vale rule `Sealambda.CurrentState` fails the `docs` check. The rule
+  `Sealambda.History` shows only in an editor that runs Vale, because the check
+  runs Vale with `--minAlertLevel=error`.
+  [Writing style](https://github.com/sealambda/.github/blob/main/docs/reference/writing-style.md)
+  defines both.
 
 ### Decision records
 

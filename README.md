@@ -28,7 +28,8 @@ and keeps its own facts.
   `sync-config` app copies the files, and the `config-in-sync` check fails
   when a copy differs.
 - **CI building blocks.** The reusable workflow `secrets.yml` (gitleaks), the
-  flake check `lib.mkDocsCheck` (markdownlint-cli2, lychee and Vale), and the
+  flake check `lib.mkDocsCheck` (markdownlint-cli2, lychee and Vale with the
+  hub's own style, which keeps pages in the present tense), and the
   flake check `lib.mkDecisionsCheck`, which validates the decision records and
   every citation of a record, a spec or a page. The JSON Schemas of the records
   and the ledger are in `schemas/`. The `decisions` app retires a record into
@@ -44,8 +45,9 @@ The pages follow [Diátaxis](https://diataxis.fr/).
   [Retire a decision record](docs/how-to/retire-a-decision-record.md).
 - **Reference.** [Toolchain versions](docs/reference/versions.md),
   [Elixir quality checks](docs/reference/elixir-qa.md), the
-  [Renovate preset](docs/reference/renovate-preset.md) and
-  [decision records](docs/reference/decision-records.md).
+  [Renovate preset](docs/reference/renovate-preset.md),
+  [decision records](docs/reference/decision-records.md) and
+  [writing style](docs/reference/writing-style.md).
 - **Explanation.** The [decision records](docs/decisions/) say why the hub
   works as it does. [ADR 0005](docs/decisions/0005-check-decision-records-with-a-hermetic-flake-check.md)
   explains the decision records check.

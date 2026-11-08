@@ -65,7 +65,10 @@ Three further choices:
   the system from the `pkgs` that the caller passes, and builds the tool from
   the hub's nixpkgs. Every repository then runs one version of Python, PyYAML
   and `jsonschema`, whatever nixpkgs it follows, and a change to the checker
-  reaches a repository by a bump of the hub in `flake.lock`.
+  reaches a repository by a bump of the hub in `flake.lock`. `mkDocsCheck`
+  follows the same rule: it also takes only the system from `pkgs`, so every
+  repository runs one version of markdownlint-cli2, lychee, Vale and the Vale
+  styles. A repository needs no `nixpkgs.follows` for either check.
 
 ### Consequences
 
