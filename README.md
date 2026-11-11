@@ -4,7 +4,9 @@ This repository holds Sealambda's engineering standards. It isn't a community
 project. It's public because GitHub reads default community files only from a
 public `.github` repository, and private repositories consume it without
 credentials ([ADR 0002](docs/decisions/0002-public-hub-repository.md)). It
-holds no secrets and no operational detail.
+holds no secrets and no operational detail, and the
+[leak check](docs/reference/leak-check.md) fails when a file holds a private
+name or identifier.
 
 Sealambda repositories consume it. Each repository adopts the parts it needs
 and keeps its own facts.
@@ -46,8 +48,9 @@ The pages follow [Diátaxis](https://diataxis.fr/).
 - **Reference.** [Toolchain versions](docs/reference/versions.md),
   [Elixir quality checks](docs/reference/elixir-qa.md), the
   [Renovate preset](docs/reference/renovate-preset.md),
-  [decision records](docs/reference/decision-records.md) and
-  [writing style](docs/reference/writing-style.md).
+  [decision records](docs/reference/decision-records.md),
+  [writing style](docs/reference/writing-style.md) and the
+  [leak check](docs/reference/leak-check.md).
 - **Explanation.** The [decision records](docs/decisions/) say why the hub
   works as it does. [ADR 0005](docs/decisions/0005-check-decision-records-with-a-hermetic-flake-check.md)
   explains the decision records check.
