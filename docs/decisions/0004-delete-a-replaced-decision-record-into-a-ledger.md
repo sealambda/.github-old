@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-08
+date: 2026-11-11
 decision-makers: Sealambda maintainers
 ---
 
@@ -50,8 +50,8 @@ format of the record, the ledger and the citations. The hub's
 
 No surveyed source deletes a record, so this is a deliberate deviation from
 them. The deviation keeps their main rule, which is that an accepted record is
-immutable. The `sealambda/infra` repository decided this first, in its record
-0038. This record makes the rule that of every Sealambda repository.
+immutable. One repository of the organization decided this first. This record
+makes the rule that of every Sealambda repository.
 
 ### Consequences
 

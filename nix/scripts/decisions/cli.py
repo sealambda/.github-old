@@ -116,7 +116,7 @@ def _build_parser() -> _Parser:
         required=True,
         metavar="OWNER/NAME",
         help="the repository that holds ROOT; a citation that another "
-        "repository qualifies, as in 'sealambda/infra ADR 0038', is skipped",
+        "repository qualifies, as in 'sealambda/quints ADR 0038', is skipped",
     )
     _add_exclude(check)
 

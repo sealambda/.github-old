@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/sealambda/.github/blob/main/schemas/superseded.schema.json",
   "title": "Ledger of deleted decision records",
-  "description": "docs/decisions/superseded.yaml: one entry for each record that a pull request deleted. The decisions check validates the file against this schema. The entries are those of the ledger in sealambda/infra, except that `successor` is optional: an entry without it is a withdrawn record.",
+  "description": "docs/decisions/superseded.yaml: one entry for each record that a pull request deleted. The decisions check validates the file against this schema. The `successor` field is optional: an entry without it is a withdrawn record.",
   "type": "array",
   "items": { "$ref": "#/$defs/entry" },
   "$defs": {

@@ -39,7 +39,6 @@ blocks, so a flag or a command in code font never matches.
 
 These words mark a plan or a gap. A page that has them describes a system that
 doesn't exist yet. Write what's true today, and open an issue for the rest.
-The rule is the same as the rule of the `sealambda/infra` repository.
 
 The words `target` and `planned` aren't on the list. Each has a true present
 meaning, such as a build target or a planned maintenance window, that a word

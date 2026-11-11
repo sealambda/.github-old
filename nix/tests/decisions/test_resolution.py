@@ -460,9 +460,9 @@ class SpecAndPathCitationTest(TreeTestCase):
         """A citation that another repository qualifies is not checked here."""
         self.write(
             {
-                "notes.md": "In sealambda/infra ADR 0042 holds, as "
-                "[its ADR 0043](https://github.com/sealambda/infra/blob/main/"
-                "docs/adr/0043-x.md) and https://github.com/sealambda/infra/blob/"
+                "notes.md": "In example/other ADR 0042 holds, as "
+                "[its ADR 0043](https://github.com/example/other/blob/main/"
+                "docs/adr/0043-x.md) and https://github.com/example/other/blob/"
                 "main/docs/decisions/0044-y.md say.\n"
             }
         )
@@ -472,7 +472,7 @@ class SpecAndPathCitationTest(TreeTestCase):
         """Naming a repository in a sentence does not excuse its other citations."""
         self.write(
             {
-                "notes.md": "The sealambda/infra repository differs, "
+                "notes.md": "The example/other repository differs, "
                 "but ADR 0042 is ours.\n"
             }
         )

@@ -7,7 +7,7 @@ from types import FrameType
 
 from decisions.citations import CitationKind, scan_text
 
-REPO = "sealambda/hub-test"
+REPO = "example/hub-test"
 RECORD = CitationKind.RECORD_NUMBER
 FILE = CitationKind.RECORD_FILE
 SPEC = CitationKind.SPEC_NUMBER
@@ -106,7 +106,7 @@ class RecordFormTest(unittest.TestCase):
 
     def test_address_of_this_repository_names_a_record(self) -> None:
         """`blob` and `tree` addresses of the repository count, in any letter case."""
-        base = "https://github.com/Sealambda/HUB-test"
+        base = "https://github.com/Example/HUB-test"
         self.assertEqual(
             scan(f"{base}/blob/main/docs/decisions/0001-x.md"),
             [(RECORD, "0001", 1), (FILE, "0001-x.md", 1)],
@@ -120,8 +120,8 @@ class RecordFormTest(unittest.TestCase):
         base = "https://github.com"
         for address in (
             f"{base}/other/hub-test/blob/main/docs/decisions/0001-x.md",
-            f"{base}/sealambda/hub/blob/main/docs/decisions/0001-x.md",
-            f"{base}/sealambda/hub-test2/blob/main/docs/decisions/0001-x.md",
+            f"{base}/example/hub/blob/main/docs/decisions/0001-x.md",
+            f"{base}/example/hub-test2/blob/main/docs/decisions/0001-x.md",
         ):
             with self.subTest(address=address):
                 self.assertEqual(scan(address), [])
@@ -309,7 +309,7 @@ class RangeTest(unittest.TestCase):
 
     def test_foreign_repository_skips_every_number_of_a_range(self) -> None:
         """A range that another repository qualifies is not about this one."""
-        text = "In `sealambda/infra`, ADRs 0001 to 0003 hold. ADRs 0005 to 0006 hold."
+        text = "In `example/other`, ADRs 0001 to 0003 hold. ADRs 0005 to 0006 hold."
         self.assertEqual(scan(text), records("0005", "0006"))
 
 
@@ -639,23 +639,23 @@ class ForeignCitationTest(unittest.TestCase):
     """A citation that another repository qualifies is skipped, and no other."""
 
     def test_name_before_a_citation_skips_that_citation_only(self) -> None:
-        """`sealambda/infra ADR 0002` is infra's; its neighbors are the hub's."""
-        text = "ADR 0001 holds. In `sealambda/infra`, ADR 0002 holds. ADR 0003 holds."
+        """`example/other ADR 0002` is foreign; its neighbors are the hub's."""
+        text = "ADR 0001 holds. In `example/other`, ADR 0002 holds. ADR 0003 holds."
         self.assertEqual(scan(text), [(RECORD, "0001", 1), (RECORD, "0003", 1)])
 
     def test_name_in_a_sentence_does_not_skip_the_other_citations(self) -> None:
         """A sentence that names a repository and cites a record of its own."""
-        text = "ADR 0004 says `sealambda/infra` ADR 0038 differs, as ADR 0005 does."
+        text = "ADR 0004 says `example/other` ADR 0038 differs, as ADR 0005 does."
         self.assertEqual(scan(text), [(RECORD, "0004", 1), (RECORD, "0005", 1)])
 
     def test_hub_text_about_a_record_of_another_repository_still_counts(self) -> None:
         """Text that only names the repository and then talks on is the hub's."""
-        text = "The sealambda/infra repository keeps a record. See ADR 0004 here."
+        text = "The example/other repository keeps a record. See ADR 0004 here."
         self.assertEqual(scan(text), [(RECORD, "0004", 1)])
 
     def test_qualified_citation_wrapped_over_lines_is_skipped(self) -> None:
         """The repository name and the citation may sit on different lines."""
-        text = "See `sealambda/infra`\nADR 0038 and ADR 0004."
+        text = "See `example/other`\nADR 0038 and ADR 0004."
         self.assertEqual(scan(text), [(RECORD, "0004", 2)])
 
     def test_every_citation_in_a_foreign_address_is_skipped(self) -> None:
@@ -671,8 +671,8 @@ class ForeignCitationTest(unittest.TestCase):
     def test_citation_in_a_foreign_markdown_link_is_skipped(self) -> None:
         """The text and the address of one link are the same citation."""
         text = (
-            "[ADR 0038](https://github.com/sealambda/infra/blob/main/docs/adr/x.md) "
-            "and [sealambda/infra ADR 0039](https://example.org/x) and ADR 0004."
+            "[ADR 0038](https://github.com/example/other/blob/main/docs/adr/x.md) "
+            "and [example/other ADR 0039](https://example.org/x) and ADR 0004."
         )
         self.assertEqual(scan(text), [(RECORD, "0004", 1)])
 
@@ -689,16 +689,16 @@ class ForeignCitationTest(unittest.TestCase):
                 )
 
     def test_short_name_is_foreign_in_any_letter_case(self) -> None:
-        """`Sealambda/infra` qualifies the citation after it, as `sealambda/infra`."""
+        """`Example/Other` qualifies the citation after it, as `example/other`."""
         self.assertEqual(
-            scan("`Sealambda/Infra` ADR 0002 and ADR 0003."), [(RECORD, "0003", 1)]
+            scan("`Example/Other` ADR 0002 and ADR 0003."), [(RECORD, "0003", 1)]
         )
 
     def test_short_name_takes_its_owner_from_the_checked_repository(self) -> None:
-        """In `acme/hub`, `acme/infra` is foreign and `sealambda/infra` is not."""
+        """In `acme/hub`, `acme/other` is foreign and `example/other` is not."""
         path = PurePosixPath("notes.md")
         found = scan_text(
-            "`acme/infra` ADR 0001 and `sealambda/infra` ADR 0002.",
+            "`acme/other` ADR 0001 and `example/other` ADR 0002.",
             "acme/hub",
             path=path,
             prose=True,
@@ -708,8 +708,8 @@ class ForeignCitationTest(unittest.TestCase):
     def test_own_repository_is_not_foreign(self) -> None:
         """The named repository, by URL or short name, is not foreign."""
         text = (
-            "See https://github.com/sealambda/hub-test/blob/main/docs/decisions/"
-            "0001-x.md and sealambda/hub-test. ADR 0002."
+            "See https://github.com/example/hub-test/blob/main/docs/decisions/"
+            "0001-x.md and example/hub-test. ADR 0002."
         )
         self.assertEqual(
             scan(text),
@@ -718,17 +718,17 @@ class ForeignCitationTest(unittest.TestCase):
 
     def test_hub_style_repository_name(self) -> None:
         """The name `.github` ends at a slash, and a final dot is punctuation."""
-        hub = "sealambda/.github"
+        hub = "example/.github"
         path = PurePosixPath("notes.md")
         own = scan_text(
-            "Use sealambda/.github/x.yml. ADR 0001.", hub, path=path, prose=True
+            "Use example/.github/x.yml. ADR 0001.", hub, path=path, prose=True
         )
-        other = scan_text("Use sealambda/infra. ADR 0001.", hub, path=path, prose=True)
+        other = scan_text("Use example/other. ADR 0001.", hub, path=path, prose=True)
         self.assertEqual([c.value for c in own], ["0001"])
         # The final dot ends the name, so the next sentence counts.
         self.assertEqual([c.value for c in other], ["0001"])
         # A foreign name before a citation, in a line of code, qualifies it.
-        line = scan_text("sealambda/infra ADR 0001", hub, path=path, prose=False)
+        line = scan_text("example/other ADR 0001", hub, path=path, prose=False)
         self.assertEqual(line, [])
 
     def test_other_github_hosts_are_not_repositories(self) -> None:
@@ -761,13 +761,13 @@ class SegmentationTest(unittest.TestCase):
 
     def test_foreign_line_in_code_does_not_hide_other_lines(self) -> None:
         """A repository name in one line of code does not skip the next line."""
-        text = "# sealambda/infra ADR 0001\n# ADR 0002\n"
+        text = "# example/other ADR 0001\n# ADR 0002\n"
         self.assertEqual(scan(text, prose=False), [(RECORD, "0002", 2)])
 
     def test_table_rows_and_list_items_are_separate_segments(self) -> None:
         """A foreign row of a table or item of a list does not hide the others."""
-        table = "| a | sealambda/infra ADR 0001 |\n| b | ADR 0002 |\n"
-        items = "- sealambda/infra ADR 0001\n- ADR 0002\n"
+        table = "| a | example/other ADR 0001 |\n| b | ADR 0002 |\n"
+        items = "- example/other ADR 0001\n- ADR 0002\n"
         self.assertEqual(scan(table), [(RECORD, "0002", 2)])
         self.assertEqual(scan(items), [(RECORD, "0002", 2)])
 
@@ -786,9 +786,9 @@ class ScanTimeTest(unittest.TestCase):
         the line from each `[` needs hours on this text, and a plain assertion
         would hang the whole run. A timer signal turns the hang into a failure.
         """
-        text = "sealambda/other ADR 0001 " + "[" * 1_000_000
+        text = "example/other ADR 0001 " + "[" * 1_000_000
         self.assertEqual(self.scan_within_limit(text), [])
-        text = "sealambda/other ADR 0001 " + "[a](" * 250_000
+        text = "example/other ADR 0001 " + "[a](" * 250_000
         self.assertEqual(self.scan_within_limit(text), [])
 
     @unittest.skipUnless(hasattr(signal, "setitimer"), "needs POSIX interval timers")

@@ -15,8 +15,7 @@
 # The words "target" and "planned" aren't listed: they have a true present
 # meaning (a build target, a planned maintenance window) that a word list can't
 # tell from a plan.
-# Level: error. Tests: CurrentState.test.yml. This rule is the same as the rule
-# of the sealambda/infra repository.
+# Level: error. Tests: CurrentState.test.yml.
 extends: existence
 message: "'%s' describes a plan or a gap. Describe what is true today and link to an issue."
 link: https://github.com/sealambda/.github/blob/main/docs/reference/writing-style.md#current-state

@@ -92,8 +92,8 @@ Rules for the entries:
   the entries that name it name its successor.
 - Only the ledger and the successor of a deleted record cite its number.
 
-The fields are the same as those of the ledger in the `sealambda/infra`
-repository, so an entry written there stays valid here.
+A ledger entry keeps its fields when it moves between repositories that use
+this format.
 
 ## Citations
 

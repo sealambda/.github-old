@@ -27,18 +27,18 @@ class LedgerRulesTest(TreeTestCase):
         )
         self.assertEqual(self.findings(), [])
 
-    def test_infra_style_entry_is_valid(self) -> None:
-        """An entry as `sealambda/infra` writes it: unquoted date and hash."""
+    def test_unquoted_date_and_hash_entry_is_valid(self) -> None:
+        """An entry with an unquoted date and an unquoted hash is valid."""
         self.write(
             {
-                "docs/decisions/0043-current.md": record_text(),
+                "docs/decisions/0002-current.md": record_text(),
                 LEDGER: (
                     '- number: "0001"\n'
-                    '  title: "What `sealambda/infra` owns and what an app owns"\n'
-                    "  commit: c4c0ff2bc26b0b6e787e0321011b8c86e5e25330\n"
-                    "  path: docs/adr/0001-boundary.md\n"
-                    '  successor: "0043"\n'
-                    "  date: 2026-10-26\n"
+                    '  title: "A deleted record"\n'
+                    "  commit: 0123456789abcdef0123456789abcdef01234567\n"
+                    "  path: docs/decisions/0001-deleted.md\n"
+                    '  successor: "0002"\n'
+                    "  date: 2026-01-15\n"
                 ),
             }
         )
