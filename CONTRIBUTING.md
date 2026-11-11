@@ -43,6 +43,7 @@ Assisted-by: <tool> (<model>)
 - Update a branch by rebase. Never merge the base into it.
 - Make dependent changes a stack: one pull request per layer, each on the
   branch of the layer below.
+- A contribution is under the license of the repository that it changes.
 
 ## Review and landing
 

@@ -597,6 +597,30 @@
               touch "$out"
             '';
 
+        # Fails when a file of the hub has no copyright and license, when a
+        # license that `REUSE.toml` names has no text in `LICENSES/`, or when
+        # `LICENSES/` holds a text that nothing uses: `reuse lint` checks the
+        # tree against the REUSE specification. It also fails when the root
+        # `LICENSE`, which GitHub reads, differs from `LICENSES/MPL-2.0.txt`.
+        # The check needs no network and no Git history: the tool reads the
+        # source tree in the Nix store. It cannot tell that a new file is
+        # third-party content (`docs/reference/licensing.md`).
+        licenses =
+          pkgs.runCommand "licenses"
+            {
+              nativeBuildInputs = [ pkgs.reuse ];
+            }
+            ''
+              export HOME="$TMPDIR"
+              cd ${self}
+              reuse lint
+              if ! cmp LICENSE LICENSES/MPL-2.0.txt; then
+                echo "licenses: LICENSE differs from LICENSES/MPL-2.0.txt" >&2
+                exit 1
+              fi
+              touch "$out"
+            '';
+
         # Formats, lints and type-checks the hub's Python with ruff and mypy,
         # configured in `pyproject.toml`. Only the hub runs this check: it is
         # not part of `mkTreefmt`.

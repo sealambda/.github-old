@@ -1,0 +1,42 @@
+# Copyright and license of every file of the hub, in the format of the REUSE
+# specification 3.3 (https://reuse.software/spec-3.3/). The flake check
+# `licenses` runs `reuse lint` against this file. The reference page is
+# `docs/reference/licensing.md`, and the procedure for new third-party content
+# is `docs/how-to/add-third-party-content.md`.
+#
+# When two tables of this file cover the same file, only the last one applies
+# to that file, as a whole. So the table for all files comes first, and each
+# table for third-party content follows it. A table for third-party content
+# lists every copyright notice of its file and the whole license expression,
+# because it replaces the first table and does not add to it.
+#
+# `precedence` stays at its default `closest`: a file that holds its own
+# copyright or license tags keeps them, and this file covers only the files
+# without tags. The hub has no such file.
+#
+# `LICENSE` and the folder `LICENSES/` are not covered files, so the tool
+# reads no table for them. `LICENSES/` holds the text of each license that a
+# table names, and `LICENSE` is the copy of `LICENSES/MPL-2.0.txt` that GitHub
+# reads to show the license of the repository. The check compares the two.
+
+version = 1
+
+# Everything that Sealambda wrote.
+[[annotations]]
+path = "**"
+SPDX-FileCopyrightText = "2026 Sealambda"
+SPDX-License-Identifier = "MPL-2.0"
+
+# The decision record template is the MADR 4.0.0 template,
+# `template/adr-template.md` in https://github.com/adr/madr at the tag
+# `4.0.0`, with a changed front matter. MADR offers its files under the MIT
+# license or CC0 1.0: its file `LICENSE` reads "MIT OR CC0-1.0", and its file
+# `LICENSE.MIT` names the copyright holders below. The hub's change to the
+# file is under the same terms, so the expression is the upstream one.
+[[annotations]]
+path = "templates/adr.md.tmpl"
+SPDX-FileCopyrightText = [
+  "2017-2022 Oliver Kopp, Olaf Zimmermann",
+  "2026 Sealambda",
+]
+SPDX-License-Identifier = "MIT OR CC0-1.0"

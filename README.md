@@ -43,14 +43,16 @@ The pages follow [Diátaxis](https://diataxis.fr/).
 
 - **How-to guides.**
   [Adopt the hub in a repository](docs/how-to/adopt-the-hub.md),
-  [Change a toolchain version](docs/how-to/change-a-toolchain-version.md) and
-  [Retire a decision record](docs/how-to/retire-a-decision-record.md).
+  [Change a toolchain version](docs/how-to/change-a-toolchain-version.md),
+  [Retire a decision record](docs/how-to/retire-a-decision-record.md) and
+  [Add third-party content](docs/how-to/add-third-party-content.md).
 - **Reference.** [Toolchain versions](docs/reference/versions.md),
   [Elixir quality checks](docs/reference/elixir-qa.md), the
   [Renovate preset](docs/reference/renovate-preset.md),
   [decision records](docs/reference/decision-records.md),
-  [writing style](docs/reference/writing-style.md) and the
-  [leak check](docs/reference/leak-check.md).
+  [writing style](docs/reference/writing-style.md), the
+  [leak check](docs/reference/leak-check.md) and
+  [licensing](docs/reference/licensing.md).
 - **Explanation.** The [decision records](docs/decisions/) say why the hub
   works as it does. [ADR 0005](docs/decisions/0005-check-decision-records-with-a-hermetic-flake-check.md)
   explains the decision records check.
@@ -64,4 +66,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md). To report a vulnerability, read
 
 ## License
 
-[Mozilla Public License 2.0](LICENSE).
+The hub is licensed under the [Mozilla Public License 2.0](LICENSE), SPDX
+identifier `MPL-2.0`. [Licensing](docs/reference/licensing.md) lists the
+third-party content and the license of each part, and the flake check
+`licenses` verifies the data.
