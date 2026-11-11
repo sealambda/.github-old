@@ -6,7 +6,12 @@
 [tool.ruff]
 target-version = "py314"
 line-length = 88
-src = ["nix/scripts", "nix/tests/decisions", "nix/tests/leaks"]
+src = [
+  "nix/scripts",
+  "nix/tests/decisions",
+  "nix/tests/leaks",
+  "nix/tests/versions",
+]
 
 [tool.ruff.lint]
 select = [

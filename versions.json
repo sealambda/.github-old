@@ -1,0 +1,4 @@
+{
+  "$schema": "./schemas/versions.schema.json",
+  "nix": "2.35.4"
+}
