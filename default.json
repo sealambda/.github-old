@@ -39,6 +39,14 @@
       "minimumReleaseAge": null
     },
     {
+      "description": "A digest update of a reusable workflow from this hub is not held back. The wait lets people vet third-party releases, and for the organization's own hub it only delays a fix. Renovate ages the update by the date of the head commit of the hub's main branch, so without this rule a pin to a hub commit that no longer exists waits until the head commit is 7 days old.",
+      "matchManagers": ["github-actions"],
+      "matchDepTypes": ["workflow"],
+      "matchDepNames": ["sealambda/.github"],
+      "matchUpdateTypes": ["digest"],
+      "minimumReleaseAge": null
+    },
+    {
       "description": "A development dependency keeps the range that its manifest declares. config:best-practices pins it to one version, and the lock file already fixes the resolved version.",
       "matchDepTypes": ["devDependencies", "dev-dependencies", "dev"],
       "rangeStrategy": "auto"

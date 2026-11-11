@@ -37,6 +37,11 @@ input that follows a Git ref, because none has a release date. The age check
 stays pending for them and Renovate never creates the branch, so two rules
 set `minimumReleaseAge` to `null` for these updates.
 
+A third rule sets `minimumReleaseAge` to `null` for the digest update of a
+reusable workflow from this hub, which a repository pins with `uses:`. Renovate
+ages that update by the date of the head commit of the `main` branch, and the
+wait exists to let people vet third-party releases.
+
 A repository that runs Renovate once a day needs a window of several hours,
 because Renovate acts only when a run falls inside the window. A repository
 that wants no window sets `schedule` to `["* * * * *"]`.
@@ -53,6 +58,7 @@ that wants no window sets `schedule` to `["* * * * *"]`.
 | One pull request for the GitHub Actions. | The same as Mix. |
 | OpenTofu providers come from the OpenTofu registry. | `tofu init` uses that registry. |
 | The `required_version` of a Terraform root is ignored. | It names OpenTofu, which Renovate would look up as Terraform. |
+| The digest update of a reusable workflow from this hub isn't held back by `minimumReleaseAge`. The rule matches the `github-actions` manager, the dependency type `workflow` and the dependency name `sealambda/.github`. | The hub is the organization's own, so the wait only delays a fix. See [Timing](#timing). |
 
 ## Other settings
 
