@@ -4,7 +4,7 @@
     "Sealambda dependency update policy. A repository extends it with github>sealambda/.github and adds its own managers, constraints and package rules.",
     "It builds on config:best-practices, which pins GitHub Actions and Docker images by digest, and sets the commit type to build and the label to dependencies.",
     "A release waits 7 days before Renovate proposes it, so a withdrawn or compromised release is less likely to reach a repository. The Renovate schedule and the lock file maintenance run on Monday mornings and on the first day of the month, in UTC.",
-    "The Nix manager is off by default. It keeps the flake.lock files up to date."
+    "The Nix manager is on. It keeps the flake.lock files up to date, through lock file maintenance."
   ],
   "extends": [
     "config:best-practices",
