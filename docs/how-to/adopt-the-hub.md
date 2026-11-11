@@ -64,7 +64,10 @@ every repository evaluates one nixpkgs revision.
 2. Run `nix flake lock`, then `nix flake check`.
 
 The repository's `flake.lock` pins the hub. To take a newer hub revision, run
-`nix flake update hub`. Renovate opens the same update as a pull request.
+`nix flake update hub`. Renovate opens the same update as a pull request, in its
+lock file maintenance. The lock doesn't move the commit that the reusable
+workflow names. [Call the reusable workflow](#call-the-reusable-workflow)
+explains why the two can differ.
 
 ## Run a hub app
 
@@ -282,13 +285,16 @@ The hub offers the reusable workflow `secrets.yml`. It runs its tool from the
 repository's flake. The comment at the top of the workflow file states what the
 flake must expose.
 
-1. Call the workflow from a job. Pin it to a commit SHA, which Renovate bumps.
-   The `runs-on` input is optional. It takes JSON.
+1. Call the workflow from a job. Pin it to a commit SHA, and write the comment
+   `# main` after the SHA. Renovate skips a SHA that has no comment. With the
+   comment, Renovate bumps the SHA to the head of the hub's `main` branch. The
+   comment holds only the branch name. The `runs-on` input is optional. It takes
+   JSON.
 
    ```yaml
    jobs:
      secrets:
-       uses: sealambda/.github/.github/workflows/secrets.yml@<sha>
+       uses: sealambda/.github/.github/workflows/secrets.yml@<sha> # main
        permissions:
          contents: read
        with:
@@ -297,3 +303,23 @@ flake must expose.
 
 2. List the job in the `needs` of the repository's `ci` job, as the hub's
    `.github/workflows/ci.yml` does.
+
+### Two references to the hub
+
+A repository refers to the hub twice: the commit that `uses:` names, and the
+`hub` input in `flake.lock`. The two move independently, and they need not name
+the same commit:
+
+- The `github-actions` manager of Renovate updates the `uses:` pin, as a digest
+  update of the `main` branch. This is why the comment must be `# main`.
+- The `nix` manager updates the `hub` input, in the lock file maintenance of
+  [the preset](../reference/renovate-preset.md#timing). Renovate never groups
+  lock file maintenance with other updates, so one pull request can't move both
+  references.
+
+The workflow's only contract with its caller is the one in the header of
+`secrets.yml`, so the workflow commit doesn't have to match the commit of the
+toolchain that the flake pins. The
+[preset](../reference/renovate-preset.md#package-rules) doesn't hold back the
+digest update of the pin, so a repository takes a hub fix in the workflow
+without the wait that applies to third-party releases.

@@ -4,7 +4,7 @@
     "Sealambda dependency update policy. A repository extends it with github>sealambda/.github and adds its own managers, constraints and package rules.",
     "It builds on config:best-practices, which pins GitHub Actions and Docker images by digest, and sets the commit type to build and the label to dependencies.",
     "A release waits 7 days before Renovate proposes it, so a withdrawn or compromised release is less likely to reach a repository. The Renovate schedule and the lock file maintenance run on Monday mornings and on the first day of the month, in UTC.",
-    "The Nix manager is off by default. It keeps the flake.lock files up to date."
+    "The Nix manager is on. It keeps the flake.lock files up to date, through lock file maintenance."
   ],
   "extends": [
     "config:best-practices",
@@ -36,6 +36,14 @@
     {
       "description": "A flake input that follows a Git ref has no release date, so its age cannot be checked.",
       "matchManagers": ["nix"],
+      "minimumReleaseAge": null
+    },
+    {
+      "description": "A digest update of a reusable workflow from this hub is not held back. The wait lets people vet third-party releases, and for the organization's own hub it only delays a fix. Renovate ages the update by the date of the head commit of the hub's main branch, so without this rule a pin to a hub commit that no longer exists waits until the head commit is 7 days old.",
+      "matchManagers": ["github-actions"],
+      "matchDepTypes": ["workflow"],
+      "matchDepNames": ["sealambda/.github"],
+      "matchUpdateTypes": ["digest"],
       "minimumReleaseAge": null
     },
     {

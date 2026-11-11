@@ -37,6 +37,11 @@ input that follows a Git ref, because none has a release date. The age check
 stays pending for them and Renovate never creates the branch, so two rules
 set `minimumReleaseAge` to `null` for these updates.
 
+A third rule sets `minimumReleaseAge` to `null` for the digest update of a
+reusable workflow from this hub, which a repository pins with `uses:`. Renovate
+ages that update by the date of the head commit of the `main` branch, and the
+wait exists to let people vet third-party releases.
+
 A repository that runs Renovate once a day needs a window of several hours,
 because Renovate acts only when a run falls inside the window. A repository
 that wants no window sets `schedule` to `["* * * * *"]`.
@@ -53,11 +58,19 @@ that wants no window sets `schedule` to `["* * * * *"]`.
 | One pull request for the GitHub Actions. | The same as Mix. |
 | OpenTofu providers come from the OpenTofu registry. | `tofu init` uses that registry. |
 | The `required_version` of a Terraform root is ignored. | It names OpenTofu, which Renovate would look up as Terraform. |
+| The digest update of a reusable workflow from this hub isn't held back by `minimumReleaseAge`. The rule matches the `github-actions` manager, the dependency type `workflow` and the dependency name `sealambda/.github`. | The hub is the organization's own, so the wait only delays a fix. See [Timing](#timing). |
 
 ## Other settings
 
-- The Nix manager is on, and Renovate updates `flake.lock`. A repository lists
-  the managers it uses in `enabledManagers`.
+- The Nix manager is on, and Renovate updates `flake.lock` in its lock file
+  maintenance. A repository lists the managers it uses in `enabledManagers`.
+- A repository holds two references to the hub: the commit of a reusable
+  workflow in `uses:`, and the `hub` input in `flake.lock`. The `github-actions`
+  manager updates the first, as a digest update of the `main` branch, and the
+  Nix manager updates the second. Renovate never groups lock file maintenance
+  with other updates, so the two references move in separate pull requests and
+  need not name the same commit. [Two references to the
+  hub](../how-to/adopt-the-hub.md#two-references-to-the-hub) gives the reason.
 - `osvVulnerabilityAlerts` is on. Renovate reads the OSV advisory database
   for direct dependencies, besides GitHub's Dependabot alerts. Renovate marks
   this option as experimental.
