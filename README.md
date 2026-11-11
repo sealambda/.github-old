@@ -29,6 +29,11 @@ and keeps its own facts.
   name or address. An unknown installer passes, and review covers it. The
   check reads only the hub's own files, and the other workflows of a consumer
   choose their own Nix.
+- **Releases.** Every merge to `main` is covered by a release, a tag
+  `v1.<minor>.<patch>` on the merged commit or on a later one. The first line
+  of the note says
+  `rules changed: yes` or `rules changed: no`
+  ([Hub releases](docs/reference/hub-releases.md)).
 - **Dependency updates.** `default.json`, a shared
   [Renovate](https://docs.renovatebot.com/) preset for update timing,
   grouping and security fixes. A repository's `renovate.json` extends it and
@@ -52,16 +57,18 @@ The pages follow [Diátaxis](https://diataxis.fr/).
 - **How-to guides.**
   [Adopt the hub in a repository](docs/how-to/adopt-the-hub.md),
   [Change a toolchain version](docs/how-to/change-a-toolchain-version.md),
-  [Retire a decision record](docs/how-to/retire-a-decision-record.md) and
-  [Add third-party content](docs/how-to/add-third-party-content.md).
+  [Retire a decision record](docs/how-to/retire-a-decision-record.md),
+  [Add third-party content](docs/how-to/add-third-party-content.md) and
+  [Release the hub](docs/how-to/release-the-hub.md).
 - **Reference.** [Toolchain versions](docs/reference/versions.md),
   [Elixir quality checks](docs/reference/elixir-qa.md), the
   [Renovate preset](docs/reference/renovate-preset.md),
   [decision records](docs/reference/decision-records.md),
   [writing style](docs/reference/writing-style.md), the
   [leak check](docs/reference/leak-check.md),
-  [licensing](docs/reference/licensing.md) and the
-  [CI of the hub](docs/reference/hub-ci.md).
+  [licensing](docs/reference/licensing.md),
+  [CI of the hub](docs/reference/hub-ci.md) and
+  [hub releases](docs/reference/hub-releases.md).
 - **Explanation.** The [decision records](docs/decisions/) say why the hub
   works as it does. [ADR 0005](docs/decisions/0005-check-decision-records-with-a-hermetic-flake-check.md)
   explains the decision records check.

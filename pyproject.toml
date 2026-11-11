@@ -10,6 +10,7 @@ src = [
   "nix/scripts",
   "nix/tests/decisions",
   "nix/tests/leaks",
+  "nix/tests/release",
   "nix/tests/versions",
 ]
 
