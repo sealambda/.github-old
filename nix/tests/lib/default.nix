@@ -9,10 +9,9 @@
   pkgs,
   hub,
   syncConfig,
-  syncedPaths,
 }:
 let
-  harness = import ./harness.nix { inherit pkgs syncConfig syncedPaths; };
+  harness = import ./harness.nix { inherit pkgs syncConfig; };
 
   # The case files. Each one is a function from the arguments below to an
   # attribute set of cases, named `<function>-<situation>`.

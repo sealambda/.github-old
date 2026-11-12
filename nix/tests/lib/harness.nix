@@ -1,11 +1,9 @@
 # The helpers of the tests of the functions in `nix/lib`. `default.nix` in this
 # folder calls them, and each case file (`docs.nix`, `decisions.nix`,
-# `config.nix`, `treefmt.nix`) uses `mkTree` to write its fixtures, and
-# `config.nix` compares `syncedPaths` with its own list of the synced files.
+# `config.nix`, `treefmt.nix`) uses `mkTree` to write its fixtures.
 {
   pkgs,
   syncConfig,
-  syncedPaths,
 }:
 let
   inherit (pkgs) lib;
@@ -68,12 +66,6 @@ let
       case.check.overrideAttrs { name = testName; };
 in
 {
-  # The path of each file that `sync-config` writes, taken from the hub's own
-  # list. Only the case that compares this list with the five files that the
-  # requirement names reads it. A case must not build its fixtures from it: a
-  # file that the function drops would drop its case.
-  inherit syncedPaths;
-
   /**
     Builds a source tree from text, as a store path. Use it as the `src` of
     a function under test. The tree holds, in this order: the files of

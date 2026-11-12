@@ -1,7 +1,10 @@
 # The cases of `lib.mkConfigCheck`. `default.nix` in this folder collects them.
 # A case holds the check applied to a fixture and, for a case that must fail,
 # the text that the log of the failure holds. Each fixture starts from the
-# files of `sync-config`, so the cases need no second list of config files.
+# files of `sync-config`. `comparedPaths` is the one list of the config files
+# that this file writes by hand, from the requirement. It is the independent
+# oracle: don't derive it from `sync-config` or from `nix/lib/config.nix`, or a
+# file that the function drops would drop its case.
 {
   pkgs,
   hub,
@@ -27,6 +30,9 @@ let
   # A path as one word for the name of a case: no slash.
   sanitize = path: lib.replaceStrings [ "/" ] [ "-" ] path;
 
+  # The tree that `sync-config` writes, with no change.
+  syncedTree = tree "synced" "";
+
   # Requirement: the check compares these five files, no more and no less:
   # `.editorconfig`, `.markdownlint-cli2.yaml`, `.vale.ini`, the Sealambda Vale
   # vocabulary and `lychee.toml`. The list is written here from the requirement
@@ -48,16 +54,16 @@ let
   # check, whichever file it is. The log names the file, shows the difference
   # and gives the command that repairs it. There is one case for each path of
   # `comparedPaths`, so a file that the check drops from its comparison
-  # leaves its case green, and the case fails the test.
+  # leaves its case green, and the case fails the test. The fixture name has
+  # no path, and the log entry has a slash before the path: the store path of
+  # a fixture then cannot satisfy the entry, only the name of the file can.
   differingCases = lib.listToAttrs (
     map (path: {
       name = "config-differing-${sanitize path}-fails";
       value = {
-        check = configCheck (
-          tree "differing-${sanitize path}" "echo '# local edit' >> ${lib.escapeShellArg path}"
-        );
+        check = configCheck (tree "differing" "echo '# local edit' >> ${lib.escapeShellArg path}");
         expectedLog = [
-          path
+          "/${path}"
           "+# local edit"
           "A tool configuration differs from the hub."
           repairHint
@@ -70,28 +76,29 @@ in
   # Requirement: a tree with the files that `sync-config` writes passes the
   # check.
   config-synced-passes = {
-    check = configCheck (tree "synced" "");
+    check = configCheck syncedTree;
   };
 
-  # Requirement: the function lists the same five files as `comparedPaths`.
-  # `sync-config` and the check both build on that list, so a dropped entry
-  # leaves every other case consistent and green. This case fails when the
-  # list lacks one of the five files or holds another one, and its log shows
+  # Requirement: `sync-config` writes the same five files as `comparedPaths`.
+  # `sync-config` and the check both build on one list, so a dropped entry
+  # leaves every other case consistent and green. This case lists the files
+  # that `sync-config` wrote into an empty folder. It fails when the app
+  # leaves out one of the five files or writes another one, and its log shows
   # the difference.
   config-synced-paths-are-the-five-files = {
     check =
       pkgs.runCommand "config-synced-paths"
         {
-          nativeBuildInputs = [ pkgs.diffutils ];
-          expected = asLines comparedPaths;
-          actual = asLines harness.syncedPaths;
-          passAsFile = [
-            "expected"
-            "actual"
+          nativeBuildInputs = [
+            pkgs.diffutils
+            pkgs.findutils
           ];
+          expected = asLines comparedPaths;
+          passAsFile = [ "expected" ];
         }
         ''
-          if ! diff -u "$expectedPath" "$actualPath"; then
+          (cd ${syncedTree} && find . -type f -printf '%P\n' | LC_ALL=C sort) > "$TMPDIR/actual"
+          if ! diff -u "$expectedPath" "$TMPDIR/actual"; then
             echo "The synced paths differ from the five compared files." >&2
             exit 1
           fi

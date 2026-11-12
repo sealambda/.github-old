@@ -36,7 +36,6 @@
       inherit (import ./nix/lib/config.nix { inherit (nixpkgs) lib; })
         mkSyncConfig
         mkConfigCheck
-        syncedPaths
         ;
       inherit
         (import ./nix/lib/docs.nix {
@@ -212,7 +211,6 @@
           inherit pkgs;
           hub = self.lib;
           syncConfig = mkSyncConfig pkgs;
-          inherit syncedPaths;
         };
 
         # The hub checks its own records and citations. The fixtures of the

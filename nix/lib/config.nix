@@ -1,8 +1,7 @@
 # The tool configuration that the hub copies into every repository. `flake.nix`
 # imports this file. It uses `mkSyncConfig` for the `sync-config` app and for
 # the tests of `nix/scripts/check-docs.sh`, and it exports `mkConfigCheck` as
-# `lib.mkConfigCheck`, which a consumer calls. It also exports `syncedPaths`
-# for the tests in `nix/tests/lib`.
+# `lib.mkConfigCheck`, which a consumer calls.
 { lib }:
 let
   # Tool configuration that a tool reads only from a file in the
@@ -18,12 +17,6 @@ let
   };
 in
 {
-  # The path of each synced file, as the list that `sync-config` writes and
-  # `mkConfigCheck` compares. The tests of `mkConfigCheck` compare it with
-  # their own literal list of the five files, so a dropped entry fails a case.
-  # It is not part of `lib`: `flake.nix` passes it to the tests.
-  syncedPaths = lib.attrNames configFiles;
-
   # Writes the copies into the current directory. `-m 644` makes each copy
   # writable, because the source is read-only in the Nix store. `-D` creates
   # the parent directories.
