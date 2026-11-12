@@ -378,6 +378,9 @@ style. [Writing style](../reference/writing-style.md) defines its rules:
   `vale .` in the `docs` dev shell. A hub revision that adds a warning rule
   leaves the result of the check unchanged. The table in
   [Writing style](../reference/writing-style.md#rules) lists them.
+- The length rules need Vale 3.21 or later. The `docs` check and the `docs`
+  dev shell pin a newer version. An editor that runs its own Vale needs
+  version 3.21 or later.
 
 The hub's Vale configuration turns `Sealambda.CurrentState` off for
 `docs/decisions/` and `docs/specs/`. It turns `Sealambda.HowToTitle` and

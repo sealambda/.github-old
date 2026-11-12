@@ -38,6 +38,10 @@ The hub's own pages trip the warning rules too, and the `docs` check stays
 green because it reports errors only. Run `vale .` in the `docs` dev shell at
 the root of the hub to print every finding of level warning and suggestion.
 
+The length rules use the Vale extension point `metric`, which needs Vale 3.21
+or later. The `docs` check and the `docs` dev shell pin a newer version. An
+editor that runs its own Vale needs version 3.21 or later.
+
 No rule of this page checks code. A code span and a code block never match, so
 a flag or a command in code font stays silent.
 
