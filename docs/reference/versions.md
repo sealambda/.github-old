@@ -100,13 +100,15 @@ The files are every `.yml` or `.yaml` file directly in a folder
 `.github/workflows`, at any depth of the tree, so a workflow skeleton under
 `templates/` is read, every `.yml` or `.yaml` file directly in the folder
 `workflow-templates` at the root of the tree, and every `action.yml` or
-`action.yaml` below the root. The folder `workflow-templates` holds the
-[starter workflows][starter] of an organization when the repository is its
-`.github` repository. A starter workflow is a workflow file, so it follows the
-same rules. The hub has no starter workflows, and a repository that has some
-gets them checked. The `.properties.json` and icon files of that folder aren't
-YAML, so the check skips them, and so it skips a file in a subfolder of
-`workflow-templates` or in a `workflow-templates` folder below the root.
+`action.yaml` below the root. The [`workflows` check](workflow-checks.md) reads
+the same workflow files, selected by the same code. The folder
+`workflow-templates` holds the [starter workflows][starter] of an organization
+when the repository is its `.github` repository. A starter workflow is a
+workflow file, so it follows the same rules. The hub has no starter workflows,
+and a repository that has some gets them checked. The `.properties.json` and
+icon files of that folder aren't YAML, so the check skips them, and so it skips
+a file in a subfolder of `workflow-templates` or in a `workflow-templates`
+folder below the root.
 A file in a subfolder of `workflows` isn't a workflow, because GitHub doesn't
 run it. A file that isn't valid YAML is a finding, because it could hide a
 step. A local action (`uses: ./path`) and a Docker image are skipped, and the

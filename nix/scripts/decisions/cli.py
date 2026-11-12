@@ -14,44 +14,31 @@ finds afterwards, 2 when a rule or a usage error refuses the retirement or a
 step fails, and 3 for an internal error. A refusal changes nothing. After an
 internal error, check the work tree with `git status`.
 
-An internal error is an exception that the tool does not expect, which means a
-bug in the tool. The traceback goes to standard error. Status 1 stays reserved
-for findings, so that a caller can tell a bug from a problem in the checked tree.
+`decisions.cli_common` holds the exit status contract that every tool of the
+hub shares.
 """
 
 import argparse
 import re
 import sys
-import traceback
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path, PurePosixPath
-from typing import NoReturn
 
 from decisions.check import run_checks
+from decisions.cli_common import (
+    EXIT_CLEAN,
+    RaisingParser,
+    UsageError,
+    report_findings,
+    run_guarded,
+)
 from decisions.retire import RetireError, RetireResult, retire
 from decisions.walk import parse_exclude
 
-EXIT_CLEAN = 0
-EXIT_FINDINGS = 1
-EXIT_USAGE = 2
-EXIT_INTERNAL = 3
-
 _REPOSITORY = re.compile(r"^[\w.-]+/[\w.-]+$")
 _NUMBER = re.compile(r"^[0-9]{4}$")
-
-
-class UsageError(Exception):
-    """The command line or the environment is wrong, not the checked tree."""
-
-
-class _Parser(argparse.ArgumentParser):
-    """An argument parser that raises `UsageError` instead of exiting."""
-
-    def error(self, message: str) -> NoReturn:
-        """Raise `UsageError` with the usage text and the problem."""
-        raise UsageError(f"{self.format_usage().strip()}\n{self.prog}: {message}")
 
 
 @dataclass(frozen=True)
@@ -98,9 +85,9 @@ def _add_exclude(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _build_parser() -> _Parser:
+def _build_parser() -> RaisingParser:
     """Build the argument parser with its two commands."""
-    parser = _Parser(
+    parser = RaisingParser(
         prog="decisions",
         description="Check decision records, specs and the citations that name "
         "them, and retire a record into the ledger.",
@@ -193,39 +180,24 @@ def main(
             entry. Tests pass a fixed date.
 
     Returns:
-        `EXIT_CLEAN`, `EXIT_FINDINGS`, `EXIT_USAGE` or `EXIT_INTERNAL`. An
-        exception that no other clause handles is a bug in the tool: its
-        traceback goes to standard error and the status is `EXIT_INTERNAL`.
+        The exit status of `decisions.cli_common.run_guarded`. A `RetireError`
+        is a refusal: it gives `EXIT_USAGE`.
     """
-    try:
+
+    def run() -> int:
         args = _parse(sys.argv[1:] if argv is None else argv)
         if isinstance(args, CheckArgs):
             return _run_check(args)
         return _run_retire(args, today())
-    except RetireError as error:
-        print(f"decisions: {error}", file=sys.stderr)
-        return EXIT_USAGE
-    except UsageError as error:
-        print(error, file=sys.stderr)
-        return EXIT_USAGE
-    except OSError as error:
-        print(f"decisions: {error}", file=sys.stderr)
-        return EXIT_USAGE
-    except Exception:  # the last resort: report any bug with its trace
-        traceback.print_exc()
-        print("decisions: internal error, the traceback is above", file=sys.stderr)
-        return EXIT_INTERNAL
+
+    return run_guarded("decisions", run, refused=(RetireError,))
 
 
 def _run_check(args: CheckArgs) -> int:
     """Run the checks and print the findings."""
-    findings = run_checks(args.root, args.repository, args.excludes)
-    for finding in findings:
-        print(finding.format())
-    if findings:
-        print(f"decisions: {len(findings)} finding(s)", file=sys.stderr)
-        return EXIT_FINDINGS
-    return EXIT_CLEAN
+    return report_findings(
+        "decisions", run_checks(args.root, args.repository, args.excludes)
+    )
 
 
 def _run_retire(args: RetireArgs, today: date) -> int:

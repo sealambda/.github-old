@@ -50,6 +50,13 @@
         })
         mkDecisionsCheck
         ;
+      inherit
+        (import ./nix/lib/workflows.nix {
+          inherit (nixpkgs) lib;
+          inherit hubPackagesFor tools;
+        })
+        mkWorkflowsCheck
+        ;
 
       treefmtFor = eachSystem (pkgs: mkTreefmt pkgs [ ]);
 
@@ -64,10 +71,12 @@
           ./nix/scripts/leaks
           ./nix/scripts/release
           ./nix/scripts/versions
+          ./nix/scripts/workflows
           ./nix/tests/decisions
           ./nix/tests/leaks
           ./nix/tests/release
           ./nix/tests/versions
+          ./nix/tests/workflows
           ./pyproject.toml
         ];
       };
@@ -93,6 +102,7 @@
           mkConfigCheck
           mkDocsCheck
           mkDecisionsCheck
+          mkWorkflowsCheck
           ;
       };
 
@@ -357,6 +367,31 @@
               touch "$out"
             '';
 
+        # Fails when a job of a workflow of the hub that does not call a
+        # reusable workflow has no `timeout-minutes`, or when a workflow that a
+        # pull request event triggers has no `concurrency` group. The rules are
+        # in `nix/scripts/workflows` and the reference is
+        # `docs/reference/workflow-checks.md`. The check needs no network: it
+        # reads files.
+        workflows = mkWorkflowsCheck pkgs self;
+
+        # Runs the unit tests of `nix/scripts/workflows`: each rule with
+        # workflows that it accepts and workflows that it rejects, the three
+        # forms of the `on` key, and the command line. The tests of the file
+        # selection that this tool shares with `versions` are in
+        # `nix/tests/decisions`.
+        check-workflows-tests =
+          pkgs.runCommand "check-workflows-tests"
+            {
+              nativeBuildInputs = [ (tools.decisions.python pkgs) ];
+              env = tools.workflows.env;
+            }
+            ''
+              export HOME="$TMPDIR"
+              python -m unittest discover -v -s ${./nix/tests/workflows}
+              touch "$out"
+            '';
+
         # Runs the unit tests of `nix/scripts/release`: the rules for the tag
         # series and the changed paths, and the plan of a release against
         # temporary Git repositories with a fake `gh`. The tests need `git` and
@@ -428,7 +463,8 @@
                 nix/scripts/decisions nix/tests/decisions \
                 nix/scripts/leaks nix/tests/leaks \
                 nix/scripts/release nix/tests/release \
-                nix/scripts/versions nix/tests/versions
+                nix/scripts/versions nix/tests/versions \
+                nix/scripts/workflows nix/tests/workflows
               touch "$out"
             '';
       });

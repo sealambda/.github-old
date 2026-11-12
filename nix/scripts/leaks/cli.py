@@ -10,46 +10,25 @@ usage error or a file that cannot be read, 3 for an internal error. Each
 finding is printed to standard output as `path:line: rule: text. advice`, all
 in one run. The text is the masked start of the leaked value: the output goes
 to logs that stay readable after the value leaves the tree.
-
-An internal error is an exception that the tool does not expect, which means a
-bug in the tool. The traceback goes to standard error. Status 1 stays reserved
-for findings, so that a caller can tell a bug from a leak in the scanned tree.
+`decisions.cli_common` holds the exit status contract that every tool of the
+hub shares.
 """
 
-import argparse
 import re
 import sys
-import traceback
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import NoReturn
 
+from decisions.cli_common import RaisingParser, UsageError, report_findings, run_guarded
 from decisions.walk import parse_exclude
 from leaks.rules import Policy
 from leaks.scan import scan_tree
-
-EXIT_CLEAN = 0
-EXIT_FINDINGS = 1
-EXIT_USAGE = 2
-EXIT_INTERNAL = 3
 
 # Both patterns are used with `fullmatch`: `$` would also accept a trailing
 # newline, and a name with a newline makes every rule that reads it find nothing.
 _ORGANIZATION = re.compile(r"[A-Za-z0-9-]+")
 _NAME = re.compile(r"[A-Za-z0-9._-]+")
-
-
-class UsageError(Exception):
-    """The command line is wrong, not the scanned tree."""
-
-
-class _Parser(argparse.ArgumentParser):
-    """An argument parser that raises `UsageError` instead of exiting."""
-
-    def error(self, message: str) -> NoReturn:
-        """Raise `UsageError` with the usage text and the problem."""
-        raise UsageError(f"{self.format_usage().strip()}\n{self.prog}: {message}")
 
 
 @dataclass(frozen=True)
@@ -67,9 +46,9 @@ class Args:
     excludes: list[PurePosixPath]
 
 
-def _build_parser() -> _Parser:
+def _build_parser() -> RaisingParser:
     """Build the argument parser."""
-    parser = _Parser(
+    parser = RaisingParser(
         prog="leaks",
         description="Report the private facts of an organization in a public "
         "source tree: account identifiers, buckets, runner labels, internal "
@@ -152,26 +131,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         argv: The arguments after the program name. `None` reads `sys.argv`.
 
     Returns:
-        `EXIT_CLEAN`, `EXIT_FINDINGS`, `EXIT_USAGE` or `EXIT_INTERNAL`. An
-        exception that no other clause handles is a bug in the tool: its
-        traceback goes to standard error and the status is `EXIT_INTERNAL`.
+        The exit status of `decisions.cli_common.run_guarded`.
     """
-    try:
+
+    def run() -> int:
         args = _parse(sys.argv[1:] if argv is None else argv)
-        findings = scan_tree(args.root, args.policy, args.excludes)
-    except UsageError as error:
-        print(error, file=sys.stderr)
-        return EXIT_USAGE
-    except OSError as error:
-        print(f"leaks: {error}", file=sys.stderr)
-        return EXIT_USAGE
-    except Exception:  # the last resort: report any bug with its trace
-        traceback.print_exc()
-        print("leaks: internal error, the traceback is above", file=sys.stderr)
-        return EXIT_INTERNAL
-    for finding in findings:
-        print(finding.format())
-    if findings:
-        print(f"leaks: {len(findings)} finding(s)", file=sys.stderr)
-        return EXIT_FINDINGS
-    return EXIT_CLEAN
+        return report_findings(
+            "leaks", scan_tree(args.root, args.policy, args.excludes)
+        )
+
+    return run_guarded("leaks", run)

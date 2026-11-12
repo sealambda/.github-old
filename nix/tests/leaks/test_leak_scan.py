@@ -10,8 +10,9 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from decisions.cli_common import EXIT_CLEAN, EXIT_FINDINGS, EXIT_INTERNAL, EXIT_USAGE
 from decisions.walk import SNIFF_BYTES
-from leaks.cli import EXIT_CLEAN, EXIT_FINDINGS, EXIT_INTERNAL, EXIT_USAGE, main
+from leaks.cli import main
 from leaks.scan import mask
 
 ACCOUNT_LINE = "account 123456789012\n"

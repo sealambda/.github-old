@@ -48,7 +48,9 @@ and keeps its own facts.
   flake check `lib.mkDecisionsCheck`, which validates the decision records and
   every citation of a record, a spec or a page. The JSON Schemas of the records
   and the ledger are in `schemas/`. The `decisions` app retires a record into
-  the ledger.
+  the ledger. The flake check `lib.mkWorkflowsCheck` fails when a job has no
+  `timeout-minutes` or when a pull request workflow has no `concurrency`
+  group ([Workflow checks](docs/reference/workflow-checks.md)).
 
 ## Documentation
 
@@ -68,6 +70,7 @@ The pages follow [Diátaxis](https://diataxis.fr/).
   [decision records](docs/reference/decision-records.md),
   [writing style](docs/reference/writing-style.md), the
   [leak check](docs/reference/leak-check.md),
+  [workflow checks](docs/reference/workflow-checks.md),
   [licensing](docs/reference/licensing.md),
   [CI of the hub](docs/reference/hub-ci.md) and
   [hub releases](docs/reference/hub-releases.md).
