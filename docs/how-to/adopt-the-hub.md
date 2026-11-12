@@ -73,12 +73,12 @@ The repository's `flake.lock` pins the hub. To take a newer hub revision, run
 ## Take the standards in one call
 
 `lib.mkStandards` gives the checks `formatting`, `docs`, `decisions`,
-`workflows` and `pre-commit`, the formatter and the hub's commands from one
-call. It replaces the calls that the sections below add one by one, and it
-returns what those calls return. Use it when the repository takes all the
-standards and holds no synced copy of the tool configuration. The separate
-functions stay valid: a repository that keeps the synced copies, or that wants
-only some checks, follows the sections below.
+`workflows`, `pre-commit` and `renovate-config`, the formatter and the hub's
+commands from one call. It replaces the calls that the sections below add one
+by one, and it returns what those calls return. Use it when the repository
+takes all the standards and holds no synced copy of the tool configuration. The
+separate functions stay valid: a repository that keeps the synced copies, or
+that wants only some checks, follows the sections below.
 [Standards contract](../reference/standards-contract.md) defines the arguments
 and the result. The synthetic consumer `nix/tests/consumers/standards` has this
 shape.
@@ -145,7 +145,8 @@ shape.
 To add to the rules, pass the optional arguments. `treefmtModules` adds the
 repository's treefmt-nix modules. `decisions.exclude` lists the paths that the
 citation scan skips. `extraHooks` adds hooks of the repository, and `scanner`
-replaces the secret scanner. The repository's own `.vale.ini`,
+replaces the secret scanner. `renovateConfig = false` leaves the check
+`renovate-config` out. The repository's own `.vale.ini`,
 `.markdownlint-cli2.yaml` or `lychee.toml` layers over the hub's base, as
 [Layer your own configuration](#layer-your-own-configuration) says.
 

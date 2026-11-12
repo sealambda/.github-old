@@ -1,7 +1,8 @@
 # The Renovate configuration gate. `flake.nix` imports this file and exports
 # `mkRenovateConfigCheck` as `lib.mkRenovateConfigCheck`, which a consumer
-# calls. The script that the check runs is `nix/scripts/renovate-config.sh`, and
-# the rules are in `docs/reference/renovate-config-check.md`.
+# calls. `standards.nix` adds the check to `mkStandards`. The script that the
+# check runs is `nix/scripts/renovate-config.sh`, and the rules are in
+# `docs/reference/renovate-config-check.md`.
 { lib, hubPackagesFor }:
 {
   /**

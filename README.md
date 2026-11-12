@@ -68,7 +68,7 @@ and keeps its own facts.
   shell installs them (`nix develop .#hooks`), and the flake check `pre-commit`
   runs them. The `default` shell installs nothing. A person can skip a hook, so
   CI stays the gate ([Git hooks](docs/reference/hooks.md)).
-- **Standards in one call.** The function `lib.mkStandards` returns the five
+- **Standards in one call.** The function `lib.mkStandards` returns the six
   flake checks, the formatter and the hub's commands for one repository from one
   call, and installs no hook until the repository opts in
   ([Standards contract](docs/reference/standards-contract.md)).

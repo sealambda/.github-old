@@ -16,6 +16,7 @@ let
     "decisions"
     "extraHooks"
     "scanner"
+    "renovateConfig"
   ];
 
   # The keys that the argument `decisions` can hold.
@@ -135,6 +136,13 @@ let
     ++ lib.optional (
       args ? scanner && lib.isDerivation args.scanner && !(args.scanner ? meta.mainProgram)
     ) "`scanner` must have `meta.mainProgram`, so that `lib.getExe` finds its command.";
+
+  # The problems of `renovateConfig`: a boolean.
+  problemsOfRenovateConfig =
+    args:
+    lib.optional (args ? renovateConfig && !(lib.isBool args.renovateConfig)) (
+      wrongType "renovateConfig" "a boolean" args.renovateConfig
+    );
 in
 {
   /**
@@ -174,5 +182,6 @@ in
       ++ problemsOfRequired args
       ++ problemsOfCollections args
       ++ lib.optionals (args ? decisions) (problemsOfDecisions args)
-      ++ problemsOfScanner args;
+      ++ problemsOfScanner args
+      ++ problemsOfRenovateConfig args;
 }

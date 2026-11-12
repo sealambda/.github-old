@@ -119,7 +119,12 @@ The third argument holds `presets`, a list of file paths relative to the root,
 and its default is the empty list. The hub passes `default.json`, which is the
 preset that other repositories extend.
 
+The function `lib.mkStandards` adds the check by default. Its argument
+`renovateConfig = false` leaves the check out, as the
+[Standards contract](standards-contract.md) says. That call lists no preset.
+
 The validator comes from the hub's own nixpkgs, whatever nixpkgs the repository
 follows, so every repository runs one version of Renovate. The check has no
 other option and no exclusion. The tests of the check are the cases
-`renovate-config-*` of the check `lib-functions`.
+`renovate-config-*` of the check `lib-functions`, and the cases `standards-*`
+that cover the argument.

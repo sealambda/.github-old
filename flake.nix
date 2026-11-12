@@ -112,6 +112,7 @@
             mkDocsCheck
             mkDecisionsCheck
             mkWorkflowsCheck
+            mkRenovateConfigCheck
             mkGitPolicyTool
             mkSecretsScan
             defaultScanner

@@ -14,6 +14,7 @@
   mkDocsCheck,
   mkDecisionsCheck,
   mkWorkflowsCheck,
+  mkRenovateConfigCheck,
   mkGitPolicyTool,
   mkSecretsScan,
   defaultScanner,
@@ -35,6 +36,7 @@ let
       decisions ? { },
       extraHooks ? { },
       scanner ? defaultScanner pkgs,
+      renovateConfig ? true,
     }:
     let
       hubPkgs = hubPackagesFor pkgs;
@@ -60,6 +62,9 @@ let
         };
         workflows = mkWorkflowsCheck pkgs src;
         pre-commit = hooksResult;
+      }
+      // lib.optionalAttrs renovateConfig {
+        renovate-config = mkRenovateConfigCheck pkgs src { };
       };
 
       hooks = hooksResult;
@@ -85,11 +90,13 @@ in
 
     The result has these attributes:
 
-    - `checks` has `formatting`, `docs`, `decisions`, `workflows` and
-      `pre-commit`. They are the checks of `lib.mkTreefmt`,
-      `lib.mkDocsCheck`, `lib.mkDecisionsCheck`, `lib.mkWorkflowsCheck` and
-      `lib.mkHooks`. There is no `config-in-sync`: a repository that calls
-      this function holds no copy of the hub's tool configuration.
+    - `checks` has `formatting`, `docs`, `decisions`, `workflows`,
+      `pre-commit` and `renovate-config`. They are the checks of
+      `lib.mkTreefmt`, `lib.mkDocsCheck`, `lib.mkDecisionsCheck`,
+      `lib.mkWorkflowsCheck`, `lib.mkHooks` and `lib.mkRenovateConfigCheck`.
+      The check `renovate-config` is absent when `renovateConfig` is false.
+      There is no `config-in-sync`: a repository that calls this function
+      holds no copy of the hub's tool configuration.
     - `formatter` is the treefmt wrapper, for the `formatter` output.
     - `packages` has `vale`, `markdownlint-cli2`, `lychee`, `secrets-scan`,
       `gitpolicy` and `workflows`. Each one has `meta.mainProgram`. The
@@ -154,6 +161,12 @@ in
       and of the hook `secrets-scan`. The default is gitleaks of the hub's
       nixpkgs.
 
+    `renovateConfig`
+    : A boolean. When true, `checks` has `renovate-config`, which validates the
+      Renovate files of the repository. A repository that has no Renovate file
+      passes the check, so the default is true. Set it to false to leave the
+      check out. Default true.
+
     # Type
 
     ```
@@ -165,8 +178,9 @@ in
       decisions :: { exclude :: [String] ? [ ]; } ? { exclude = [ ]; };
       extraHooks :: AttrSet ? { };
       scanner :: Derivation ? <hub gitleaks>;
+      renovateConfig :: Bool ? true;
     } -> {
-      checks :: { formatting; docs; decisions; workflows; pre-commit :: Derivation; };
+      checks :: { formatting; docs; decisions; workflows; pre-commit; renovate-config :: Derivation; };
       formatter :: Derivation;
       packages :: { vale; markdownlint-cli2; lychee; secrets-scan; gitpolicy; workflows :: Derivation; };
       hooks :: Derivation;
