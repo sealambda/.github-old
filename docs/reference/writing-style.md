@@ -231,6 +231,13 @@ and the rule reads that file. The rule flags a heading when fewer than 80
 percent of its words are in the expected case, so a single name that the lists
 don't know can pass in a long heading and fail in a short one.
 
+The Microsoft style has a rule of the same kind, `Microsoft.Headings`, with
+the level suggestion. Both rules report a heading that isn't in sentence case,
+so one heading can get two findings. The two rules keep different lists of
+names that keep their case, so a heading can pass one rule and fail the other.
+The hub keeps its own rule for the level warning and for the names of its own
+tools. A repository that wants no report of a heading turns off both rules.
+
 ### A true use of a heading in another case
 
 A heading that quotes a title needs a Vale comment with the reason before it:
