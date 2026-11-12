@@ -6,8 +6,8 @@
 # The set holds one entry for each tool: the result of `mkPythonTool`
 # (`python-tool.nix`), with `env`, the run-time environment for the tests of
 # the package, and `mkTool`, which returns the command for one package set.
-# The set also holds `decisionsPython`, a function from a package set to the
-# Python of `decisions` with its two libraries, for the checks that need it.
+# The entry `decisions` also holds `python`, a function from a package set to
+# the Python of `decisions` with its two libraries, for the checks that need it.
 { lib }:
 let
   inherit ((import ./python-tool.nix { inherit lib; })) mkPythonTool;
@@ -25,20 +25,22 @@ let
     ]);
 in
 {
-  inherit decisionsPython;
-
   # The `decisions` command: `python -P -m decisions`, the code in
   # `nix/scripts/decisions`, with the schemas in `schemas`. `git` lists the
   # files of a work tree, so the check skips the ignored ones, and it is
-  # for the `retire` subcommand.
-  decisions = mkPythonTool {
-    name = "decisions";
-    inherit schemaDir;
-    runtimeInputs = pkgs: [
-      (decisionsPython pkgs)
-      pkgs.git
-    ];
-  };
+  # for the `retire` subcommand. `python` is the Python of the command.
+  decisions =
+    mkPythonTool {
+      name = "decisions";
+      inherit schemaDir;
+      runtimeInputs = pkgs: [
+        (decisionsPython pkgs)
+        pkgs.git
+      ];
+    }
+    // {
+      python = decisionsPython;
+    };
 
   # The `leaks` command: `python -P -m leaks`, the code in `nix/scripts/leaks`.
   # It reports the private facts of an organization in a source tree. The

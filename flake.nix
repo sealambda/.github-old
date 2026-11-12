@@ -217,7 +217,7 @@
           pkgs.runCommand "check-decisions-tests"
             {
               nativeBuildInputs = [
-                (tools.decisionsPython pkgs)
+                (tools.decisions.python pkgs)
                 pkgs.git
               ];
               env = tools.decisions.env;
@@ -338,7 +338,7 @@
         check-versions-tests =
           pkgs.runCommand "check-versions-tests"
             {
-              nativeBuildInputs = [ (tools.decisionsPython pkgs) ];
+              nativeBuildInputs = [ (tools.decisions.python pkgs) ];
               env = tools.versions.env;
             }
             ''
