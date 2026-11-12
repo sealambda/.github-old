@@ -19,6 +19,7 @@ let
     ./config.nix
     ./decisions.nix
     ./docs.nix
+    ./hooks.nix
     ./treefmt.nix
     ./workflows.nix
   ];
