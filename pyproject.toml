@@ -9,6 +9,7 @@ line-length = 88
 src = [
   "nix/scripts",
   "nix/tests/decisions",
+  "nix/tests/gitpolicy",
   "nix/tests/leaks",
   "nix/tests/release",
   "nix/tests/versions",

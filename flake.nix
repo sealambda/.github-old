@@ -57,6 +57,12 @@
         })
         mkWorkflowsCheck
         ;
+      inherit
+        (import ./nix/lib/git-policy.nix {
+          inherit hubPackagesFor tools;
+        })
+        mkGitPolicyTool
+        ;
 
       treefmtFor = eachSystem (pkgs: mkTreefmt pkgs [ ]);
 
@@ -68,11 +74,13 @@
         root = ./.;
         fileset = nixpkgs.lib.fileset.unions [
           ./nix/scripts/decisions
+          ./nix/scripts/gitpolicy
           ./nix/scripts/leaks
           ./nix/scripts/release
           ./nix/scripts/versions
           ./nix/scripts/workflows
           ./nix/tests/decisions
+          ./nix/tests/gitpolicy
           ./nix/tests/leaks
           ./nix/tests/release
           ./nix/tests/versions
@@ -103,8 +111,23 @@
           mkDocsCheck
           mkDecisionsCheck
           mkWorkflowsCheck
+          mkGitPolicyTool
           ;
       };
+
+      # The `gitpolicy` command, for a Git hook or a CI step that runs
+      # `nix run .#gitpolicy` or builds it with `nix build .#gitpolicy`.
+      #
+      # The `release` command for the releases of this repository. It is not a
+      # tool for consumers: it reads the changed paths against the rules of the
+      # hub (`nix/scripts/release/paths.py`). `nix run .#release -- plan` runs
+      # it in the current repository. The CI builds it first and runs the
+      # result in a later step, so that Nix runs without the token that
+      # `publish` needs. The tool comes from the hub's nixpkgs.
+      packages = eachSystem (pkgs: {
+        gitpolicy = mkGitPolicyTool pkgs;
+        release = tools.release.mkTool pkgs;
+      });
 
       apps = eachSystem (pkgs: {
         sync-config = {
@@ -118,16 +141,13 @@
           type = "app";
           program = nixpkgs.lib.getExe (tools.decisions.mkTool pkgs);
         };
-      });
 
-      # The `release` command for the releases of this repository. It is not a
-      # tool for consumers: it reads the changed paths against the rules of the
-      # hub (`nix/scripts/release/paths.py`). `nix run .#release -- plan` runs
-      # it in the current repository. The CI builds it first and runs the
-      # result in a later step, so that Nix runs without the token that
-      # `publish` needs. The tool comes from the hub's nixpkgs.
-      packages = eachSystem (pkgs: {
-        release = tools.release.mkTool pkgs;
+        # `gitpolicy commit-msg`, `gitpolicy range` and `gitpolicy branch` in
+        # the current repository. The CI job `git-policy` runs it.
+        gitpolicy = {
+          type = "app";
+          program = nixpkgs.lib.getExe (mkGitPolicyTool pkgs);
+        };
       });
 
       # Version policy: a toolchain version is the name of a nixpkgs attribute
@@ -392,6 +412,27 @@
               touch "$out"
             '';
 
+        # Runs the unit tests of `nix/scripts/gitpolicy`: the rules for commit
+        # messages and branch names as tables, and the range, branch and hook
+        # commands against temporary Git repositories. The rules themselves
+        # run in the hooks and in the CI job `git-policy`, because a flake
+        # check sees no history. The tests need `git` and a writable HOME,
+        # and they reach no network.
+        check-gitpolicy-tests =
+          pkgs.runCommand "check-gitpolicy-tests"
+            {
+              nativeBuildInputs = [
+                pkgs.python3
+                pkgs.git
+              ];
+              env = tools.gitpolicy.env;
+            }
+            ''
+              export HOME="$TMPDIR"
+              python -m unittest discover -v -s ${./nix/tests/gitpolicy}
+              touch "$out"
+            '';
+
         # Runs the unit tests of `nix/scripts/release`: the rules for the tag
         # series and the changed paths, and the plan of a release against
         # temporary Git repositories with a fake `gh`. The tests need `git` and
@@ -461,6 +502,7 @@
               ruff check --no-cache nix
               mypy --cache-dir "$TMPDIR/mypy" \
                 nix/scripts/decisions nix/tests/decisions \
+                nix/scripts/gitpolicy nix/tests/gitpolicy \
                 nix/scripts/leaks nix/tests/leaks \
                 nix/scripts/release nix/tests/release \
                 nix/scripts/versions nix/tests/versions \
