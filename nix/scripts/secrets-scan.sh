@@ -39,7 +39,11 @@
 # `.git/info/attributes` marks with `-diff` or `binary`. A scanner finds nothing
 # in such a file, and a person who can commit decides which file is binary. Both
 # commands put a `git` first on PATH that adds `--text` to `git diff` and
-# `git log`, so Git prints every file as text: see `use_text_git`.
+# `git log`, so Git prints every file as text: see `use_text_git`. The same
+# `git` adds `--no-renames`: a moved file that has no edit has no added line
+# with rename detection, so a secret in a file that moved out of a path that the
+# scanner skips would pass. Without detection, Git prints the file at the new
+# path with its whole content.
 #
 # `history` shows the diff of a merge commit with `--diff-merges=remerge`: the
 # changes that the person who merged made by hand, for example the resolution of
@@ -71,16 +75,6 @@
 # the scanner reads.
 readonly -a HISTORY_LOG_OPTIONS=(
   --full-history --all --diff-filter=uxdb --diff-merges=remerge
-)
-
-# The two lines on standard error that Git prints for a change with more
-# renamed files than `diff.renameLimit`. gitleaks and its forks log them as a
-# warning and scan on, because Git still prints the whole diff. Any other
-# message on standard error stops a gitleaks scan with status 0: see
-# `refuse_unreadable_diff`.
-readonly -a TOLERATED_STDERR=(
-  "exhaustive rename detection was skipped"
-  "you may want to set your diff.renameLimit"
 )
 
 # Prints the usage line to standard error.
@@ -144,10 +138,12 @@ pin_diff_output() {
 
 # Puts the `git` command of `nix/scripts/secrets-scan-git.sh` first on PATH, for
 # this process and the commands that it starts. The scanner and
-# `refuse_unreadable_diff` both run `git`, so both get `--text`, and the check
-# reads what the scanner reads. The flag overrides every other reason for a
-# binary diff: the setting `diff.<driver>.binary` of a driver, and a file above
-# `core.bigFileThreshold`. So `pin_diff_output` has no pin for either.
+# `refuse_unreadable_diff` both run `git`, so both get `--text` and
+# `--no-renames`, and the check reads what the scanner reads. The flag `--text`
+# overrides every other reason for a binary diff: the setting
+# `diff.<driver>.binary` of a driver, and a file above `core.bigFileThreshold`.
+# So `pin_diff_output` has no pin for either. The flag `--no-renames` overrides
+# `diff.renames`, so it has no pin either.
 use_text_git() {
   export PATH="$SECRETS_SCAN_GIT_DIR:$PATH"
 }
@@ -165,21 +161,13 @@ refuse_shallow_clone() {
   fi
 }
 
-# Succeeds when the line $1 of standard error is one of `TOLERATED_STDERR`.
-is_tolerated_stderr() {
-  local message
-  for message in "${TOLERATED_STDERR[@]}"; do
-    [[ $1 == *"$message"* ]] && return 0
-  done
-  return 1
-}
-
 # Exits with status 4 when Git can't produce the output that the scanner reads.
 # The function runs the Git command $2 and later, the same command that the
 # scanner runs, and discards its output. The text $1 names what the command
 # reads, for the message. The command fails when it exits with a status other
-# than 0, or when it writes a message to standard error that
-# `is_tolerated_stderr` doesn't accept.
+# than 0, or when it writes any message to standard error. The `git` of the
+# command turns rename detection off, so Git has no warning about
+# `diff.renameLimit` to print, and the check has no message to tolerate.
 #
 # The scanners don't notice such a failure. gitleaks exits 0 with "no leaks
 # found" for a missing or a damaged object, for a `git diff` that fails and for
@@ -196,16 +184,10 @@ refuse_unreadable_diff() {
   shift
   local messages status=0
   messages=$(git "$@" 2>&1 >/dev/null) || status=$?
-  local line unexpected=
-  while IFS= read -r line; do
-    if [ -n "$line" ] && ! is_tolerated_stderr "$line"; then
-      unexpected+=$line$'\n'
-    fi
-  done <<<"$messages"
-  if [ "$status" -ne 0 ] || [ -n "$unexpected" ]; then
+  if [ "$status" -ne 0 ] || [ -n "$messages" ]; then
     echo "secrets-scan: Git can't produce the diff of $reads, so nothing was" \
       "scanned." >&2
-    printf '%s' "$unexpected" >&2
+    printf '%s\n' "$messages" >&2
     exit 4
   fi
 }

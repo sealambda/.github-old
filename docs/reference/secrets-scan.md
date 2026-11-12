@@ -30,8 +30,7 @@ and the result would look clean and mean nothing:
   settings of the next section: `git log -p -U0` with the options of the scan
   for `history`, and `git diff -U0 --no-ext-diff --staged .` for `staged`. It
   exits with status 4 when the command exits with a status other than 0, or
-  writes a message to standard error other than the two lines about
-  `diff.renameLimit` that the scanners accept. Git names the cause on standard
+  writes any message to standard error. Git names the cause on standard
   error, and the command prints it. The causes include a missing or damaged
   object, a setting that makes Git fail, such as `diff.orderFile` with a file
   that doesn't exist (status 128), and a value that Git can't parse and only
@@ -156,14 +155,25 @@ padding a file above the limit.
 ### Other repository content that changes the diff
 
 A probe of the ways that the content of a repository changes what `git log -p`
-and `git diff --staged` print, with both scanners, found two more cases that
-passed a secret, and the command closes both:
+and `git diff --staged` print, with both scanners, found three more cases that
+passed a secret, and the command closes all three:
 
 - A commit that turns a symbolic link into a file. The default filter of the
   scanners, `--diff-filter=tuxdb`, has a `t` that leaves out type changes, and
   the diff of such a commit holds the whole content of the file. The command
   passes `--diff-filter=uxdb`.
 - A `refs/replace` reference, described in the list above.
+- A commit that moves a file without an edit. With rename detection, Git prints
+  `rename from` and `rename to` lines and no hunk, so a scanner reads no line
+  of the file. A secret in a file at a path that the scanner skips, such as
+  `creds.png`, passes after `git mv creds.png deploy.yml`, and the file at the
+  new path holds it. The `git` of the command adds `--no-renames`, which
+  overrides `diff.renames`. Git then prints the file at the new path as an
+  addition with its whole content, and the scanner reads it. The cost is that a
+  moved file is a finding at its new path, with a new fingerprint, even when a
+  fingerprint suppresses the finding at the old path. Git also prints no
+  warning about `diff.renameLimit` for a change with many renames, because it
+  looks for none.
 
 The attributes `working-tree-encoding`, `filter`, `ident`, `export-subst`,
 `text`, `eol` and `-text`, a file mode change, a symbolic link, a line of
@@ -418,9 +428,10 @@ and the command doesn't filter the output:
   CI finds what the hook missed, with the guards of the workflow or of the
   command, as [The workflow and the command](#the-workflow-and-the-command)
   compares.
-- `staged` scans the lines that the change adds. A staged deletion and a staged
-  rename without an edit add no line, so they pass. The secret that they leave
-  or move is in the history, and the scan of the history finds it.
+- `staged` scans the lines that the change adds. A staged deletion adds no
+  line, so it passes. The secret that it leaves is in the history, and the scan
+  of the history finds it. A staged rename is an addition at the new path, so
+  the scan reads the whole file.
 - A merge commit with three or more parents, an octopus merge, has no `remerge`
   diff: Git prints the line `diff: warning: Skipping remerge-diff for octopus
   merges.` in place of a diff. A secret that only such a merge commit holds

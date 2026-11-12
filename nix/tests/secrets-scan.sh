@@ -575,20 +575,50 @@ case_staged_finds_a_secret_added_in_a_renamed_file() {
   assert_output_contains "ci.yml"
 }
 
-# A staged rename of a file with a committed secret adds no line, so the scan of
-# the staged changes passes. The secret is in the history, and the scan of the
-# history finds it.
-case_staged_passes_a_rename_of_a_committed_secret() {
+# Git prints a rename that has no edit as `rename from` and `rename to` lines
+# without a hunk, so a scanner that reads the added lines finds nothing. The
+# command turns rename detection off: Git prints the file as an addition at the
+# new path with its whole content. A staged rename of a file with a committed
+# secret is a finding at the new path, and the scan of the history finds the
+# secret at the old path.
+case_staged_finds_a_committed_secret_that_a_rename_moves() {
   new_repository rename-moves
   commit_secret ci.yml
   git mv ci.yml moved.yml
 
   run_scan staged
-  assert_status 0
+  assert_status 1
+  assert_output_contains "moved.yml"
 
   run_scan history
   assert_status 1
   assert_output_contains "ci.yml"
+}
+
+# Both scanners skip a file whose path the default rules allow, such as
+# `creds.png`. A rename of such a file to a path that the scanners read prints no
+# added line with rename detection, so the secret would pass at the new path
+# while the file at HEAD holds it. With the detection off, both scans read the
+# file at the new path.
+case_a_rename_out_of_a_skipped_path_does_not_hide_a_secret() {
+  new_repository rename-from-skipped-history
+  commit_secret creds.png
+  run_scan history
+  assert_status 0
+  git mv creds.png deploy.yml
+  git commit --quiet --message "Rename creds.png"
+
+  run_scan history
+  assert_status 1
+  assert_output_contains "deploy.yml"
+
+  new_repository rename-from-skipped-staged
+  commit_secret creds.png
+  git mv creds.png deploy.yml
+
+  run_scan staged
+  assert_status 1
+  assert_output_contains "deploy.yml"
 }
 
 # A staged deletion adds no line, so the scan of the staged changes passes, and
@@ -937,9 +967,10 @@ case_driver_names_with_quote_characters_are_pinned() {
 }
 
 # Git warns on standard error, and still prints the whole diff, when a change
-# has more renamed files than `diff.renameLimit`. Both scanners log the warning
-# and scan on, so the scan must not refuse such a repository: the warning is no
-# failure. The check of the setup shows that Git does print the warning.
+# has more renamed files than `diff.renameLimit`. The `git` of the command turns
+# rename detection off, so Git prints no warning during the scan, and the scan
+# must not refuse such a repository. The check of the setup shows that Git does
+# print the warning when rename detection is on.
 case_rename_limit_warning_does_not_stop_the_scan() {
   new_repository rename-limit
   local number
@@ -1164,7 +1195,8 @@ main() {
     case_repository_without_commits
     case_linked_worktree
     case_staged_finds_a_secret_added_in_a_renamed_file
-    case_staged_passes_a_rename_of_a_committed_secret
+    case_staged_finds_a_committed_secret_that_a_rename_moves
+    case_a_rename_out_of_a_skipped_path_does_not_hide_a_secret
     case_staged_deletion_passes_and_history_keeps_the_secret
     case_a_file_that_git_treats_as_binary_does_not_hide_a_secret
     case_a_file_with_the_extension_of_a_binary_format_is_not_scanned
