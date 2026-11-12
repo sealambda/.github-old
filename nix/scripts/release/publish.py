@@ -4,7 +4,7 @@ import json
 
 from release.plan import AlreadyReleased, Plan, ReleaseError, plan_for_existing_tag
 from release.runner import CommandError, Runner
-from release.series import HUB, Series
+from release.series import Series
 
 RELEASE_NOT_FOUND = "release not found"
 """What `gh release view` prints to standard error for a missing release.
@@ -128,7 +128,7 @@ def release_exists(gh: Runner, tag: str) -> bool:
 
 
 def ensure_release(
-    gh: Runner, git: Runner, released: AlreadyReleased, series: Series = HUB
+    gh: Runner, git: Runner, released: AlreadyReleased, series: Series
 ) -> bool:
     """Make sure that a release exists for the tag that a commit carries.
 
@@ -142,7 +142,7 @@ def ensure_release(
         gh: The runner of `gh`.
         git: The runner of git in the repository.
         released: The commit and the release tag that it carries.
-        series: The series of the tag. The default is the hub series.
+        series: The series of the tag.
 
     Returns:
         `True` when this call created the release, `False` when it existed.

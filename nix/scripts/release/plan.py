@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from release import repo
 from release.notes import render_notes
 from release.runner import Runner
-from release.series import HUB, Bump, Series
+from release.series import Bump, Series
 from release.tags import Version, highest_release, lowest_release, next_version
 
 
@@ -126,7 +126,7 @@ def _make_plan(
 
 
 def plan_release(
-    git: Runner, revision: str, series: Series = HUB
+    git: Runner, revision: str, series: Series
 ) -> Plan | AlreadyReleased | Covered | NoRelease:
     """Decide what releasing a commit means in a series.
 
@@ -140,7 +140,8 @@ def plan_release(
     Args:
         git: The runner of git in the repository to release.
         revision: A name for the commit, such as `HEAD` or a hash.
-        series: The series to release. The default is the hub series.
+        series: The series to release. It has no default, so a caller can't
+            plan the hub series by omission.
 
     Returns:
         `AlreadyReleased` when the commit carries a tag of the series.
@@ -179,7 +180,7 @@ def plan_release(
 
 
 def plan_for_existing_tag(
-    git: Runner, released: AlreadyReleased, series: Series = HUB
+    git: Runner, released: AlreadyReleased, series: Series
 ) -> Plan:
     """Plan the release for a tag that a commit already carries.
 
@@ -192,7 +193,7 @@ def plan_for_existing_tag(
     Args:
         git: The runner of git in the repository to release.
         released: The commit and its tag, from `plan_release`.
-        series: The series of the tag. The default is the hub series.
+        series: The series of the tag.
 
     Raises:
         CommandError: A git command failed.

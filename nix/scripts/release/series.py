@@ -12,7 +12,6 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import Enum
 
-from release.notes import RULES_CHANGED_LABEL
 from release.paths import (
     ACTIONS_DATA_PATTERNS,
     ACTIONS_FILE_PATTERNS,
@@ -124,7 +123,7 @@ def _actions_kind(path: str) -> Bump:
 HUB = Series(
     name="hub",
     prefix=HUB_PREFIX,
-    label=RULES_CHANGED_LABEL,
+    label="rules changed",
     make_latest=True,
     bump_for_changes=_hub_bump,
     bump_for_first_release=_hub_first_bump,

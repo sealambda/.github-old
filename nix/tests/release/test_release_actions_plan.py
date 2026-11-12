@@ -150,15 +150,13 @@ class ActionsPlanTest(RepoTestCase):
         self.assertFalse(hub.rules_changed)
         self.assertTrue(hub.make_latest)
 
-    def test_the_hub_series_is_the_default_series(self) -> None:
-        """A call without a series plans the hub series, and ignores actions tags."""
+    def test_the_hub_plan_ignores_actions_tags(self) -> None:
+        """An actions tag is no release of the hub series, so the plan is first."""
         self.commit({"flake.nix": "{}\n"}, "feat: add the flake")
         self.tag("actions-v1.0.0")
-        default = plan_release(self.git, "HEAD")
-        explicit = plan_release(self.git, "HEAD", HUB)
-        self.assertEqual(default, explicit)
-        assert isinstance(default, Plan), default
-        self.assertEqual((default.tag, default.previous), ("v1.0.0", None))
+        outcome = plan_release(self.git, "HEAD", HUB)
+        assert isinstance(outcome, Plan), outcome
+        self.assertEqual((outcome.tag, outcome.previous), ("v1.0.0", None))
 
     def test_a_commit_with_a_tag_of_the_other_series_is_not_released(self) -> None:
         """A hub tag does not release the commit for the actions series."""

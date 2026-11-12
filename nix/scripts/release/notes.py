@@ -3,9 +3,6 @@
 import re
 from collections.abc import Sequence
 
-RULES_CHANGED_LABEL = "rules changed"
-"""The question that the first line of the notes of the hub series answers."""
-
 MAX_NOTES_BYTES = 100_000
 """The most bytes that the notes of a release may hold.
 
@@ -46,13 +43,13 @@ def _size(text: str) -> int:
 def render_notes(
     rules_changed: bool,
     subjects: Sequence[str],
+    label: str,
     limit: int = MAX_NOTES_BYTES,
-    label: str = RULES_CHANGED_LABEL,
 ) -> str:
     """Return the notes of a release.
 
-    The first line is `<label>: yes` or `<label>: no`, for the default label
-    `rules changed: yes` or `rules changed: no`. A blank line follows, then one
+    The first line is `<label>: yes` or `<label>: no`, for example
+    `rules changed: yes` for the hub series. A blank line follows, then one
     bullet for the subject of each commit. A bullet holds the subject as a
     Markdown code span, so the text of a contributor cannot add a link, a
     mention or a reference to the notes. When the whole text would exceed
@@ -64,12 +61,12 @@ def render_notes(
         rules_changed: The answer for the release.
         subjects: The subject lines of the commits in the release, newest
             first. Each is one line.
+        label: The question that the first line answers.
+            `release.series.Series.label` holds the question of each series,
+            and it is the only place that spells one.
         limit: The most bytes (UTF-8) that the notes may hold. The default is
             `MAX_NOTES_BYTES`. A limit that cannot hold the first line and the
             last line gives notes that exceed it, and the first line stays.
-        label: The question that the first line answers. The default is the
-            question of the hub series, `release.series.Series.label` holds
-            the question of each series.
     """
     answer = "yes" if rules_changed else "no"
     header = f"{label}: {answer}\n\n"

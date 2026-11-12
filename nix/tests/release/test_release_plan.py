@@ -8,6 +8,7 @@ from release.plan import (
     plan_for_existing_tag,
     plan_release,
 )
+from release.series import HUB
 from release_repo import RepoTestCase
 
 
@@ -16,7 +17,7 @@ class PlanReleaseTest(RepoTestCase):
 
     def planned(self, revision: str = "HEAD") -> Plan:
         """Plan `revision` and check that the commit is not yet released."""
-        outcome = plan_release(self.git, revision)
+        outcome = plan_release(self.git, revision, HUB)
         assert isinstance(outcome, Plan), outcome
         return outcome
 
@@ -149,7 +150,7 @@ class PlanReleaseTest(RepoTestCase):
                     {f"docs/reference/{annotated}.txt": "a\n"}, "docs: a page"
                 )
                 self.tag("v1.3.0" if annotated else "v1.2.0", annotated=annotated)
-                outcome = plan_release(self.git, "HEAD")
+                outcome = plan_release(self.git, "HEAD", HUB)
                 self.assertEqual(
                     outcome,
                     AlreadyReleased(head, "v1.3.0" if annotated else "v1.2.0"),
@@ -161,14 +162,14 @@ class PlanReleaseTest(RepoTestCase):
         self.tag("v1.2.0")
         self.tag("v1.10.0")
         self.assertEqual(
-            plan_release(self.git, "HEAD"), AlreadyReleased(head, "v1.10.0")
+            plan_release(self.git, "HEAD", HUB), AlreadyReleased(head, "v1.10.0")
         )
 
     def test_malformed_tag_on_the_commit_is_not_a_release(self) -> None:
         """A commit with only a malformed tag still gets released."""
         self.commit({"docs/reference/a.txt": "a\n"}, "docs: add a page")
         self.tag("v1.0")
-        self.assertIsInstance(plan_release(self.git, "HEAD"), Plan)
+        self.assertIsInstance(plan_release(self.git, "HEAD", HUB), Plan)
 
     def test_tag_on_a_commit_that_does_not_contain_this_one_fails(self) -> None:
         """A version that a release on another branch holds is taken."""
@@ -180,7 +181,7 @@ class PlanReleaseTest(RepoTestCase):
         self.git(["switch", "--quiet", "main"])
         main_commit = self.commit({"docs/reference/a.txt": "a\n"}, "docs: add a page")
         with self.assertRaises(ReleaseError) as raised:
-            plan_release(self.git, main_commit)
+            plan_release(self.git, main_commit, HUB)
         self.assertIn("v1.0.1", str(raised.exception))
         self.assertIn(other, str(raised.exception))
 
@@ -191,7 +192,9 @@ class PlanReleaseTest(RepoTestCase):
         skipped = self.commit({"docs/reference/a.txt": "a\n"}, "docs: add a page")
         self.commit({"flake.nix": "{ }\n"}, "fix: change the flake")
         self.tag("v1.1.0")
-        self.assertEqual(plan_release(self.git, skipped), Covered(skipped, "v1.1.0"))
+        self.assertEqual(
+            plan_release(self.git, skipped, HUB), Covered(skipped, "v1.1.0")
+        )
 
     def test_covering_tag_is_the_lowest_by_number(self) -> None:
         """`v1.9.0` is lower than `v1.10.0`, although it sorts higher as text."""
@@ -200,7 +203,9 @@ class PlanReleaseTest(RepoTestCase):
         self.commit({"flake.nix": "{ }\n"}, "fix: change the flake")
         self.tag("v1.10.0")
         self.tag("v1.9.0")
-        self.assertEqual(plan_release(self.git, skipped), Covered(skipped, "v1.9.0"))
+        self.assertEqual(
+            plan_release(self.git, skipped, HUB), Covered(skipped, "v1.9.0")
+        )
 
     def test_a_tag_on_the_commit_wins_over_a_covering_tag(self) -> None:
         """A commit that carries a release tag is released, not merely covered."""
@@ -209,7 +214,7 @@ class PlanReleaseTest(RepoTestCase):
         self.commit({"flake.nix": "{}\n"}, "feat: add the flake")
         self.tag("v1.1.0")
         self.assertEqual(
-            plan_release(self.git, carried), AlreadyReleased(carried, "v1.0.0")
+            plan_release(self.git, carried, HUB), AlreadyReleased(carried, "v1.0.0")
         )
 
     def test_tag_on_another_branch_does_not_cover(self) -> None:
@@ -221,7 +226,7 @@ class PlanReleaseTest(RepoTestCase):
         self.tag("v1.7.0")
         self.git(["switch", "--quiet", "main"])
         main_commit = self.commit({"docs/reference/a.txt": "a\n"}, "docs: add a page")
-        self.assertIsInstance(plan_release(self.git, main_commit), Plan)
+        self.assertIsInstance(plan_release(self.git, main_commit, HUB), Plan)
 
     def test_commit_without_a_changed_path_gives_no(self) -> None:
         """An empty commit after the release gives `no` and an empty diff."""
@@ -254,7 +259,7 @@ class PlanForExistingTagTest(RepoTestCase):
         self.commit({"flake.nix": "{ }\n"}, "fix: change the flake")
         head = self.commit({"docs/reference/a.txt": "a\n"}, "docs: add a page")
         self.tag("v1.1.0")
-        plan = plan_for_existing_tag(self.git, AlreadyReleased(head, "v1.1.0"))
+        plan = plan_for_existing_tag(self.git, AlreadyReleased(head, "v1.1.0"), HUB)
         self.assertEqual(
             (plan.tag, plan.commit, plan.previous), ("v1.1.0", head, "v1.0.0")
         )
@@ -271,7 +276,7 @@ class PlanForExistingTagTest(RepoTestCase):
         head = self.commit({"flake.nix": "{ }\n"}, "fix: change the flake")
         self.tag("v1.1.0")
         self.tag("v1.1.1")
-        plan = plan_for_existing_tag(self.git, AlreadyReleased(head, "v1.1.1"))
+        plan = plan_for_existing_tag(self.git, AlreadyReleased(head, "v1.1.1"), HUB)
         self.assertEqual(plan.previous, "v1.0.0")
         self.assertTrue(plan.rules_changed)
 
@@ -279,6 +284,6 @@ class PlanForExistingTagTest(RepoTestCase):
         """Without an earlier release tag the answer is `yes`."""
         head = self.commit({"docs/reference/a.txt": "a\n"}, "docs: add a page")
         self.tag("v1.0.0")
-        plan = plan_for_existing_tag(self.git, AlreadyReleased(head, "v1.0.0"))
+        plan = plan_for_existing_tag(self.git, AlreadyReleased(head, "v1.0.0"), HUB)
         self.assertIsNone(plan.previous)
         self.assertTrue(plan.rules_changed)

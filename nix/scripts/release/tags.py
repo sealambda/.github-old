@@ -45,11 +45,6 @@ class Version:
     minor: int
     patch: int
 
-    @property
-    def tag(self) -> str:
-        """The tag name of the version in the hub series, such as `v1.2.3`."""
-        return self.tag_with(HUB_PREFIX)
-
     def tag_with(self, prefix: str) -> str:
         """Return the tag name of the version in the series of `prefix`."""
         return f"{prefix}{self.major}.{self.minor}.{self.patch}"
@@ -59,12 +54,14 @@ FIRST_VERSION = Version(1, 0, 0)
 """The version of the first release."""
 
 
-def parse_tag(name: str, prefix: str = HUB_PREFIX) -> Version | None:
+def parse_tag(name: str, prefix: str) -> Version | None:
     """Return the version that a tag name holds, or `None` for another name.
 
     Args:
         name: A tag name of any form.
-        prefix: The prefix of the series. The default is the hub series.
+        prefix: The prefix of the series, `HUB_PREFIX` or `ACTIONS_PREFIX`. No
+            default exists, so a caller can't read the wrong series by
+            omission.
     """
     match = _release_pattern(prefix).fullmatch(name)
     if match is None:
@@ -78,13 +75,13 @@ def _release_versions(names: Iterable[str], prefix: str) -> list[Version]:
     return [version for name in names if (version := parse_tag(name, prefix))]
 
 
-def highest_release(names: Iterable[str], prefix: str = HUB_PREFIX) -> Version | None:
+def highest_release(names: Iterable[str], prefix: str) -> Version | None:
     """Return the highest version among the release tags in `names`.
 
     Args:
         names: Tag names of any form. The function ignores the names that are
             not release tags of the series.
-        prefix: The prefix of the series. The default is the hub series.
+        prefix: The prefix of the series.
 
     Returns:
         The highest version, or `None` when no name is a release tag.
@@ -92,13 +89,13 @@ def highest_release(names: Iterable[str], prefix: str = HUB_PREFIX) -> Version |
     return max(_release_versions(names, prefix), default=None)
 
 
-def lowest_release(names: Iterable[str], prefix: str = HUB_PREFIX) -> Version | None:
+def lowest_release(names: Iterable[str], prefix: str) -> Version | None:
     """Return the lowest version among the release tags in `names`.
 
     Args:
         names: Tag names of any form. The function ignores the names that are
             not release tags of the series.
-        prefix: The prefix of the series. The default is the hub series.
+        prefix: The prefix of the series.
 
     Returns:
         The lowest version, or `None` when no name is a release tag.
