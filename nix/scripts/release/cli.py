@@ -2,22 +2,28 @@
 
 Usage:
 
-    release plan [--commit REVISION]
-    release publish [--commit REVISION]
+    release plan [--series {hub,actions}] [--commit REVISION]
+    release publish [--series {hub,actions}] [--commit REVISION]
 
-`REVISION` is a name for a commit and defaults to `HEAD`. Both commands run in
-the git repository of the current directory.
+`REVISION` is a name for a commit and defaults to `HEAD`. `--series` names the
+tag series (`release.series`) and defaults to `hub`. The hub series has the tags
+`v<major>.<minor>.<patch>`, and the actions series has the tags
+`actions-v<major>.<minor>.<patch>`. Both commands run in the git repository of
+the current directory.
 
 `plan` prints the tag, the commit, the previous release and the notes of the
 release that the commit gets. It changes nothing and does not call `gh`.
 `publish` creates the GitHub release, and with it the tag, at the commit. It
 needs `gh`, and `gh` reads `GH_TOKEN` and `GH_REPO` from the environment.
 
-Two cases get no new tag. A commit that a later release tag contains is
-covered by that release: both commands say so and exit 0. A commit that
-carries a release tag is released: `plan` says so, and `publish` asks GitHub
-whether the release for the tag exists. It exits 0 when it does, and it
-creates the missing release for the existing tag when it does not.
+Three cases get no new tag. A commit that a later release tag of the series
+contains is covered by that release: both commands say so and exit 0. A commit
+that carries a release tag of the series is released: `plan` says so, and
+`publish` asks GitHub whether the release for the tag exists. It exits 0 when
+it does, and it creates the missing release for the existing tag when it does
+not. A commit that changes no path that the series releases gets no release:
+both commands say so, call nothing and exit 0. Only the actions series has
+paths of its own, so the hub series never answers this.
 
 Exit status: 0 for success, 1 when the release cannot be made (a command failed,
 the new tag exists on a commit that does not contain this one, or the tag on
@@ -46,6 +52,7 @@ from release.plan import (
 )
 from release.publish import ensure_release, publish_release
 from release.runner import CommandError, Runner, command_runner
+from release.series import ALL_SERIES, HUB, Series
 
 EXIT_OK = 0
 EXIT_CANNOT_RELEASE = 1
@@ -72,10 +79,12 @@ class Args:
     Attributes:
         command: `plan` or `publish`.
         commit: The revision of the commit to release.
+        series: The tag series to release.
     """
 
     command: str
     commit: str
+    series: Series
 
 
 def _parse(argv: Sequence[str]) -> Args:
@@ -100,8 +109,15 @@ def _parse(argv: Sequence[str]) -> Args:
             metavar="REVISION",
             help="the commit to release (default: HEAD)",
         )
+        command.add_argument(
+            "--series",
+            default=HUB.name,
+            choices=[series.name for series in ALL_SERIES],
+            help=f"the tag series to release (default: {HUB.name})",
+        )
     parsed = parser.parse_args(argv)
-    return Args(parsed.command, parsed.commit)
+    series = next(series for series in ALL_SERIES if series.name == parsed.series)
+    return Args(parsed.command, parsed.commit, series)
 
 
 def _describe(plan: Plan) -> str:
@@ -143,7 +159,7 @@ def _run_for_tagged_commit(
         CommandError: A git or `gh` command failed.
     """
     done = f"commit {released.commit} is already released as {released.tag}\n"
-    if args.command == "plan" or not ensure_release(gh, git, released):
+    if args.command == "plan" or not ensure_release(gh, git, released, args.series):
         return done
     return (
         f"commit {released.commit} carries the tag {released.tag} without a "
@@ -159,7 +175,7 @@ def _run(args: Args, git: Runner, gh: Runner) -> str:
             commit to release.
         CommandError: A git or `gh` command failed.
     """
-    outcome = plan_release(git, args.commit)
+    outcome = plan_release(git, args.commit, args.series)
     if isinstance(outcome, Covered):
         return f"commit {outcome.commit} is covered by release {outcome.tag}\n"
     if isinstance(outcome, NoRelease):

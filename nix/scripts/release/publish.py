@@ -4,6 +4,7 @@ import json
 
 from release.plan import AlreadyReleased, Plan, ReleaseError, plan_for_existing_tag
 from release.runner import CommandError, Runner
+from release.series import HUB, Series
 
 RELEASE_NOT_FOUND = "release not found"
 """What `gh release view` prints to standard error for a missing release.
@@ -54,6 +55,10 @@ def publish_release(gh: Runner, plan: Plan, *, tag_exists: bool = False) -> None
     For a tag that exists, `--verify-tag` makes the call fail when the tag is
     not in the GitHub repository, and no `--target` is needed. The notes go
     through standard input, which has no limit on the length of an argument.
+    A plan with `make_latest` set to `False` adds `--latest=false`, so that the
+    release does not take the "latest" label from the hub release. The hub
+    series keeps the default, which `gh` chooses by date and version, and its
+    call has no such argument.
 
     Args:
         gh: The runner of `gh`. The repository and the token come from the
@@ -69,6 +74,7 @@ def publish_release(gh: Runner, plan: Plan, *, tag_exists: bool = False) -> None
             tool changes nothing more: a person decides what to do with it.
     """
     placement = ["--verify-tag"] if tag_exists else ["--target", plan.commit]
+    label = [] if plan.make_latest else ["--latest=false"]
     gh(
         [
             "release",
@@ -79,6 +85,7 @@ def publish_release(gh: Runner, plan: Plan, *, tag_exists: bool = False) -> None
             plan.tag,
             "--notes-file",
             "-",
+            *label,
         ],
         stdin=plan.notes,
     )
@@ -120,18 +127,22 @@ def release_exists(gh: Runner, tag: str) -> bool:
     return True
 
 
-def ensure_release(gh: Runner, git: Runner, released: AlreadyReleased) -> bool:
+def ensure_release(
+    gh: Runner, git: Runner, released: AlreadyReleased, series: Series = HUB
+) -> bool:
     """Make sure that a release exists for the tag that a commit carries.
 
     A tag can exist without a release, for example when someone deleted the
     release and kept the tag. This function asks GitHub, and it creates the
     release for the existing tag when it is missing. The notes come from the
-    release before that tag (`release.plan.plan_for_existing_tag`).
+    release before that tag (`release.plan.plan_for_existing_tag`), and the
+    release has the "latest" setting of the series.
 
     Args:
         gh: The runner of `gh`.
         git: The runner of git in the repository.
         released: The commit and the release tag that it carries.
+        series: The series of the tag. The default is the hub series.
 
     Returns:
         `True` when this call created the release, `False` when it existed.
@@ -142,5 +153,6 @@ def ensure_release(gh: Runner, git: Runner, released: AlreadyReleased) -> bool:
     """
     if release_exists(gh, released.tag):
         return False
-    publish_release(gh, plan_for_existing_tag(git, released), tag_exists=True)
+    plan = plan_for_existing_tag(git, released, series)
+    publish_release(gh, plan, tag_exists=True)
     return True
