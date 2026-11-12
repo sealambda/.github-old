@@ -229,7 +229,15 @@ error and 3 for an internal error.
 nix run .#release -- plan
 ```
 
-The tests are the flake check `check-release-tests`.
+The command starts Python with `-P`, so the current directory isn't on the
+import path. A file in the repository that the command runs in, such as
+`argparse.py` or a package `release`, can't replace the code of the tool.
+
+The tests are the flake check `check-release-tests`. It also builds the
+`release` command, runs `release --help` and `release plan` in a temporary
+repository with one commit, and runs `release plan` again next to a package
+`release` that would shadow the tool. This covers the wrapper, its run-time
+inputs and the default runners, which the unit tests replace.
 
 ## Immutable releases
 

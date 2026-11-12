@@ -306,7 +306,10 @@
             pkgs.gh
           ];
           runtimeEnv = releaseEnv;
-          text = ''exec python -m release "$@"'';
+          # `-P` keeps the current directory off `sys.path`: the command runs in
+          # the repository of the caller, and a file there must not replace a
+          # module of the standard library or the package `release`.
+          text = ''exec python -P -m release "$@"'';
         };
 
       # The Python package `leaks`, and the package `decisions`. `leaks`
@@ -744,6 +747,13 @@
         # a writable HOME, and they reach no network. They compare the list of
         # patterns with the table of the reference page, which the variable
         # `HUB_RELEASES_DOC` names, because the test folder holds no page.
+        #
+        # The unit tests import the package and inject their runners, so they
+        # do not run the `release` command that CI runs. The second part does:
+        # it runs the built command in a temporary repository with one commit,
+        # which covers the wrapper, its run-time inputs and the default runners.
+        # A directory with a package `release` in it must not shadow the real
+        # one, because the command runs in the repository of the caller.
         check-release-tests =
           pkgs.runCommand "check-release-tests"
             {
@@ -758,6 +768,22 @@
             ''
               export HOME="$TMPDIR"
               python -m unittest discover -v -s ${./nix/tests/release}
+
+              release=${mkReleaseTool pkgs}/bin/release
+              mkdir "$TMPDIR/smoke"
+              cd "$TMPDIR/smoke"
+              git init --quiet --initial-branch=main
+              git -c user.name=smoke -c user.email=smoke@example.com \
+                -c commit.gpgsign=false \
+                commit --quiet --allow-empty --message "feat: first commit"
+              "$release" --help > /dev/null
+              "$release" plan | grep --line-regexp "tag: v1.0.0"
+              mkdir release
+              echo "raise SystemExit('shadowed by the current directory')" \
+                > release/__main__.py
+              : > release/__init__.py
+              "$release" plan | grep --line-regexp "tag: v1.0.0"
+
               touch "$out"
             '';
 
