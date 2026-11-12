@@ -126,8 +126,11 @@ renovate-config = hub.lib.mkRenovateConfigCheck pkgs self { presets = [ "default
 ```
 
 The third argument holds `presets`, a list of file paths relative to the root,
-and its default is the empty list. The hub passes `default.json`, which is the
-preset that other repositories extend.
+and its default is the empty list. A value that isn't a list of strings stops
+the evaluation with a message that names `presets`, such as
+`` `presets` must be a list of strings, got `string`. ``
+The hub passes `default.json`, which is the preset that other repositories
+extend.
 
 The function `lib.mkStandards` adds the check by default. Its argument
 `renovateConfig = false` leaves the check out, as the

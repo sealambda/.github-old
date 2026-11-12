@@ -40,6 +40,13 @@ let
 
   check = hub.mkRenovateConfigCheck pkgs;
 
+  inherit (harness) mustHold;
+
+  # Whether the evaluation of the check for the value `presets` succeeds. The
+  # derivation path is forced, which runs the check of the argument.
+  evaluatesWith =
+    presets: (builtins.tryEval (check (tree "presets-type" { }) { inherit presets; }).drvPath).success;
+
   # The configuration files that Renovate reads, written out here and not taken
   # from the script, so a name that the script drops loses its case. The case
   # `renovate-config-names-match-renovate` compares the names of the script with
@@ -203,6 +210,23 @@ in
     };
     expectedLog = [ "preset file not found: v2.json" ];
     expectedExitCode = 2;
+  };
+
+  # Requirement: `presets` must be a list of strings. A string fails the
+  # evaluation, and so does a list that holds a path: without the check the
+  # path becomes a store path in the command, and the check reads a file that
+  # is not in the source. Each case holds a list of strings as its control, so
+  # a fixture that never evaluates can't pass it.
+  renovate-config-presets-string-is-refused = {
+    check = mustHold "The call with a string for presets evaluates, or the control fails." (
+      evaluatesWith [ "default.json" ] && !evaluatesWith "default.json"
+    );
+  };
+
+  renovate-config-presets-path-item-is-refused = {
+    check = mustHold "The call with a path in presets evaluates, or the control fails." (
+      evaluatesWith [ "default.json" ] && !evaluatesWith [ ./renovate-config.nix ]
+    );
   };
 
   # Requirement: the script reads every name that the installed Renovate reads.

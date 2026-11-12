@@ -4,6 +4,17 @@
 # check runs is `nix/scripts/renovate-config.sh`, and the rules are in
 # `docs/reference/renovate-config-check.md`.
 { lib, hubPackagesFor }:
+let
+  # The part of the message that says what the caller passed for `presets`:
+  # the type of the value, or, for a list, the type of its first item that is
+  # not a string.
+  describePresets =
+    presets:
+    if lib.isList presets then
+      "a list that holds `${builtins.typeOf (lib.findFirst (item: !lib.isString item) null presets)}`"
+    else
+      "`${builtins.typeOf presets}`";
+in
 {
   /**
     Builds a check that fails when a Renovate configuration file of a source
@@ -41,7 +52,8 @@
       one is a shared preset that the repository publishes, such as
       `default.json`. The check validates it as a repository configuration,
       and it fails with exit status 2 when a listed file doesn't exist or its
-      path leaves the root of `src`.
+      path leaves the root of `src`. The evaluation stops with a message that
+      names `presets` when the value is not a list of strings.
 
     # Type
 
@@ -54,6 +66,9 @@
     {
       presets ? [ ],
     }:
+    assert lib.assertMsg (
+      lib.isList presets && lib.all lib.isString presets
+    ) "`presets` must be a list of strings, got ${describePresets presets}.";
     let
       hubPkgs = hubPackagesFor pkgs;
       renovateConfig = hubPkgs.writeShellApplication {
