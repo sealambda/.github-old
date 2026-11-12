@@ -113,6 +113,11 @@ class RenderNotesTest(unittest.TestCase):
                 first = render_notes(answer, ["x"]).splitlines()[0]
                 self.assertEqual(first, f"rules changed: {word}")
 
+    def test_label_replaces_the_question_of_the_first_line(self) -> None:
+        """The actions series asks its own question and keeps the bullets."""
+        text = render_notes(False, ["fix: a"], label="workflow or action files changed")
+        self.assertEqual(text, "workflow or action files changed: no\n\n- `fix: a`\n")
+
 
 class SubjectMarkdownTest(unittest.TestCase):
     """A subject is the text of a contributor, so it stays plain text."""

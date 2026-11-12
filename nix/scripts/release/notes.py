@@ -3,6 +3,9 @@
 import re
 from collections.abc import Sequence
 
+RULES_CHANGED_LABEL = "rules changed"
+"""The question that the first line of the notes of the hub series answers."""
+
 MAX_NOTES_BYTES = 100_000
 """The most bytes that the notes of a release may hold.
 
@@ -44,16 +47,18 @@ def render_notes(
     rules_changed: bool,
     subjects: Sequence[str],
     limit: int = MAX_NOTES_BYTES,
+    label: str = RULES_CHANGED_LABEL,
 ) -> str:
     """Return the notes of a release.
 
-    The first line is `rules changed: yes` or `rules changed: no`. A blank line
-    follows, then one bullet for the subject of each commit. A bullet holds the
-    subject as a Markdown code span, so the text of a contributor cannot add a
-    link, a mention or a reference to the notes. When the whole text would
-    exceed `limit`, the notes keep the first subjects, which are the newest
-    commits, and end with one line, `older commits omitted: <count>`. Notes
-    that fit have no such line.
+    The first line is `<label>: yes` or `<label>: no`, for the default label
+    `rules changed: yes` or `rules changed: no`. A blank line follows, then one
+    bullet for the subject of each commit. A bullet holds the subject as a
+    Markdown code span, so the text of a contributor cannot add a link, a
+    mention or a reference to the notes. When the whole text would exceed
+    `limit`, the notes keep the first subjects, which are the newest commits,
+    and end with one line, `older commits omitted: <count>`. Notes that fit
+    have no such line.
 
     Args:
         rules_changed: The answer for the release.
@@ -62,9 +67,12 @@ def render_notes(
         limit: The most bytes (UTF-8) that the notes may hold. The default is
             `MAX_NOTES_BYTES`. A limit that cannot hold the first line and the
             last line gives notes that exceed it, and the first line stays.
+        label: The question that the first line answers. The default is the
+            question of the hub series, `release.series.Series.label` holds
+            the question of each series.
     """
     answer = "yes" if rules_changed else "no"
-    header = f"rules changed: {answer}\n\n"
+    header = f"{label}: {answer}\n\n"
     bullets = [f"- {_code_span(subject)}\n" for subject in subjects]
     if _size(header) + sum(_size(bullet) for bullet in bullets) <= limit:
         return header + "".join(bullets)

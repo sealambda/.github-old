@@ -36,7 +36,14 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import NoReturn
 
-from release.plan import AlreadyReleased, Covered, Plan, ReleaseError, plan_release
+from release.plan import (
+    AlreadyReleased,
+    Covered,
+    NoRelease,
+    Plan,
+    ReleaseError,
+    plan_release,
+)
 from release.publish import ensure_release, publish_release
 from release.runner import CommandError, Runner, command_runner
 
@@ -108,6 +115,22 @@ def _describe(plan: Plan) -> str:
     )
 
 
+def _describe_no_release(outcome: NoRelease) -> str:
+    """Return the text for a commit that the series does not release.
+
+    The text is for information: the command exits 0 and calls nothing.
+    """
+    if outcome.previous is None:
+        return (
+            f"commit {outcome.commit} has no path that the series releases: "
+            f"no release\n"
+        )
+    return (
+        f"commit {outcome.commit} changes no path that the series releases "
+        f"since {outcome.previous}: no release\n"
+    )
+
+
 def _run_for_tagged_commit(
     args: Args, git: Runner, gh: Runner, released: AlreadyReleased
 ) -> str:
@@ -139,6 +162,8 @@ def _run(args: Args, git: Runner, gh: Runner) -> str:
     outcome = plan_release(git, args.commit)
     if isinstance(outcome, Covered):
         return f"commit {outcome.commit} is covered by release {outcome.tag}\n"
+    if isinstance(outcome, NoRelease):
+        return _describe_no_release(outcome)
     if isinstance(outcome, AlreadyReleased):
         return _run_for_tagged_commit(args, git, gh, outcome)
     if args.command == "plan":

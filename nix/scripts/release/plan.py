@@ -1,11 +1,11 @@
-"""Plan the release of one commit. Planning has no side effect."""
+"""Plan the release of one commit in one series. Planning has no side effect."""
 
 from dataclasses import dataclass
 
 from release import repo
 from release.notes import render_notes
-from release.paths import rules_changed
 from release.runner import Runner
+from release.series import HUB, Bump, Series
 from release.tags import Version, highest_release, lowest_release, next_version
 
 
@@ -49,6 +49,23 @@ class Covered:
 
 
 @dataclass(frozen=True)
+class NoRelease:
+    """The commit changes no path that the series releases.
+
+    Only a series that has paths of its own returns this (the actions series).
+    It is not an error: the commit belongs to no release of that series.
+
+    Attributes:
+        commit: The full hash of the commit.
+        previous: The previous release tag of the series, `None` when the
+            series has no release and no path of it is in the tree.
+    """
+
+    commit: str
+    previous: str | None
+
+
+@dataclass(frozen=True)
 class Plan:
     """The release that a commit gets.
 
@@ -56,8 +73,11 @@ class Plan:
         commit: The full hash of the commit to tag.
         tag: The tag of the release.
         previous: The previous release tag, `None` for the first release.
-        rules_changed: The answer that the first line of the notes holds.
+        rules_changed: The answer that the first line of the notes holds. For
+            the actions series it answers whether a workflow or action file
+            changed.
         notes: The text of the release.
+        make_latest: Whether the release takes the "latest" label on GitHub.
     """
 
     commit: str
@@ -65,49 +85,69 @@ class Plan:
     previous: str | None
     rules_changed: bool
     notes: str
+    make_latest: bool = True
 
 
-def _answer_since(git: Runner, commit: str, previous: Version | None) -> bool:
-    """Tell whether the rules changed between `previous` and `commit`.
+def _previous_tag(series: Series, previous: Version | None) -> str | None:
+    """Return the tag name of the previous release, `None` for the first."""
+    return None if previous is None else previous.tag_with(series.prefix)
 
-    The first release (`previous` is `None`) has nothing to compare with, so
-    its answer is `True`.
+
+def _bump_since(
+    git: Runner, series: Series, commit: str, previous: Version | None
+) -> Bump:
+    """Return the kind of release that `commit` asks of `series`.
+
+    The first release (`previous` is `None`) has no commit to compare with, so
+    the rule reads the paths of the whole tree of `commit`.
     """
     if previous is None:
-        return True
-    return rules_changed(repo.changed_paths(git, previous.tag, commit))
+        return series.bump_for_first_release(repo.tree_paths(git, commit))
+    base = previous.tag_with(series.prefix)
+    return series.bump_for_changes(repo.changed_paths(git, base, commit))
 
 
 def _make_plan(
-    git: Runner, commit: str, previous: Version | None, changed: bool, tag: str
+    git: Runner,
+    series: Series,
+    commit: str,
+    previous: Version | None,
+    changed: bool,
+    tag: str,
 ) -> Plan:
-    """Build the plan of the release `tag` for `commit`.
+    """Build the plan of the release `tag` of `series` for `commit`.
 
     The notes list the subject of each commit after `previous`.
     """
-    base = None if previous is None else previous.tag
+    base = _previous_tag(series, previous)
     subjects = repo.commit_subjects(git, base, commit)
-    return Plan(commit, tag, base, changed, render_notes(changed, subjects))
+    notes = render_notes(changed, subjects, label=series.label)
+    return Plan(commit, tag, base, changed, notes, series.make_latest)
 
 
-def plan_release(git: Runner, revision: str) -> Plan | AlreadyReleased | Covered:
-    """Decide what releasing a commit means.
+def plan_release(
+    git: Runner, revision: str, series: Series = HUB
+) -> Plan | AlreadyReleased | Covered | NoRelease:
+    """Decide what releasing a commit means in a series.
 
-    The previous release is the highest release tag merged into the commit. The
-    answer `rules changed` is `yes` for the first release, and otherwise it
-    comes from the paths that differ between the previous release and the
-    commit (`release.paths`). The notes list the subject of each commit since
-    the previous release.
+    The previous release is the highest tag of the series merged into the
+    commit. The kind of release comes from the rule of the series: for the first
+    release it reads the tree, and otherwise the paths that differ between the
+    previous release and the commit (`release.series`). The notes list the
+    subject of each commit since the previous release. Tags of the other series
+    never count.
 
     Args:
         git: The runner of git in the repository to release.
         revision: A name for the commit, such as `HEAD` or a hash.
+        series: The series to release. The default is the hub series.
 
     Returns:
-        `AlreadyReleased` when the commit carries a release tag. `Covered`
-        when no tag points at the commit but a release tag contains it, which
-        happens when a run for an older commit starts after a newer release. A
-        `Plan` otherwise.
+        `AlreadyReleased` when the commit carries a tag of the series.
+        `Covered` when no tag points at the commit but a tag of the series
+        contains it, which happens when a run for an older commit starts after
+        a newer release. `NoRelease` when the rule of the series asks for no
+        release. A `Plan` otherwise.
 
     Raises:
         ReleaseError: The new tag exists on a commit that does not contain
@@ -116,42 +156,51 @@ def plan_release(git: Runner, revision: str) -> Plan | AlreadyReleased | Covered
             names no commit.
     """
     commit = repo.resolve_commit(git, revision)
-    carried = highest_release(repo.tags_at(git, commit))
+    carried = highest_release(repo.tags_at(git, commit), series.prefix)
     if carried is not None:
-        return AlreadyReleased(commit, carried.tag)
-    covering = lowest_release(repo.tags_containing(git, commit))
+        return AlreadyReleased(commit, carried.tag_with(series.prefix))
+    covering = lowest_release(repo.tags_containing(git, commit), series.prefix)
     if covering is not None:
-        return Covered(commit, covering.tag)
+        return Covered(commit, covering.tag_with(series.prefix))
 
-    previous = highest_release(repo.tags_merged_into(git, commit))
-    changed = _answer_since(git, commit, previous)
-    tag = next_version(previous, changed).tag
+    previous = highest_release(repo.tags_merged_into(git, commit), series.prefix)
+    bump = _bump_since(git, series, commit, previous)
+    if bump is Bump.NONE:
+        return NoRelease(commit, _previous_tag(series, previous))
+    changed = bump is Bump.MINOR
+    tag = next_version(previous, changed).tag_with(series.prefix)
     holder = repo.tag_commit(git, tag)
     if holder is not None:
         raise ReleaseError(
             f"the tag {tag} exists on commit {holder}, which does not contain "
             f"{commit}: the version {tag} is taken"
         )
-    return _make_plan(git, commit, previous, changed, tag)
+    return _make_plan(git, series, commit, previous, changed, tag)
 
 
-def plan_for_existing_tag(git: Runner, released: AlreadyReleased) -> Plan:
+def plan_for_existing_tag(
+    git: Runner, released: AlreadyReleased, series: Series = HUB
+) -> Plan:
     """Plan the release for a tag that a commit already carries.
 
-    The tag stays what it is. The previous release is the highest release tag
-    among the ancestors of the commit, so a second release tag on the same
-    commit is not the previous release. The answer and the notes come from
-    that previous release, the same as for a new tag.
+    The tag stays what it is. The previous release is the highest tag of the
+    series among the ancestors of the commit, so a second tag on the same
+    commit is not the previous release. The answer and the notes come from that
+    previous release, the same as for a new tag. When the rule of the series
+    asks for no release, the answer is `no`: the tag exists and needs a release.
 
     Args:
         git: The runner of git in the repository to release.
         released: The commit and its tag, from `plan_release`.
+        series: The series of the tag. The default is the hub series.
 
     Raises:
         CommandError: A git command failed.
     """
     at_commit = set(repo.tags_at(git, released.commit))
     ancestors = set(repo.tags_merged_into(git, released.commit)) - at_commit
-    previous = highest_release(ancestors)
-    changed = _answer_since(git, released.commit, previous)
-    return _make_plan(git, released.commit, previous, changed, released.tag)
+    previous = highest_release(ancestors, series.prefix)
+    bump = _bump_since(git, series, released.commit, previous)
+    return _make_plan(
+        git, series, released.commit, previous, bump is Bump.MINOR, released.tag
+    )

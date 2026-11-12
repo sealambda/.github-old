@@ -52,6 +52,16 @@ def changed_paths(git: Runner, base: str, commit: str) -> list[str]:
     return [path for path in output.split("\0") if path]
 
 
+def tree_paths(git: Runner, commit: str) -> list[str]:
+    """Return the paths of all files in the tree of `commit`.
+
+    A path is relative to the root of the repository. A submodule counts as one
+    path.
+    """
+    output = git(["ls-tree", "-r", "--name-only", "--full-tree", "-z", commit])
+    return [path for path in output.split("\0") if path]
+
+
 def commit_subjects(git: Runner, base: str | None, commit: str) -> list[str]:
     """Return the subject line of each commit after `base` up to `commit`.
 
