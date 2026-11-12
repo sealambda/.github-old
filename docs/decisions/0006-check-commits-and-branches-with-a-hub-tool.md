@@ -36,18 +36,31 @@ Three facts decide the question:
 - A change of a rule reaches every repository with one update of the hub input.
 - The rules are testable without Git, and the Git reading is testable on real
   repositories.
-- Few lines of code that a maintainer must own.
+- The policy fails what the hub refuses, without a change to the defaults of
+  a tool: a merge commit, a `fixup!` header and a missing blank line.
+- The code and the dependencies that a maintainer must own are the smallest
+  that meet the other drivers.
 
 ## Considered Options
 
 - Use `conform` with a configuration file in each repository
+- Use `commitlint` with a configuration file that the hub holds
+- Use `cocogitto`, `convco` or `gitlint` for the commit rules
 - A Python tool in the hub, `gitpolicy`
 
 ## Decision Outcome
 
 Chosen option: "A Python tool in the hub" because it reads no configuration
 file, so the hub holds the rules once, and because it checks branch names,
-which `conform` doesn't.
+which no option checks. No other tool states the policy with its defaults:
+`commitlint` accepts four cases that the hub refuses, and it doesn't check a
+branch name. The cost is code that the hub owns: at the time of writing,
+about 900 lines of code and 1,700 lines of tests and comments.
+
+A tool for the commit rules and a short check for the branch names is a
+credible alternative. The hub didn't try to set `commitlint` to the policy,
+so the record doesn't claim that it can't. A maintainer who does, and finds
+that the configuration is small, replaces this decision by a new record.
 
 The tool is the package `nix/scripts/gitpolicy`. Two pure functions hold the
 rules, `check_commit_message` and `check_branch_name`, and one constant holds
@@ -98,6 +111,43 @@ tool on every pull request, and the job `ci` fails when it fails.
 - Bad, because it has no branch-name rule.
 - Bad, because its version in nixpkgs is an alpha release.
 
+### Use `commitlint` with a configuration file that the hub holds
+
+The hub ran `commitlint` 21.0.0, the version in its locked nixpkgs.
+
+- Good, because `--config` takes the path of a configuration file. A file in
+  the hub, with `@commitlint/config-conventional` as its preset, worked from
+  a folder that has no configuration. The hub could hold the rules once.
+- Good, because it checks a range with `--from` and `--to`, and a message
+  file with `--edit`, so it serves CI and a hook.
+- Bad, because its defaults accept four cases that the hub refuses. A merge
+  header, a `Revert "..."` header, a `fixup!` header and the type `style` all
+  pass with exit status 0, and a missing blank line before the body is a
+  warning with exit status 0. The configuration must turn the default
+  ignores off, set the types and raise the levels of the rules.
+- Bad, because it has no option for a branch name, so the branch rule needs
+  another check.
+- Bad, because the package is 233 MiB unpacked, with a Node closure, and the
+  hub's own tools are small Python packages.
+
+### Use `cocogitto`, `convco` or `gitlint` for the commit rules
+
+The hub read the help of `cocogitto` 7.0.0, `convco` 0.7.2 and `gitlint`
+0.19.1, the versions in its locked nixpkgs. Each is a small package.
+
+- `cocogitto` has `cog check [RANGE]` and `cog verify`. The help of both lists
+  no option for a configuration file, and the options only ignore merge and
+  fixup commits. The package is about 7 MiB unpacked.
+- `convco` has `convco check [REV]` with `--config`, and `--strip`, which is
+  like `git commit --cleanup=strip`. The package is about 7 MiB unpacked.
+- `gitlint` has `--config` and `--commits` for a range, and it takes extra
+  rules from a folder or a Python module with `--extra-path`. The package and
+  its Python dependencies are about 4 MiB unpacked.
+- None has an option for a branch name, so each needs the same extra check as
+  `commitlint`.
+- The hub didn't run them on the cases above, so the record doesn't say which
+  of the four cases each accepts.
+
 ### A Python tool in the hub
 
 - Good, because the hub holds one copy of the rules.
@@ -110,4 +160,8 @@ tool on every pull request, and the job `ci` fails when it fails.
 - [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)
 - [`commitlint` `config-conventional`](https://github.com/conventional-changelog/commitlint/blob/master/%40commitlint/config-conventional/src/index.ts)
 - [conform](https://github.com/siderolabs/conform)
+- [`commitlint`](https://commitlint.js.org/)
+- [`cocogitto`](https://docs.cocogitto.io/)
+- [`convco`](https://github.com/convco/convco)
+- [`gitlint`](https://jorisroovers.com/gitlint/)
 - [Renovate: semantic commits](https://docs.renovatebot.com/semantic-commits/)
