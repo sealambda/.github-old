@@ -185,6 +185,13 @@ treefmt-nix rejects stops it with the message of treefmt-nix.
   `packages.secrets-scan`, and it doesn't reach `secrets.yml`. [Ways a
   repository switches the scan off](secrets-scan.md#ways-a-repository-switches-the-scan-off)
   lists which files can silence the scan.
+- The check `renovate-config` of `mkStandards` lists no preset. A repository
+  that publishes a shared Renovate preset, such as `default.json`, replaces the
+  attribute `renovate-config` of `checks` with a call to
+  `lib.mkRenovateConfigCheck` that lists its `presets`, as
+  [Gate the Renovate configuration](../how-to/adopt-the-hub.md#gate-the-renovate-configuration)
+  shows. The default check validates the files that Renovate reads at the root
+  and leaves a published preset unvalidated.
 - The argument `extraHooks` adds hooks. It can't replace a hub hook or
   switch one off, as the options of [Git hooks](hooks.md#options) say.
 - The owner of the repository is `sealambda`, and the argument `name` has no
