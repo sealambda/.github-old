@@ -11,20 +11,26 @@ The workflow sets one `concurrency` group for each run.
 | Event | Group | A newer run in the group |
 | ----- | ----- | ------------------------ |
 | Pull request | Workflow name, ref and head commit of the pull request | Waits for the run in progress. |
-| Push to `main` | Workflow name and ref | Cancels the run in progress. |
+| Push to `main` | Workflow name and ref | Waits for the run in progress. |
 
-A pull request run never cancels another run. The group of a pull request
-names the head commit, so a run for a new head commit starts at once, and the
-run for the older commit finishes. A newer run for the same head commit waits
-for the run in progress, because the two share a group.
+No run cancels another run. The group of a pull request names the head
+commit, so a run for a new head commit starts at once, and the run for the
+older commit finishes. A newer run for the same head commit waits for the run
+in progress, because the two share a group. A run on `main` is never cancelled
+while it runs, because a cancelled run could leave a merge without its
+release.
 
 A push that updates a pull request and its base branch together can start two
 runs for one head commit, one for each update. The pull requests of a stack
 have this case after a push of the whole stack. The two runs share a group, so
 they run one after the other and both finish.
 
-A group holds one run in progress and one pending run. A third run for the
-same head commit replaces the pending run, and GitHub cancels it.
+A group holds one run in progress and one pending run. A third run in the
+same group replaces the pending run, and GitHub cancels it. For a pull
+request, that's a third run for the same head commit. For `main`, it's a push
+that arrives while one run is in progress and another is pending. The replaced
+push gets no release of its own, and the next release covers its commits
+([Hub releases](hub-releases.md)).
 
 ## The job `ci`
 

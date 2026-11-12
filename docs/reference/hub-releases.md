@@ -169,9 +169,10 @@ Nix evaluates the flake, fetches its inputs and builds the command in the
 build step. That step has no token. The command step runs the built command
 and no Nix, so no Nix process holds the token.
 
-The workflow concurrency group cancels a run in progress only for a pull
-request. A run on `main` is never cancelled while it runs. A group holds one
-running and one pending run, and a newer pending run replaces an older one.
+The workflow concurrency group never cancels a run in progress, so a run on
+`main` is never cancelled while it runs ([CI of the hub](hub-ci.md)). A group
+holds one running and one pending run, and a newer pending run replaces an
+older one.
 When pushes arrive faster than runs finish, the replaced push gets no tag of
 its own, and the next release covers its commits.
 
