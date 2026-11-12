@@ -122,10 +122,11 @@ in
 {
   /**
     Lists what is wrong with the arguments of `mkStandards`, as sentences. The
-    list is empty when the arguments are valid. The check covers the names,
-    the required arguments and the type of each value, and it reports every
-    problem at once. A message about a type names the type that the caller
-    passed. The check reads the shape of `pkgs`, `src` and `scanner` and
+    list is empty when the arguments are valid. The check covers that `args`
+    is a set, the names, the required arguments and the type of each value. It
+    reports every problem at once, except that a value that is no set has the
+    one problem and nothing else. A message about a type names the type that
+    the caller passed. The check reads the shape of `pkgs`, `src` and `scanner` and
     builds nothing.
 
     # Inputs
@@ -141,17 +142,20 @@ in
   */
   argumentProblems =
     args:
-    let
-      known = required ++ optional;
-      unknown = builtins.attrNames (removeAttrs args known);
-      missing = builtins.filter (name: !(args ? ${name})) required;
-    in
-    lib.optional (
-      unknown != [ ]
-    ) "Unknown arguments: ${quoted unknown}. The arguments are ${quoted known}."
-    ++ lib.optional (missing != [ ]) "Missing required arguments: ${quoted missing}."
-    ++ problemsOfRequired args
-    ++ problemsOfCollections args
-    ++ lib.optionals (args ? decisions) (problemsOfDecisions args)
-    ++ problemsOfScanner args;
+    if !lib.isAttrs args then
+      [ "`mkStandards` takes one set of arguments, got ${describe args}." ]
+    else
+      let
+        known = required ++ optional;
+        unknown = builtins.attrNames (removeAttrs args known);
+        missing = builtins.filter (name: !(args ? ${name})) required;
+      in
+      lib.optional (
+        unknown != [ ]
+      ) "Unknown arguments: ${quoted unknown}. The arguments are ${quoted known}."
+      ++ lib.optional (missing != [ ]) "Missing required arguments: ${quoted missing}."
+      ++ problemsOfRequired args
+      ++ problemsOfCollections args
+      ++ lib.optionals (args ? decisions) (problemsOfDecisions args)
+      ++ problemsOfScanner args;
 }

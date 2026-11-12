@@ -608,6 +608,20 @@ in
       );
   };
 
+  # Requirement: a call whose argument is not a set is reported with one
+  # message that names the type, and not with an error of Nix from inside the
+  # check. The twin `standards-valid-arguments-have-no-problem` shows that a
+  # set passes.
+  standards-an-argument-that-is-not-a-set-is-reported = {
+    check =
+      let
+        message = given: "`mkStandards` takes one set of arguments, got `${given}`.";
+      in
+      mustHold "The problems are ${builtins.toJSON (argumentProblems null)} and ${
+        builtins.toJSON (argumentProblems [ ])
+      }." (argumentProblems null == [ (message "null") ] && argumentProblems [ ] == [ (message "list") ]);
+  };
+
   # Requirement: a call without a required argument is reported, and the
   # message names the argument.
   standards-missing-required-argument-is-reported = {

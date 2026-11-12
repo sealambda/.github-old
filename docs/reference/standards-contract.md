@@ -140,6 +140,7 @@ line, so one evaluation shows every mistake.
 
 | Situation | Problem line |
 | --------- | ------------ |
+| The argument isn't a set, such as `null` or a list. The function reports this problem and no other. | `` `mkStandards` takes one set of arguments, got `null`. `` |
 | An unknown name | ``Unknown arguments: `foo`. The arguments are `decisions`, `hooks`, `name`, `pkgs`, `scanner`, `src`, `treefmtModules`.`` |
 | A required argument is missing | ``Missing required arguments: `name`.`` |
 | `pkgs` is a set without `stdenv`, such as the flake `nixpkgs` and not its `legacyPackages.<system>` | `` `pkgs` must be a package set such as `nixpkgs.legacyPackages.<system>`, and this set has no `stdenv`. `` |
