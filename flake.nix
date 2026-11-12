@@ -33,10 +33,7 @@
       # holds and who calls it. This file composes them into the outputs.
       inherit (import ./nix/lib/hub-packages.nix { inherit nixpkgs; }) hubPackagesFor;
       inherit (import ./nix/lib/treefmt.nix { inherit treefmt-nix; }) mkTreefmt;
-      inherit (import ./nix/lib/config.nix { inherit (nixpkgs) lib; })
-        mkSyncConfig
-        mkConfigCheck
-        ;
+      inherit (import ./nix/lib/config.nix { inherit (nixpkgs) lib; }) mkSyncConfig mkConfigCheck;
       inherit
         (import ./nix/lib/docs.nix {
           inherit (nixpkgs) lib;
