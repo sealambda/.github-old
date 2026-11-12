@@ -10,6 +10,13 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Builds the Git hook configuration that `lib.mkHooks` returns. It has no
+    # releases, so `flake.lock` pins it. Its own nixpkgs is the hub's.
+    git-hooks = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -17,6 +24,7 @@
       self,
       nixpkgs,
       treefmt-nix,
+      git-hooks,
     }:
     let
       systems = [
