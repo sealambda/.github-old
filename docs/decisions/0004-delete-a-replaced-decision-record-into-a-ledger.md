@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-08
+date: 2026-11-12
 decision-makers: Sealambda maintainers
 ---
 
@@ -45,7 +45,7 @@ decision that no longer applies and has no replacement is deleted the same way,
 without a successor.
 
 The [decision records reference](../reference/decision-records.md) defines the
-format of the record, the ledger and the citations. The hub's
+format of the record and the ledger. The hub's
 [CONTRIBUTING.md](../../CONTRIBUTING.md) states the rules.
 
 No surveyed source deletes a record, so this is a deliberate deviation from

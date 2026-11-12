@@ -82,6 +82,8 @@ and use one term for one concept.
 
 ### Decision records
 
+A decision record is a Markdown file that people write and review. No tool
+validates it.
 [Decision records](https://github.com/sealambda/.github/blob/main/docs/reference/decision-records.md)
 defines the format of a record and of the ledger. These rules apply:
 
@@ -93,13 +95,12 @@ defines the format of a record and of the ledger. These rules apply:
   correction that keeps the decision, such as a renamed path or a removed
   example. A correction updates `date`.
 - A changed decision is a new record that restates the whole current decision.
-  Delete the old record, and list it in `docs/decisions/superseded.yaml` with
-  the commit of its last text and its successor. The `decisions retire`
-  command does both, as
-  [Retire a decision record](https://github.com/sealambda/.github/blob/main/docs/how-to/retire-a-decision-record.md)
-  shows.
+  In the same pull request, delete the old record and list it in
+  `docs/decisions/superseded.yaml` with the commit of its last text and its
+  successor, and change each citation of the old record to cite the successor.
+  The reviewer opens the permalink of the entry.
 - A decision that no longer applies, with no replacement, is deleted into the
-  ledger as withdrawn, with `decisions retire --withdrawn`.
+  ledger the same way, as withdrawn: its entry has no successor.
 - A `rejected` record stays only while it holds reasoning that no other record
   holds.
 - A record states a decision, not an inventory. A list that changes, such as

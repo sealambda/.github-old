@@ -1,0 +1,5 @@
+- number: "0005"
+  title: Check decision records with a hermetic flake check
+  commit: 527e23e6587f21aab7ff1c9f80e3c7149037db43
+  path: docs/decisions/0005-check-decision-records-with-a-hermetic-flake-check.md
+  date: 2026-11-12
