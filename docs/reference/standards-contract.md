@@ -142,7 +142,8 @@ line, so one evaluation shows every mistake.
 | --------- | ------------ |
 | An unknown name | ``Unknown arguments: `foo`. The arguments are `decisions`, `hooks`, `name`, `pkgs`, `scanner`, `src`, `treefmtModules`.`` |
 | A required argument is missing | ``Missing required arguments: `name`.`` |
-| `pkgs` isn't a package set | `` `pkgs` must be a package set, got `set`. `` |
+| `pkgs` is a set without `stdenv`, such as the flake `nixpkgs` and not its `legacyPackages.<system>` | `` `pkgs` must be a package set such as `nixpkgs.legacyPackages.<system>`, and this set has no `stdenv`. `` |
+| `pkgs` isn't a set | `` `pkgs` must be a package set, got `int`. `` |
 | `src` isn't a path, an absolute path string or a set with `outPath` | `` `src` must be a path, an absolute path string or a set with `outPath`, such as `self`, got `int`. `` |
 | `name` isn't a string | `` `name` must be a string, got `int`. `` |
 | `name` isn't a repository name: it's empty, longer than 100 characters, `.` or `..`, or it holds a character that a name can't hold | `` `name` must be a repository name of 1 to 100 letters, digits, `.`, `-` and `_`, and not `.` or `..`, got "a b". `` |

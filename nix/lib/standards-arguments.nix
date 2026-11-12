@@ -56,12 +56,21 @@ let
     src:
     lib.isPath src || (lib.isString src && lib.hasPrefix "/" src) || (lib.isAttrs src && src ? outPath);
 
+  # The message for a `pkgs` that is not a package set. A set without `stdenv`
+  # is typically the flake `nixpkgs` and not its `legacyPackages.<system>`, so
+  # the message says what the set lacks. A value that is no set gets the
+  # message about its type.
+  pkgsMessage =
+    pkgs:
+    if lib.isAttrs pkgs then
+      "`pkgs` must be a package set such as `nixpkgs.legacyPackages.<system>`, and this set has no `stdenv`."
+    else
+      wrongType "pkgs" "a package set" pkgs;
+
   # The problems of `pkgs`, `src` and `name`.
   problemsOfRequired =
     args:
-    lib.optional (args ? pkgs && !(lib.isAttrs args.pkgs && args.pkgs ? stdenv)) (
-      wrongType "pkgs" "a package set" args.pkgs
-    )
+    lib.optional (args ? pkgs && !(lib.isAttrs args.pkgs && args.pkgs ? stdenv)) (pkgsMessage args.pkgs)
     ++ lib.optional (args ? src && !isSource args.src) (
       wrongType "src" "a path, an absolute path string or a set with `outPath`, such as `self`" args.src
     )

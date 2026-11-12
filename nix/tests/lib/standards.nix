@@ -113,9 +113,13 @@ let
       args.foo = 1;
       message = "Unknown arguments: `foo`. The arguments are `decisions`, `hooks`, `name`, `pkgs`, `scanner`, `src`, `treefmtModules`.";
     };
-    pkgs-is-not-a-package-set = {
+    pkgs-is-a-set-without-stdenv = {
       args.pkgs = { };
-      message = "`pkgs` must be a package set, got `set`.";
+      message = "`pkgs` must be a package set such as `nixpkgs.legacyPackages.<system>`, and this set has no `stdenv`.";
+    };
+    pkgs-is-not-a-set = {
+      args.pkgs = 1;
+      message = "`pkgs` must be a package set, got `int`.";
     };
     src-is-not-a-source = {
       args.src = 1;
