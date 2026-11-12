@@ -320,6 +320,29 @@
         # stages need a commit message and a push, so `hooks-tests` covers them.
         pre-commit = hooksFor.${pkgs.stdenv.hostPlatform.system};
 
+        # Runs the cases of `nix/tests/hooks.sh`: real Git against temporary
+        # repositories that get the hub's hooks from the installation script of
+        # `lib.mkHooks`. They cover the stages that `pre-commit` can't run,
+        # `commit-msg` and `pre-push`, and the refusal of a staged secret. The
+        # cases need `git`, `prek` and a writable HOME, and they reach no
+        # network.
+        hooks-tests =
+          let
+            hooks = hooksFor.${pkgs.stdenv.hostPlatform.system};
+          in
+          pkgs.runCommand "hooks-tests"
+            {
+              nativeBuildInputs = [
+                pkgs.git
+                hooks.config.package
+              ];
+              env.HOOKS_INSTALL = pkgs.writeText "install-hooks.sh" hooks.config.installationScript;
+            }
+            ''
+              HOME="$TMPDIR" bash ${./nix/tests/hooks.sh}
+              touch "$out"
+            '';
+
         # Runs the tests of `nix/tests/check-docs.sh`. The tests need a
         # writable HOME and the commands `check-docs`, `sync-config` and the
         # three wrapped tools on PATH, the same commands as the `docs` shell.
