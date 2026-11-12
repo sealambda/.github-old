@@ -71,8 +71,10 @@ let
   # Valid configurations that a strict JSON parser rejects. Renovate reads
   # them: its own parser, `parseFileConfig` of Renovate 44, returns the same
   # object for each of them, and for the file with a byte order mark it logs a
-  # warning that the file is JSON5 and not JSON.
-  byteOrderMark = builtins.fromJSON ''"﻿"'';
+  # warning that the file is JSON5 and not JSON. The byte order mark is the code
+  # point U+FEFF. It is written as an escape for the JSON parser, because the
+  # literal character is invisible and an editor or a formatter can drop it.
+  byteOrderMark = builtins.fromJSON ''"\ufeff"'';
   withComment = ''
     {
       // The comment that Renovate strips.
@@ -99,6 +101,13 @@ let
   # with the list of the Renovate package of the hub's nixpkgs, which Node reads
   # from the file that Renovate uses to find its configuration. It fails and
   # prints the difference when a Renovate upgrade adds or drops a name.
+  #
+  # The file `dist/config/app-strings.js` and its function `getConfigFileNames`
+  # are internal to Renovate, not a public interface. A Renovate upgrade can
+  # move them. The derivation then fails with the message `cannot read the
+  # names of the Renovate configuration files`, and not with a difference of
+  # names. In that case, find the new place of `getConfigFileNames` in the
+  # package and change the path below.
   namesMatchRenovate =
     pkgs.runCommand "renovate-config-names-match-renovate" { nativeBuildInputs = [ pkgs.nodejs ]; }
       ''
@@ -110,13 +119,22 @@ let
         node --input-type=module -e '
           const names = await import("${pkgs.renovate}/lib/node_modules/renovate/dist/config/app-strings.js");
           console.log(names.getConfigFileNames().join("\n"));
-        ' | sort > renovate-sorted
+        ' > renovate-names || {
+          echo "cannot read the names of the Renovate configuration files:" >&2
+          echo "the file dist/config/app-strings.js or its function" >&2
+          echo "getConfigFileNames moved in the Renovate package" >&2
+          exit 1
+        }
+        sort renovate-names > renovate-sorted
         test -s script-sorted
         diff -u script-sorted renovate-sorted
         touch "$out"
       '';
 
-  # One case for each file: an invalid file at that path fails the check.
+  # Requirement: an option that Renovate doesn't know fails the check, and the
+  # log names the option. One case for each file: an invalid file at that path
+  # fails the check. The case for `renovate.json` is the plain form of the
+  # requirement.
   invalidFileCases = lib.mapAttrs' (
     label: path:
     lib.nameValuePair "renovate-config-invalid-${label}-fails" {
@@ -148,13 +166,6 @@ in
     check = check (tree "valid-preset" { "default.json" = valid; }) {
       presets = [ "default.json" ];
     };
-  };
-
-  # Requirement: an option that Renovate doesn't know fails the check, and the
-  # log names the option.
-  renovate-config-unknown-option-fails = {
-    check = check (tree "unknown-option" { "renovate.json" = unknownOption; }) { };
-    expectedLog = [ "Invalid configuration option: nope" ];
   };
 
   # Requirement: a value of the wrong type fails the check, and the log names
@@ -278,6 +289,22 @@ in
 
   renovate-config-package-json-false-key-passes = {
     check = check (tree "package-json-false-key" { "package.json" = packageWith "false"; }) { };
+  };
+
+  # Requirement: the test of the key is the truthiness of JavaScript. The
+  # numbers and strings that JavaScript counts as false pass, and an empty
+  # object, which JavaScript counts as true, fails.
+  renovate-config-package-json-zero-key-passes = {
+    check = check (tree "package-json-zero-key" { "package.json" = packageWith "0"; }) { };
+  };
+
+  renovate-config-package-json-empty-string-key-passes = {
+    check = check (tree "package-json-empty-string-key" { "package.json" = packageWith ''""''; }) { };
+  };
+
+  renovate-config-package-json-empty-object-key-fails = {
+    check = check (tree "package-json-empty-object-key" { "package.json" = packageWith "{}"; }) { };
+    expectedLog = [ ''package.json holds the key "renovate"'' ];
   };
 
   renovate-config-package-json-not-json-passes = {
