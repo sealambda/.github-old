@@ -268,9 +268,55 @@
         root = ./.;
         fileset = nixpkgs.lib.fileset.unions [
           ./nix/scripts/decisions
+          ./nix/scripts/leaks
           ./nix/tests/decisions
+          ./nix/tests/leaks
           ./pyproject.toml
         ];
+      };
+
+      # The Python package `leaks`, and the package `decisions`. `leaks`
+      # imports only `decisions.walk` and `decisions.findings`, which use only
+      # the standard library: this environment has no `pyyaml` or
+      # `jsonschema`, which the other modules of `decisions` need.
+      leaksSource = nixpkgs.lib.fileset.toSource {
+        root = ./nix/scripts;
+        fileset = nixpkgs.lib.fileset.unions [
+          ./nix/scripts/decisions
+          ./nix/scripts/leaks
+        ];
+      };
+
+      # What `leaks` finds at run time: itself. Python cannot write byte code
+      # into the Nix store.
+      leaksEnv = {
+        PYTHONPATH = "${leaksSource}";
+        PYTHONDONTWRITEBYTECODE = "1";
+      };
+
+      # The `leaks` command: `python -m leaks`, the code in `nix/scripts/leaks`.
+      # It reports the private facts of an organization in a source tree.
+      mkLeaksTool =
+        pkgs:
+        pkgs.writeShellApplication {
+          name = "leaks";
+          runtimeInputs = [ pkgs.python3 ];
+          runtimeEnv = leaksEnv;
+          text = ''exec python -m leaks "$@"'';
+        };
+
+      # What the hub, a public repository, may name: the organization's public
+      # repositories and the team of `.github/CODEOWNERS`. Every other
+      # repository or team name fails the `leaks` check. The list holds public
+      # names only, so the hub never holds the list of the private ones.
+      publicNames = {
+        organization = "sealambda";
+        repositories = [
+          ".github"
+          "chironium"
+          "quints"
+        ];
+        teams = [ "maintainers" ];
       };
 
       # What the package finds at run time: itself, and the JSON Schemas. Python
@@ -501,6 +547,56 @@
               touch "$out"
             '';
 
+        # Fails when a file of the hub holds a private fact of the
+        # organization: an AWS account identifier or resource, a bucket, a
+        # label of a self-hosted runner, an internal host, a GitHub App
+        # identifier, or the name of a repository or team that `publicNames`
+        # does not list. The rules are in `nix/scripts/leaks/rules.py` and the
+        # reference is `docs/reference/leak-check.md`. The `--exclude` flags
+        # below are the only list of the paths that are not scanned, and the
+        # reference points here for it: the rules, whose patterns hold the
+        # prefixes that they search for, and the two test files, whose
+        # fixtures are leaks on purpose with false identifiers. A new file
+        # in the test folder is scanned.
+        leaks =
+          pkgs.runCommand "leaks"
+            {
+              nativeBuildInputs = [ (mkLeaksTool pkgs) ];
+            }
+            ''
+              leaks \
+                --organization ${nixpkgs.lib.escapeShellArg publicNames.organization} \
+                ${
+                  nixpkgs.lib.concatMapStringsSep " " (
+                    name: "--public-repository ${nixpkgs.lib.escapeShellArg name}"
+                  ) publicNames.repositories
+                } \
+                ${
+                  nixpkgs.lib.concatMapStringsSep " " (
+                    name: "--public-team ${nixpkgs.lib.escapeShellArg name}"
+                  ) publicNames.teams
+                } \
+                --exclude nix/scripts/leaks/rules.py \
+                --exclude nix/tests/leaks/test_leak_rules.py \
+                --exclude nix/tests/leaks/test_leak_scan.py \
+                ${self}
+              touch "$out"
+            '';
+
+        # Runs the unit tests of `nix/scripts/leaks`: each rule with texts that
+        # it finds and texts that it leaves alone, and the scan of a tree.
+        check-leaks-tests =
+          pkgs.runCommand "check-leaks-tests"
+            {
+              nativeBuildInputs = [ pkgs.python3 ];
+              env = leaksEnv;
+            }
+            ''
+              export HOME="$TMPDIR"
+              python -m unittest discover -v -s ${./nix/tests/leaks}
+              touch "$out"
+            '';
+
         # Formats, lints and type-checks the hub's Python with ruff and mypy,
         # configured in `pyproject.toml`. Only the hub runs this check: it is
         # not part of `mkTreefmt`.
@@ -522,7 +618,9 @@
               cd ${pythonQualitySource}
               ruff format --check --no-cache nix
               ruff check --no-cache nix
-              mypy --cache-dir "$TMPDIR/mypy" nix/scripts/decisions nix/tests/decisions
+              mypy --cache-dir "$TMPDIR/mypy" \
+                nix/scripts/decisions nix/tests/decisions \
+                nix/scripts/leaks nix/tests/leaks
               touch "$out"
             '';
       });
