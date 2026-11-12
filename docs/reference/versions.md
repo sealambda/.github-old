@@ -2,7 +2,9 @@
 
 The dev shells in the hub's `flake.nix` define the toolchain. A version is the
 name of a nixpkgs attribute, and `flake.lock` pins one revision of
-`nixpkgs-unstable`, so each attribute resolves to one exact package.
+`nixpkgs-unstable`, so each attribute resolves to one exact package. Nix itself
+is the one exception: the CI installs it, and `versions.json` holds its version
+([Nix](#nix)).
 
 ## Dev shells
 
@@ -31,7 +33,7 @@ shell is `base`.
 
 The dev shells hold no Nix. The CI installs it, so its version isn't a nixpkgs
 attribute. The file `versions.json` at the root of the hub holds the version
-that the organization standardizes on:
+that the hub's CI runs:
 
 ```json
 {
@@ -46,10 +48,12 @@ in the name of a release at `releases.nixos.org`. The key `$schema` is
 optional, for editors. The file holds no other key: nixpkgs pins every other
 tool.
 
-### Who reads it
+### Where the version is set
 
-Each step that uses `cachix/install-nix-action` sets the input `install_url`
-to the installer of that release:
+The workflows don't read `versions.json`: they hold the address as text, and
+the check `versions` compares it with the file. Each step that uses
+`cachix/install-nix-action` sets the input `install_url` to the installer of
+that release:
 
 ```yaml
 - uses: cachix/install-nix-action@<revision>
@@ -64,7 +68,9 @@ that calls the reusable workflow `secrets.yml` runs the same Nix.
 
 A developer's local Nix isn't checked, and neither is the `nix` package of the
 locked nixpkgs. The version in `versions.json` is the one that the hub's CI
-runs.
+runs. No automation updates `versions.json` yet: a new version needs the edit
+of `versions.json` and of each `install_url`, as the how-to guide
+[Change a toolchain version](../how-to/change-a-toolchain-version.md) says.
 
 ### The check
 

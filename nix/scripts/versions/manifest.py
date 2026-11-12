@@ -152,12 +152,18 @@ def _object_without_duplicates(pairs: list[tuple[str, object]]) -> dict[str, obj
 
 
 def _line_of_repeat(text: str, key: str) -> int:
-    """Return the line of the second line that holds the quoted `key`.
+    """Return the number of the second line that holds the quoted `key`.
 
-    The JSON parser doesn't say where a repeated key is. The search reads the
-    quoted key as written without escapes: when the key sits only on one line,
-    or is written with escapes, the line is that of its first occurrence, or 1
-    when there is none.
+    The JSON parser doesn't say where a repeated key is, so the search is
+    textual. It looks for the key between quotes, as `json.dumps` writes it,
+    which means without JSON escapes. The search also matches a value that is
+    equal to the key.
+
+    Returns:
+        The number of the second line that holds the quoted key. When only one
+        line holds it, because both keys sit on one line, that line. When no
+        line holds it as written, for example because the file spells it with
+        a JSON escape, 1.
     """
     quoted = json.dumps(key, ensure_ascii=False)
     lines = [

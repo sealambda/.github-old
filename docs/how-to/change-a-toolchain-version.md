@@ -20,11 +20,11 @@ The version of Nix isn't a nixpkgs attribute. `versions.json` holds it, and the
 workflows pin it with `install_url`
 ([Nix](../reference/versions.md#nix)).
 
-1. Pick a release that has an installer. This request answers 200 when it
-   does:
+1. Pick a release that has an installer. This command exits 0 when it does,
+   and it exits with another status when the installer is missing:
 
    ```console
-   curl -sI https://releases.nixos.org/nix/nix-<version>/install
+   curl -sSfI -o /dev/null https://releases.nixos.org/nix/nix-<version>/install
    ```
 
 2. In `versions.json`, set `nix` to the version as `MAJOR.MINOR.PATCH`.

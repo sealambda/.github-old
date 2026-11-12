@@ -21,12 +21,14 @@ and keeps its own facts.
   repository overrides one.
 - **Toolchain.** A Nix flake with pinned development shells and the
   organization's treefmt configuration, `lib.mkTreefmt`.
-- **Nix version.** `versions.json` holds the version of Nix that the
-  organization standardizes on, with a JSON Schema in `schemas/`. The hub's
-  workflows install that version with `cachix/install-nix-action`, and the
-  flake check `versions` fails when a step sets another `install_url` or uses
-  an installer of Nix that it knows by name or address. An unknown installer
-  passes, and review covers it.
+- **Nix version.** `versions.json` holds the version of Nix that the hub's CI
+  runs, with a JSON Schema in `schemas/`. A repository that calls the reusable
+  workflow `secrets.yml` runs the same version. The hub's workflows install it
+  with `cachix/install-nix-action`, and the flake check `versions` fails when a
+  step sets another `install_url` or uses an installer of Nix that it knows by
+  name or address. An unknown installer passes, and review covers it. The
+  check reads only the hub's own files, and the other workflows of a consumer
+  choose their own Nix.
 - **Dependency updates.** `default.json`, a shared
   [Renovate](https://docs.renovatebot.com/) preset for update timing,
   grouping and security fixes. A repository's `renovate.json` extends it and
