@@ -44,6 +44,13 @@
 # a PRESET file doesn't exist or leaves ROOT or a configuration name is a
 # dangling symbolic link, 3 for a wrong call or when the validator fails to
 # run.
+#
+# Status 1 of the validator is not always a finding. The validator ends with
+# status 1 for a problem in a file, and Node ends with status 1 for an uncaught
+# error before the validator starts, such as a missing module. The script can't
+# tell the two apart, so it maps both to status 1. The check still fails, and
+# the log shows the error of Node and not a finding. The validator ends with
+# status 99 for its own uncaught error, and that is status 3 here.
 
 set -euo pipefail
 

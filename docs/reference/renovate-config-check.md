@@ -103,6 +103,13 @@ with one of these statuses:
 | 2 | A listed preset file doesn't exist or its path leaves the source, or a configuration name is a link to nothing. |
 | 3 | A wrong call, or the validator failed to run. |
 
+Status 1 is not always a finding of the validator. Node also ends with status 1
+for an uncaught error before the validator starts, such as a missing module, and
+the script can't tell the two apart. The check fails in both cases, and the log
+shows which one it is: a finding names a file, and an error of Node shows a
+stack trace. An uncaught error of the validator itself ends with status 99,
+which the script reports as status 3.
+
 ## Run the check
 
 ```console
