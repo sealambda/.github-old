@@ -4,6 +4,10 @@
 # A case that must fail with an evaluation error can't use `expectedLog`,
 # because that only reads the log of a failed build, so these cases evaluate
 # the function in Nix and build a derivation only when the outcome is right.
+# Nix can't read the message of a failed evaluation: `builtins.tryEval` returns
+# only whether it failed. A case of that kind pins the cause by the pair of
+# calls instead: the call that must fail and the same call without the fault
+# must differ in one name, and both force the same value.
 {
   pkgs,
   hub,
@@ -30,6 +34,14 @@ let
       hooks = hub.mkHooks { inherit pkgs src extraHooks; };
     in
     map (hook: hook.id) (builtins.head hooks.config.rawConfig.repos).hooks;
+
+  # Whether `mkHooks` with `extraHooks` evaluates. It forces the result of the
+  # function and no part of the configuration that git-hooks.nix builds, so the
+  # answer doesn't depend on the structure of that configuration: only the
+  # check of the names in `mkHooks` can make it false.
+  accepts =
+    extraHooks:
+    (builtins.tryEval (builtins.seq (hub.mkHooks { inherit pkgs src extraHooks; }) true)).success;
 
   # A derivation that builds when `condition` is true and fails the evaluation
   # with `message` when it is false.
@@ -63,11 +75,20 @@ in
 
   # Requirement: a hook in `extraHooks` that has the name of a hub hook is an
   # error, so a repository can't replace a rule or switch it off by accident.
-  # The case before this one shows that the same call without the name works,
-  # so the failure here comes from the name.
+  # The same call with another name for the hook works, so the failure comes
+  # from the name, and the test doesn't read the configuration of
+  # git-hooks.nix.
   hooks-extra-hook-with-a-hub-name-is-refused = {
-    check = mustHold "extraHooks with the name docs was accepted." (
-      !(builtins.tryEval (builtins.deepSeq (hookIds { docs = extraHook; }) true)).success
+    check = mustHold "extraHooks with the name docs was accepted, or the name my-hook was refused." (
+      accepts { my-hook = extraHook; }
+      && builtins.all (name: !(accepts { ${name} = extraHook; })) [
+        "treefmt"
+        "docs"
+        "workflows"
+        "secrets-scan"
+        "gitpolicy-commit-msg"
+        "gitpolicy-branch"
+      ]
     );
   };
 }
