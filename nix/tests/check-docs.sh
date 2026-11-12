@@ -6,9 +6,9 @@
 # The commands `check-docs`, `sync-config` and `vale` must be on PATH. They
 # must be the packages that `nix/lib/docs.nix` and `nix/lib/config.nix` build,
 # because they carry their own tools: `vale` is the one that has the style
-# `Sealambda`. The flake check
-# `check-docs-tests` runs this file. The test cases of the style rules are in
-# `vale/Sealambda/*.test.yml`, and the flake check `vale-style-tests` runs them.
+# `Sealambda`. The flake check `check-docs-tests` runs this file. The test
+# cases of the style rules are in `vale/Sealambda/*.test.yml`, and the flake
+# check `vale-style-tests` runs them.
 #
 # Each case generates a small project under a temporary directory. The project
 # gets the hub's tool configuration from `sync-config`, so the test needs no
