@@ -197,6 +197,12 @@ jobs:
   # checks first: it creates nothing for a commit that a later release covers
   # or whose release exists, and it adds the release to a tag that has none. A
   # re-run is safe. This job holds the only write permission of the workflow.
+  # The hub has two tag series, and the job runs one step for each. The second
+  # step releases the actions series (`actions-v<major>.<minor>.<patch>`) only
+  # when the merge changes a path of that series. A merge that changes none
+  # gets an information line and exit status 0, so it never fails the job. The
+  # second step runs after a failed first step too, and the job fails if either
+  # step fails.
   release:
     name: release
     needs: [ci]
@@ -218,8 +224,8 @@ jobs:
         with:
           install_url: https://releases.nixos.org/nix/nix-2.35.4/install
       # Nix evaluates the flake and builds the command in this step, which has
-      # no token: only the second step holds the token, and it runs the built
-      # command and no Nix.
+      # no token: only the two publish steps hold the token, and they run the
+      # built command and no Nix.
       - name: Build the release command
         run: nix build .#release --out-link "$RUNNER_TEMP/release"
       - name: Publish the release
@@ -228,3 +234,13 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           "$RUNNER_TEMP/release/bin/release" publish --commit "$GITHUB_SHA"
+      # The tool adds `--latest=false` for this series, so the hub release keeps
+      # the "latest" label. A re-run after a partial failure repairs a tag
+      # without a release in the same way as for the hub series.
+      - name: Publish the actions release
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          "$RUNNER_TEMP/release/bin/release" publish --series actions --commit "$GITHUB_SHA"

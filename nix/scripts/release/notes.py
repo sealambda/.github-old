@@ -41,30 +41,34 @@ def _size(text: str) -> int:
 
 
 def render_notes(
-    rules_changed: bool,
+    answer: bool,
     subjects: Sequence[str],
+    label: str,
     limit: int = MAX_NOTES_BYTES,
 ) -> str:
     """Return the notes of a release.
 
-    The first line is `rules changed: yes` or `rules changed: no`. A blank line
-    follows, then one bullet for the subject of each commit. A bullet holds the
-    subject as a Markdown code span, so the text of a contributor cannot add a
-    link, a mention or a reference to the notes. When the whole text would
-    exceed `limit`, the notes keep the first subjects, which are the newest
-    commits, and end with one line, `older commits omitted: <count>`. Notes
-    that fit have no such line.
+    The first line is `<label>: yes` or `<label>: no`, for example
+    `rules changed: yes` for the hub series. A blank line follows, then one
+    bullet for the subject of each commit. A bullet holds the subject as a
+    Markdown code span, so the text of a contributor cannot add a link, a
+    mention or a reference to the notes. When the whole text would exceed
+    `limit`, the notes keep the first subjects, which are the newest commits,
+    and end with one line, `older commits omitted: <count>`. Notes that fit
+    have no such line.
 
     Args:
-        rules_changed: The answer for the release.
+        answer: `True` prints `yes` and `False` prints `no` after the label.
         subjects: The subject lines of the commits in the release, newest
             first. Each is one line.
+        label: The question that the first line answers.
+            `release.series.Series.label` holds the question of each series,
+            and it is the only place that spells one.
         limit: The most bytes (UTF-8) that the notes may hold. The default is
             `MAX_NOTES_BYTES`. A limit that cannot hold the first line and the
             last line gives notes that exceed it, and the first line stays.
     """
-    answer = "yes" if rules_changed else "no"
-    header = f"rules changed: {answer}\n\n"
+    header = f"{label}: {'yes' if answer else 'no'}\n\n"
     bullets = [f"- {_code_span(subject)}\n" for subject in subjects]
     if _size(header) + sum(_size(bullet) for bullet in bullets) <= limit:
         return header + "".join(bullets)

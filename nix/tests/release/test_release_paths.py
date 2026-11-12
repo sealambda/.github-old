@@ -32,6 +32,10 @@ UNREAD_BY_CONSUMERS: dict[str, str] = {
     ".github/CODEOWNERS": "GitHub reads it per repository, it is not inherited",
     ".github/workflows/ci.yml": "the hub's own CI, it has no workflow_call trigger",
     ".gitignore": "only the hub's own work tree",
+    # The actions series releases these. No function of the flake, and neither
+    # `secrets.yml`, the preset nor a community file reads them.
+    ".github/actions/setup-nix/action.yml": "the actions series releases it",
+    "versions.json": "the hub's own versions check and the actions series read it",
 }
 
 # The folder that GitHub reads default community files from, next to the root
@@ -79,7 +83,6 @@ READ_BY_CONSUMERS: dict[str, str] = {
     "schemas/decision-record.schema.json": "read by the decisions tool",
     ".github/workflows/secrets.yml": "the reusable workflow",
     "default.json": "the Renovate preset",
-    "versions.json": "the pinned version of Nix",
     "templates/adr.md.tmpl": "copied by people, and read by the versions check",
 }
 
@@ -176,9 +179,35 @@ class RuleFreePathTest(unittest.TestCase):
             "x.md.bak",
             "vale/Sealambda/CurrentState.testing.yml",
             ".github/workflows/ci.yml.bak",
+            ".github/actions-old/setup-nix/action.yml",
+            "versions.json.bak",
+            "config/versions.json",
+            "nix/versions.json",
         ):
             with self.subTest(path=path):
                 self.assertFalse(is_rule_free(path))
+
+    def test_the_reusable_secrets_workflow_stays_a_rule(self) -> None:
+        """`secrets.yml` stays in the hub series, next to the actions paths."""
+        self.assertFalse(is_rule_free(".github/workflows/secrets.yml"))
+        self.assertTrue(rules_changed([".github/workflows/secrets.yml"]))
+
+    def test_a_workflow_that_no_pattern_names_is_a_rule(self) -> None:
+        """No reservation: a new reusable workflow starts as a hub rule."""
+        self.assertFalse(is_rule_free(".github/workflows/standards.yml"))
+        self.assertTrue(rules_changed([".github/workflows/standards.yml"]))
+
+    def test_a_change_of_actions_paths_alone_leaves_the_hub_rules_alone(self) -> None:
+        """The actions series releases them: the hub series gives a patch."""
+        self.assertFalse(
+            rules_changed(
+                [
+                    ".github/actions/setup-nix/action.yml",
+                    "versions.json",
+                ]
+            )
+        )
+        self.assertTrue(rules_changed(["versions.json", "flake.nix"]))
 
     def test_a_path_that_nobody_classified_is_a_rule(self) -> None:
         """The default for an unknown path is the safe answer."""

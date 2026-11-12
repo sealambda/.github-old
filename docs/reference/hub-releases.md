@@ -1,15 +1,16 @@
 # Hub releases
 
 Every merge to `main` of the hub is released: it gets a tag and a release note
-at the merged commit, or the next release covers it. The note says in its first
-line whether the changes since the previous release touch the rules that
-consumers read. The procedure is in
-[Release the hub](../how-to/release-the-hub.md).
+at the merged commit, or the next release covers it. The hub has two tag
+series. The hub series covers the rules that consumers read, and the note says
+in its first line whether the changes since the previous release touch them.
+The actions series covers the workflow and action files that consumers call.
+The procedure is in [Release the hub](../how-to/release-the-hub.md).
 
 ## Tag series
 
-A release tag has the form `v<major>.<minor>.<patch>`. Each number is `0` or a
-decimal number without a leading zero. The pattern is
+The hub series has release tags of the form `v<major>.<minor>.<patch>`. Each
+number is `0` or a decimal number without a leading zero. The pattern is
 `^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`. A tag of another form,
 such as `v1.2`, `v01.2.3`, `v1.2.3-rc1` or `latest`, isn't a release tag, and
 the release tool ignores it.
@@ -24,12 +25,96 @@ later, so the major number stays 1.
 
 The first release is `v1.0.0` with `rules changed: yes`.
 
+## Actions series
+
+The actions series has tags of the form `actions-v<major>.<minor>.<patch>`,
+with the same rule for each number. The pattern is
+`^actions-v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`. A tag belongs to
+one series only: each pattern matches the whole name, so `v1.2.3` isn't an
+actions tag and `actions-v1.2.3` isn't a hub tag. Every step of the tool reads
+the tags of one series and ignores the other.
+
+The series releases these paths:
+
+| Path | Kind |
+| ---- | ---- |
+| `.github/actions/**` | A workflow or action file. A consumer that calls the tag runs different steps. |
+| `versions.json` | A data file. An action reads it, and the steps stay the same. |
+
+`.github/workflows/secrets.yml` stays in the hub series. The pull request that
+adds another reusable workflow for consumers to call by the actions tag adds
+its pattern to `ACTIONS_FILE_PATTERNS` in `nix/scripts/release/paths.py`, with
+its tests and this page. Until then a new workflow file is a hub rule, like any
+unlisted path.
+
+| Changed paths since the previous actions tag | Next version after `actions-v1.4.2` |
+| -------------------------------------------- | ----------------------------------- |
+| At least one workflow or action file | `actions-v1.5.0`: the minor number rises and the patch number resets. |
+| `versions.json` and no workflow or action file | `actions-v1.4.3`: the patch number rises. |
+| No path of the table above | No release. |
+
+The first release reads the paths of the whole tree, because no previous tag
+gives a range to compare. Only a workflow or action file starts the series: a
+tree with one and no actions tag gets `actions-v1.0.0` with the answer `yes`.
+A tree with `versions.json` and no such file gets no release, because the first
+tag can't move or go, and the version `1.0.0` must mark the first file that a
+consumer can call. The first merge that adds a workflow or action file gets
+the first tag, and its notes list every commit before it.
+
+A commit that gets no release isn't an error. `release plan` and
+`release publish` print an information line, call nothing and exit 0:
+
+```text
+commit <hash> changes no path that the series releases since actions-v1.4.2: no release
+```
+
+The line ends with `: no release` and names no previous tag for a tree
+without a workflow or action file (`commit <hash> has no path that starts the
+series: no release`). The hub series never prints this line: it releases every
+commit.
+
+A release of the actions series isn't the latest release of the repository.
+`publish` adds `--latest=false` to `gh release create`, so the hub release
+keeps the "latest" label. The same holds when `publish` repairs a tag that has
+no release. The option is in `gh release create --help` of `gh` 2.103.3.
+
+### A breaking change of an action
+
+The tool never raises the major number. It reads paths, not the meaning of a
+change, so a commit marked `!` still gets the next minor number, for example
+`actions-v1.5.0`. A person raises the major number by hand:
+
+1. The change merges. The release job tags the merge commit with the next
+   minor or patch number of the current major, because the job can't know the
+   change breaks a consumer.
+2. A maintainer creates the tag `actions-v2.0.0` on that same commit. Only a
+   maintainer does this: the tool has no command that names a major number.
+   The ruleset of the organization blocks the update and the deletion of a
+   tag, so a wrong tag stays. Check the commit and the name before the push.
+   A tag push doesn't start the `release` job, so `actions-v2.0.0` has no
+   GitHub release yet. Re-run the `release` job of the merge commit, or run
+   `nix run .#release -- publish --series actions --commit <hash>` with
+   `GH_TOKEN` set. Either way `publish` finds the tag without a release and
+   creates it ([Commands](#commands), case 1).
+3. The next plan counts from the highest tag that the commit contains, which
+   is `actions-v2.0.0`: a change of an action file gives `actions-v2.1.0` and a
+   change of `versions.json` alone gives `actions-v2.0.1`. The tag of the old
+   major on the same commit stays, and the older tags stay too.
+
+The plan of the tool follows these steps. In a scratch repository, a commit
+with the tags `actions-v1.1.0` and `actions-v2.0.0` plans as already released
+as `actions-v2.0.0`, and the next commit that changes an action file plans as
+`actions-v2.1.0`. A commit with only `actions-v2.0.0` gives the same plans. No
+one has run the creation of the tag and of its release on GitHub: only the
+plan is verified.
+
 ## Previous release
 
-The previous release of a commit is the highest release tag that the commit
-contains: `git tag --merged <commit>`, filtered by the pattern above. The
-order is by number, so `v1.10.0` is higher than `v1.9.0`. A tag on a branch
-that the commit doesn't contain doesn't count.
+The previous release of a commit is the highest release tag of the series that
+the commit contains: `git tag --merged <commit>`, filtered by the pattern of
+the series. The order is by number, so `v1.10.0` is higher than `v1.9.0`. A tag
+on a branch that the commit doesn't contain doesn't count, and a tag of the
+other series never counts.
 
 The answer and the notes come from the previous release, not from the previous
 run. When a run is skipped, the next release covers the commits of the skipped
@@ -86,6 +171,7 @@ four reads it.
 | `.github/CODEOWNERS` | GitHub reads the file of each repository and doesn't inherit one. It sets the reviewers of the hub only. |
 | `.github/workflows/ci.yml` | The hub's own CI. It has no `workflow_call` trigger, so no consumer calls it. |
 | `.gitignore` | The ignore list of the hub's own work tree. |
+| `.github/actions/**`, `versions.json` | The paths of the actions series. A consumer reads them by the tag of that series, and none of the four readers above reads them: the actions series decides their release, and the hub series gives a patch. Each of the two paths gives `no` here. Without the listing, each would give `yes`, like any unlisted path. `versions.json` holds the pinned version of Nix. No function of the flake reads the file. Only the hub's own `versions` check and the action `setup-nix` read it. |
 
 Every other tracked path stays `yes`. This table groups them by the reader
 that makes them rules:
@@ -101,7 +187,6 @@ that makes them rules:
 | `schemas/**` | The `decisions` tool validates records against them. |
 | `.github/workflows/secrets.yml` | The reusable workflow that consumers call. |
 | `default.json`, `v2.json` | The Renovate presets that consumers extend. |
-| `versions.json` | The pinned version of Nix that workflows install. |
 | `templates/**` | People copy them into consumers, and the `versions` check reads the workflows below `templates/`. |
 | `.editorconfig`, `.markdownlint-cli2.yaml`, `.vale.ini`, `.vale/**`, `lychee.toml`, `.github/.markdownlint-cli2.yaml` | The hub's own copies of the files in `config/`. The check `config-in-sync` keeps the copies equal, and the source in `config/` is the rule. |
 | `renovate.json`, `pyproject.toml` | The hub's own Renovate and Python settings. No consumer reads them, and no one has classified them as free: they stay `yes`. |
@@ -163,12 +248,24 @@ release doesn't fail the checks of the merge.
 | Permission | `contents: write` on this job only. |
 | Checkout | The whole history and every tag, without stored credentials. |
 | Build step | `nix build .#release --out-link "$RUNNER_TEMP/release"`, with no token. |
-| Command | `"$RUNNER_TEMP/release/bin/release" publish --commit "$GITHUB_SHA"` |
-| Environment | `GH_TOKEN` is the job token and `GH_REPO` is the repository. Only the command step has them. |
+| Hub step | `"$RUNNER_TEMP/release/bin/release" publish --commit "$GITHUB_SHA"` |
+| Actions step | `"$RUNNER_TEMP/release/bin/release" publish --series actions --commit "$GITHUB_SHA"` |
+| Environment | `GH_TOKEN` is the job token and `GH_REPO` is the repository. Only the two publish steps have them. |
 
 Nix evaluates the flake, fetches its inputs and builds the command in the
-build step. That step has no token. The command step runs the built command
-and no Nix, so no Nix process holds the token.
+build step. That step has no token. The hub step and the actions step run the
+built command and no Nix, so no Nix process holds the token.
+
+The actions step runs after the hub step, and it runs after a failed hub step
+too, so one run shows both problems. The job fails when either step fails. A
+merge that changes no path of the actions series gets the information line
+`no release` and exit status 0 ([Actions series](#actions-series)), so the
+actions step doesn't fail the job for that reason.
+
+A re-run is safe for both steps. After a partial failure, each step finds its
+own tag with no release and creates the release for the existing tag, as
+[Commands](#commands) describes. The permission and the job token are the
+same for both steps.
 
 The workflow concurrency group never cancels a run in progress, so a run on
 `main` is never cancelled while it runs ([CI of the hub](hub-ci.md)). A group
@@ -187,10 +284,17 @@ the hub makes no promise about its interface to other repositories.
 
 | Command | What it does |
 | ------- | ------------ |
-| `release plan [--commit REVISION]` | Prints the tag, the commit, the previous release and the notes. It changes nothing and doesn't call `gh`. |
-| `release publish [--commit REVISION]` | Creates the GitHub release, and with it the tag, at exactly that commit. |
+| `release plan [--series SERIES] [--commit REVISION]` | Prints the tag, the commit, the previous release and the notes. It changes nothing and doesn't call `gh`. |
+| `release publish [--series SERIES] [--commit REVISION]` | Creates the GitHub release, and with it the tag, at exactly that commit. |
 
-`REVISION` defaults to `HEAD`. `publish` handles four cases, in this order:
+`REVISION` defaults to `HEAD`. `SERIES` is `hub` or `actions` and defaults to
+`hub`, so a call without the option keeps its output and its `gh` calls. Any
+other value is a usage error with exit status 2. The actions series has one
+more case, which comes first: the commit changes no path of the series. Both
+commands then print the information line, call nothing and exit 0
+([Actions series](#actions-series)).
+
+`publish` handles four cases, in this order:
 
 1. The commit carries a release tag. `publish` asks GitHub with
    `gh release view <tag>` whether the release of that tag exists. When it
@@ -207,13 +311,15 @@ the hub makes no promise about its interface to other repositories.
    one, for example on another branch. `publish` exits 1 and creates nothing.
 4. Otherwise `publish` makes one `gh release create <tag> --target <hash>`
    call without assets and the tag lands on that exact commit. The tool
-   doesn't create a tag in the local repository. GitHub ignores `--target`
-   when the tag already exists on its side, for example when someone pushed
-   the tag after the checkout of the run. So `publish` then reads the tag back
-   with `gh api repos/{owner}/{repo}/git/ref/tags/<tag>`, and it follows an
-   annotated tag to its commit. When the tag names another commit, `publish`
-   exits 1 and doesn't print that it released the commit. The release exists
-   by then and is attached to that tag. The tool changes nothing more.
+   doesn't create a tag in the local repository. For the actions series, the
+   call, and the call of case 1, end with `--latest=false`. GitHub ignores
+   `--target` when the tag already exists on its side, for example when
+   someone pushed the tag after the checkout of the run. So `publish` then
+   reads the tag back with `gh api repos/{owner}/{repo}/git/ref/tags/<tag>`,
+   and it follows an annotated tag to its commit. When the tag names another
+   commit, `publish` exits 1 and doesn't print that it released the commit.
+   The release exists by then and is attached to that tag. The tool changes
+   nothing more.
 
 The state of a failed call: GitHub doesn't document that `gh release create`
 makes the tag and the release in one step, or what a failed call leaves. The
@@ -310,3 +416,9 @@ The answer holds `enabled` and `enforced_by_owner`.
   trusts the tag and doesn't ask GitHub whether that release exists.
 - A run that fails after the checks of a merge leaves the merge without a
   release until a re-run or the next release.
+- Not verified: whether the job token, with `contents: write`, can create a
+  tag that starts with `actions-v`. The hub series creates its `v` tags with
+  the same token and the same call. The first `actions-v` tag is created
+  after the merge that adds the actions series, so no run has shown the
+  result yet. A tag ruleset of the organization that restricts the name
+  `actions-v*` makes the actions step fail, and a re-run doesn't help.

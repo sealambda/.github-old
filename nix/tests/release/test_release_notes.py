@@ -3,6 +3,7 @@
 import unittest
 
 from release.notes import MAX_NOTES_BYTES, render_notes
+from release.series import ACTIONS, HUB
 
 GITHUB_BODY_LIMIT = 125_000
 """The length in characters at which the GitHub API rejects a release body.
@@ -18,7 +19,7 @@ class RenderNotesTest(unittest.TestCase):
 
     def test_changed_rules(self) -> None:
         """The answer `yes` is the first line, then a blank line and bullets."""
-        text = render_notes(True, ["feat: add a rule", "fix: repair a rule"])
+        text = render_notes(True, ["feat: add a rule", "fix: repair a rule"], HUB.label)
         self.assertEqual(
             text,
             "rules changed: yes\n\n- `feat: add a rule`\n- `fix: repair a rule`\n",
@@ -27,7 +28,7 @@ class RenderNotesTest(unittest.TestCase):
     def test_unchanged_rules(self) -> None:
         """The answer `no` is the first line."""
         self.assertEqual(
-            render_notes(False, ["docs: fix a typo"]),
+            render_notes(False, ["docs: fix a typo"], HUB.label),
             "rules changed: no\n\n- `docs: fix a typo`\n",
         )
 
@@ -43,7 +44,7 @@ class RenderNotesTest(unittest.TestCase):
     def test_notes_at_the_limit_stay_whole(self) -> None:
         """Header 20 bytes and two bullets of 15 bytes fill exactly 50 bytes."""
         subjects = ["aaaaaaaaaa", "bbbbbbbbbb"]
-        text = render_notes(True, subjects, limit=50)
+        text = render_notes(True, subjects, HUB.label, limit=50)
         self.assertEqual(text, "rules changed: yes\n\n- `aaaaaaaaaa`\n- `bbbbbbbbbb`\n")
 
     def test_notes_over_the_limit_keep_the_newest_and_count_the_rest(self) -> None:
@@ -59,7 +60,7 @@ class RenderNotesTest(unittest.TestCase):
             "fourth0000",
             "oldest0000",
         ]
-        text = render_notes(True, subjects, limit=60)
+        text = render_notes(True, subjects, HUB.label, limit=60)
         self.assertEqual(
             text,
             "rules changed: yes\n\n- `newest0000`\nolder commits omitted: 4\n",
@@ -70,7 +71,7 @@ class RenderNotesTest(unittest.TestCase):
         self,
     ) -> None:
         """A limit of 49 leaves room for the last line only."""
-        text = render_notes(True, ["aaaaaaaaaa", "bbbbbbbbbb"], limit=49)
+        text = render_notes(True, ["aaaaaaaaaa", "bbbbbbbbbb"], HUB.label, limit=49)
         self.assertEqual(text, "rules changed: yes\n\nolder commits omitted: 2\n")
         self.assertLessEqual(len(text.encode()), 49)
 
@@ -81,23 +82,23 @@ class RenderNotesTest(unittest.TestCase):
         """
         subject = "é" * 20
         self.assertEqual(
-            render_notes(True, [subject], limit=65),
+            render_notes(True, [subject], HUB.label, limit=65),
             f"rules changed: yes\n\n- `{subject}`\n",
         )
         self.assertEqual(
-            render_notes(True, [subject], limit=64),
+            render_notes(True, [subject], HUB.label, limit=64),
             "rules changed: yes\n\nolder commits omitted: 1\n",
         )
 
     def test_a_subject_longer_than_the_limit_is_omitted(self) -> None:
         """One huge subject gives the first line and the count, not an error."""
-        text = render_notes(True, ["x" * 500], limit=100)
+        text = render_notes(True, ["x" * 500], HUB.label, limit=100)
         self.assertEqual(text, "rules changed: yes\n\nolder commits omitted: 1\n")
 
     def test_the_first_release_of_a_long_history_stays_under_the_default(self) -> None:
         """A history of 50000 commits gives notes within the default bound."""
         subjects = [f"feat: change number {number}" for number in range(50_000)]
-        text = render_notes(True, subjects)
+        text = render_notes(True, subjects, HUB.label)
         lines = text.splitlines()
         self.assertEqual(lines[0], "rules changed: yes")
         self.assertEqual(lines[2], "- `feat: change number 0`")
@@ -110,8 +111,13 @@ class RenderNotesTest(unittest.TestCase):
         """A reader or a script gets the answer from the first line alone."""
         for answer, word in ((True, "yes"), (False, "no")):
             with self.subTest(answer=answer):
-                first = render_notes(answer, ["x"]).splitlines()[0]
+                first = render_notes(answer, ["x"], HUB.label).splitlines()[0]
                 self.assertEqual(first, f"rules changed: {word}")
+
+    def test_the_label_is_the_question_of_the_first_line(self) -> None:
+        """The actions series asks its own question and keeps the bullets."""
+        text = render_notes(False, ["fix: a"], ACTIONS.label)
+        self.assertEqual(text, "workflow or action files changed: no\n\n- `fix: a`\n")
 
 
 class SubjectMarkdownTest(unittest.TestCase):
@@ -119,7 +125,7 @@ class SubjectMarkdownTest(unittest.TestCase):
 
     def bullet(self, subject: str) -> str:
         """Return the one bullet that the notes of `subject` hold."""
-        return render_notes(False, [subject]).splitlines()[2]
+        return render_notes(False, [subject], HUB.label).splitlines()[2]
 
     def test_a_link_and_a_mention_sit_inside_a_code_span(self) -> None:
         """Markdown that makes a link or a mention is not live in the notes."""

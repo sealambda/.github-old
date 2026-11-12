@@ -8,6 +8,8 @@ from release.plan import (
     plan_for_existing_tag,
     plan_release,
 )
+from release.series import HUB
+from release.tags import Bump
 from release_repo import RepoTestCase
 
 
@@ -16,7 +18,7 @@ class PlanReleaseTest(RepoTestCase):
 
     def planned(self, revision: str = "HEAD") -> Plan:
         """Plan `revision` and check that the commit is not yet released."""
-        outcome = plan_release(self.git, revision)
+        outcome = plan_release(self.git, revision, HUB)
         assert isinstance(outcome, Plan), outcome
         return outcome
 
@@ -28,7 +30,7 @@ class PlanReleaseTest(RepoTestCase):
         self.assertEqual(plan.tag, "v1.0.0")
         self.assertEqual(plan.commit, head)
         self.assertIsNone(plan.previous)
-        self.assertTrue(plan.rules_changed)
+        self.assertIs(plan.bump, Bump.MINOR)
         self.assertEqual(
             plan.notes,
             "rules changed: yes\n\n- `docs: add a readme`\n- `docs: add a page`\n",
@@ -44,7 +46,7 @@ class PlanReleaseTest(RepoTestCase):
         plan = self.planned()
         self.assertEqual(plan.tag, "v1.4.3")
         self.assertEqual(plan.previous, "v1.4.2")
-        self.assertFalse(plan.rules_changed)
+        self.assertIs(plan.bump, Bump.PATCH)
         self.assertEqual(plan.notes, "rules changed: no\n\n- `docs: add a page`\n")
 
     def test_rule_change_raises_the_minor_and_resets_the_patch(self) -> None:
@@ -54,7 +56,7 @@ class PlanReleaseTest(RepoTestCase):
         self.commit({"flake.nix": "{ }\n"}, "fix: change the flake")
         plan = self.planned()
         self.assertEqual(plan.tag, "v1.5.0")
-        self.assertTrue(plan.rules_changed)
+        self.assertIs(plan.bump, Bump.MINOR)
 
     def test_mixed_change_counts_as_a_rule_change(self) -> None:
         """One rule path among documentation paths gives `yes`."""
@@ -63,14 +65,14 @@ class PlanReleaseTest(RepoTestCase):
         self.commit(
             {"docs/reference/a.txt": "a\n", "default.json": "{}\n"}, "feat: mixed"
         )
-        self.assertTrue(self.planned().rules_changed)
+        self.assertIs(self.planned().bump, Bump.MINOR)
 
     def test_unknown_path_counts_as_a_rule_change(self) -> None:
         """A path that no pattern names gives `yes`."""
         self.commit({"flake.nix": "{}\n"}, "feat: add the flake")
         self.tag("v1.0.0")
         self.commit({"brand-new-dir/file.txt": "x\n"}, "feat: new area")
-        self.assertTrue(self.planned().rules_changed)
+        self.assertIs(self.planned().bump, Bump.MINOR)
 
     def test_changes_are_measured_across_all_commits_since_the_release(self) -> None:
         """A rule change in an earlier commit counts for the later release."""
@@ -79,7 +81,7 @@ class PlanReleaseTest(RepoTestCase):
         self.commit({"flake.nix": "{ }\n"}, "fix: change the flake")
         self.commit({"docs/reference/a.txt": "a\n"}, "docs: add a page")
         plan = self.planned()
-        self.assertTrue(plan.rules_changed)
+        self.assertIs(plan.bump, Bump.MINOR)
         self.assertEqual(
             plan.notes,
             "rules changed: yes\n\n- `docs: add a page`\n- `fix: change the flake`\n",
@@ -90,12 +92,12 @@ class PlanReleaseTest(RepoTestCase):
         self.commit({"default.json": "{}\n", "keep.json": "{}\n"}, "feat: add files")
         self.tag("v1.0.0")
         self.commit({"default.json": None}, "fix: remove a file")
-        self.assertTrue(self.planned().rules_changed)
+        self.assertIs(self.planned().bump, Bump.MINOR)
         self.tag("v1.1.0")
         self.commit(
             {"docs/reference/keep.json": "{}\n", "keep.json": None}, "fix: move"
         )
-        self.assertTrue(self.planned().rules_changed)
+        self.assertIs(self.planned().bump, Bump.MINOR)
 
     def test_malformed_tags_are_ignored(self) -> None:
         """Tags of another form never act as the previous release."""
@@ -149,7 +151,7 @@ class PlanReleaseTest(RepoTestCase):
                     {f"docs/reference/{annotated}.txt": "a\n"}, "docs: a page"
                 )
                 self.tag("v1.3.0" if annotated else "v1.2.0", annotated=annotated)
-                outcome = plan_release(self.git, "HEAD")
+                outcome = plan_release(self.git, "HEAD", HUB)
                 self.assertEqual(
                     outcome,
                     AlreadyReleased(head, "v1.3.0" if annotated else "v1.2.0"),
@@ -161,14 +163,14 @@ class PlanReleaseTest(RepoTestCase):
         self.tag("v1.2.0")
         self.tag("v1.10.0")
         self.assertEqual(
-            plan_release(self.git, "HEAD"), AlreadyReleased(head, "v1.10.0")
+            plan_release(self.git, "HEAD", HUB), AlreadyReleased(head, "v1.10.0")
         )
 
     def test_malformed_tag_on_the_commit_is_not_a_release(self) -> None:
         """A commit with only a malformed tag still gets released."""
         self.commit({"docs/reference/a.txt": "a\n"}, "docs: add a page")
         self.tag("v1.0")
-        self.assertIsInstance(plan_release(self.git, "HEAD"), Plan)
+        self.assertIsInstance(plan_release(self.git, "HEAD", HUB), Plan)
 
     def test_tag_on_a_commit_that_does_not_contain_this_one_fails(self) -> None:
         """A version that a release on another branch holds is taken."""
@@ -180,7 +182,7 @@ class PlanReleaseTest(RepoTestCase):
         self.git(["switch", "--quiet", "main"])
         main_commit = self.commit({"docs/reference/a.txt": "a\n"}, "docs: add a page")
         with self.assertRaises(ReleaseError) as raised:
-            plan_release(self.git, main_commit)
+            plan_release(self.git, main_commit, HUB)
         self.assertIn("v1.0.1", str(raised.exception))
         self.assertIn(other, str(raised.exception))
 
@@ -191,7 +193,9 @@ class PlanReleaseTest(RepoTestCase):
         skipped = self.commit({"docs/reference/a.txt": "a\n"}, "docs: add a page")
         self.commit({"flake.nix": "{ }\n"}, "fix: change the flake")
         self.tag("v1.1.0")
-        self.assertEqual(plan_release(self.git, skipped), Covered(skipped, "v1.1.0"))
+        self.assertEqual(
+            plan_release(self.git, skipped, HUB), Covered(skipped, "v1.1.0")
+        )
 
     def test_covering_tag_is_the_lowest_by_number(self) -> None:
         """`v1.9.0` is lower than `v1.10.0`, although it sorts higher as text."""
@@ -200,7 +204,9 @@ class PlanReleaseTest(RepoTestCase):
         self.commit({"flake.nix": "{ }\n"}, "fix: change the flake")
         self.tag("v1.10.0")
         self.tag("v1.9.0")
-        self.assertEqual(plan_release(self.git, skipped), Covered(skipped, "v1.9.0"))
+        self.assertEqual(
+            plan_release(self.git, skipped, HUB), Covered(skipped, "v1.9.0")
+        )
 
     def test_a_tag_on_the_commit_wins_over_a_covering_tag(self) -> None:
         """A commit that carries a release tag is released, not merely covered."""
@@ -209,7 +215,7 @@ class PlanReleaseTest(RepoTestCase):
         self.commit({"flake.nix": "{}\n"}, "feat: add the flake")
         self.tag("v1.1.0")
         self.assertEqual(
-            plan_release(self.git, carried), AlreadyReleased(carried, "v1.0.0")
+            plan_release(self.git, carried, HUB), AlreadyReleased(carried, "v1.0.0")
         )
 
     def test_tag_on_another_branch_does_not_cover(self) -> None:
@@ -221,7 +227,7 @@ class PlanReleaseTest(RepoTestCase):
         self.tag("v1.7.0")
         self.git(["switch", "--quiet", "main"])
         main_commit = self.commit({"docs/reference/a.txt": "a\n"}, "docs: add a page")
-        self.assertIsInstance(plan_release(self.git, main_commit), Plan)
+        self.assertIsInstance(plan_release(self.git, main_commit, HUB), Plan)
 
     def test_commit_without_a_changed_path_gives_no(self) -> None:
         """An empty commit after the release gives `no` and an empty diff."""
@@ -229,7 +235,7 @@ class PlanReleaseTest(RepoTestCase):
         self.tag("v1.0.0")
         self.commit({}, "chore: empty commit")
         plan = self.planned()
-        self.assertFalse(plan.rules_changed)
+        self.assertIs(plan.bump, Bump.PATCH)
         self.assertEqual(plan.tag, "v1.0.1")
         self.assertEqual(plan.notes, "rules changed: no\n\n- `chore: empty commit`\n")
 
@@ -241,7 +247,7 @@ class PlanReleaseTest(RepoTestCase):
         self.commit({"flake.nix": "{ }\n"}, "fix: change the flake")
         plan = self.planned(middle)
         self.assertEqual((plan.commit, plan.tag), (middle, "v1.0.1"))
-        self.assertFalse(plan.rules_changed)
+        self.assertIs(plan.bump, Bump.PATCH)
 
 
 class PlanForExistingTagTest(RepoTestCase):
@@ -254,11 +260,11 @@ class PlanForExistingTagTest(RepoTestCase):
         self.commit({"flake.nix": "{ }\n"}, "fix: change the flake")
         head = self.commit({"docs/reference/a.txt": "a\n"}, "docs: add a page")
         self.tag("v1.1.0")
-        plan = plan_for_existing_tag(self.git, AlreadyReleased(head, "v1.1.0"))
+        plan = plan_for_existing_tag(self.git, AlreadyReleased(head, "v1.1.0"), HUB)
         self.assertEqual(
             (plan.tag, plan.commit, plan.previous), ("v1.1.0", head, "v1.0.0")
         )
-        self.assertTrue(plan.rules_changed)
+        self.assertIs(plan.bump, Bump.MINOR)
         self.assertEqual(
             plan.notes,
             "rules changed: yes\n\n- `docs: add a page`\n- `fix: change the flake`\n",
@@ -271,14 +277,14 @@ class PlanForExistingTagTest(RepoTestCase):
         head = self.commit({"flake.nix": "{ }\n"}, "fix: change the flake")
         self.tag("v1.1.0")
         self.tag("v1.1.1")
-        plan = plan_for_existing_tag(self.git, AlreadyReleased(head, "v1.1.1"))
+        plan = plan_for_existing_tag(self.git, AlreadyReleased(head, "v1.1.1"), HUB)
         self.assertEqual(plan.previous, "v1.0.0")
-        self.assertTrue(plan.rules_changed)
+        self.assertIs(plan.bump, Bump.MINOR)
 
     def test_first_tag_has_no_previous_release(self) -> None:
         """Without an earlier release tag the answer is `yes`."""
         head = self.commit({"docs/reference/a.txt": "a\n"}, "docs: add a page")
         self.tag("v1.0.0")
-        plan = plan_for_existing_tag(self.git, AlreadyReleased(head, "v1.0.0"))
+        plan = plan_for_existing_tag(self.git, AlreadyReleased(head, "v1.0.0"), HUB)
         self.assertIsNone(plan.previous)
-        self.assertTrue(plan.rules_changed)
+        self.assertIs(plan.bump, Bump.MINOR)

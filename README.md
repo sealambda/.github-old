@@ -33,7 +33,10 @@ and keeps its own facts.
   `v1.<minor>.<patch>` on the merged commit or on a later one. The first line
   of the note says
   `rules changed: yes` or `rules changed: no`
-  ([Hub releases](docs/reference/hub-releases.md)).
+  ([Hub releases](docs/reference/hub-releases.md)). A second series,
+  `actions-v1.<minor>.<patch>`, tags the workflow and action files that a
+  repository calls by tag
+  ([Actions series](docs/reference/hub-releases.md#actions-series)).
 - **Dependency updates.** `default.json` and `v2.json`, two shared
   [Renovate](https://docs.renovatebot.com/) presets for update timing,
   grouping and security fixes. A repository's `renovate.json` extends one of
