@@ -1,13 +1,13 @@
 # Standards contract
 
 The function `lib.mkStandards` gives a repository all the standards of the hub
-in one call: the five flake checks, the formatter and the commands of the hub.
+in one call: the six flake checks, the formatter and the commands of the hub.
 It adds no rule and no tool. It calls `lib.mkTreefmt`, `lib.mkDocsCheck`,
-`lib.mkDecisionsCheck`, `lib.mkWorkflowsCheck`, `lib.mkSecretsScan`,
-`lib.mkGitPolicyTool` and `lib.mkHooks` with the arguments that you pass, so the
-result is the one that a call of each function by hand gives. A change of a
-rule happens in one place, and every repository that calls `mkStandards` gets
-it with `nix flake update hub`.
+`lib.mkDecisionsCheck`, `lib.mkWorkflowsCheck`, `lib.mkRenovateConfigCheck`,
+`lib.mkSecretsScan`, `lib.mkGitPolicyTool` and `lib.mkHooks` with the arguments
+that you pass, so the result is the one that a call of each function by hand
+gives. A change of a rule happens in one place, and every repository that calls
+`mkStandards` gets it with `nix flake update hub`.
 
 [Adopt the hub in a repository](../how-to/adopt-the-hub.md#take-the-standards-in-one-call)
 shows the steps. This page defines the arguments, the result and the limits.
@@ -38,6 +38,7 @@ error.
 | `decisions` | Set | `{ exclude = [ "<path>" ]; }`, the paths that the citation scan of the check `decisions` skips. A path is relative to the root of the repository. No other key is valid. | `{ exclude = [ ]; }` |
 | `extraHooks` | Set | Hooks of the repository, in the format of git-hooks.nix. They add to the hooks of the hub. The argument is the `extraHooks` of `lib.mkHooks`, and the result attribute `hooks` is another thing: the evaluation that holds all the hooks. | `{ }` |
 | `scanner` | Package | The secret scanner of `packages.secrets-scan` and of the hook `secrets-scan`. It needs `meta.mainProgram`, and [Secrets scan](secrets-scan.md) lists what else it must support. | gitleaks of the hub's nixpkgs |
+| `renovateConfig` | Boolean | Whether `checks` has `renovate-config`, which validates the Renovate files of the repository. A repository without a Renovate file passes the check. | `true` |
 
 ## Result
 
@@ -45,7 +46,7 @@ The result is a set with four attributes:
 
 | Attribute | Content |
 | --------- | ------- |
-| `checks` | The derivations `formatting`, `docs`, `decisions`, `workflows` and `pre-commit`. |
+| `checks` | The derivations `formatting`, `docs`, `decisions`, `workflows`, `pre-commit` and `renovate-config`. The last one is absent when `renovateConfig` is `false`. |
 | `formatter` | The treefmt wrapper, for the output `formatter`. |
 | `packages` | The commands `vale`, `markdownlint-cli2`, `lychee`, `secrets-scan`, `gitpolicy` and `workflows`. Each one has `meta.mainProgram`. |
 | `hooks` | The evaluation that `lib.mkHooks` returns. |
@@ -59,6 +60,7 @@ The checks are the checks of the functions that the page of each tool defines:
 | `decisions` | `lib.mkDecisionsCheck` | [Decision records](decision-records.md) |
 | `workflows` | `lib.mkWorkflowsCheck` | [Workflow checks](workflow-checks.md) |
 | `pre-commit` | `lib.mkHooks` | [Git hooks](hooks.md) |
+| `renovate-config` | `lib.mkRenovateConfigCheck` | [Renovate configuration check](renovate-config-check.md) |
 
 The result has no `config-in-sync` check. A repository that calls `mkStandards`
 holds no copy of the hub's tool configuration, and its own files layer over the
@@ -68,16 +70,16 @@ says. A repository that keeps the synced copies calls the separate functions, as
 [Keep the synced copies](../how-to/adopt-the-hub.md#keep-the-synced-copies)
 shows.
 
-The tools of the checks `docs`, `decisions` and `workflows`, the commands in
-`packages`, the tools of the hooks and the default `scanner` come from the
-hub's own nixpkgs, whatever nixpkgs the calling flake uses, so every repository
-runs the same version of them. The formatter is the exception. treefmt-nix
-evaluates with the `pkgs` that you pass, so the formatter programs, such as
-`nixfmt` and `shellcheck`, follow the nixpkgs of the calling flake, in
-`formatter`, in `checks.formatting` and in the hook `treefmt` of the check
-`pre-commit`. A repository that wants the formatter versions of the hub sets
-`nixpkgs.follows = "hub/nixpkgs"`, as the standards consumer does. A `scanner`
-that you pass is your own package.
+The tools of the checks `docs`, `decisions`, `workflows` and `renovate-config`,
+the commands in `packages`, the tools of the hooks and the default `scanner`
+come from the hub's own nixpkgs, whatever nixpkgs the calling flake uses, so
+every repository runs the same version of them. The formatter is the
+exception. treefmt-nix evaluates with the `pkgs` that you pass, so the
+formatter programs, such as `nixfmt` and `shellcheck`, follow the nixpkgs of
+the calling flake, in `formatter`, in `checks.formatting` and in the hook
+`treefmt` of the check `pre-commit`. A repository that wants the formatter
+versions of the hub sets `nixpkgs.follows = "hub/nixpkgs"`, as the standards
+consumer does. A `scanner` that you pass is your own package.
 
 ### The check `pre-commit` runs three rules again
 
@@ -93,7 +95,7 @@ and the workflow check twice: once in the check of that name and once in
   runs a hook of the repository.
 
 Removing the hooks from the check would drop that proof, and removing the other
-checks would drop the named gates, so the function keeps all five. The cost is
+checks would drop the named gates, so the function keeps all of them. The cost is
 the run time of the three tools. To avoid it, drop the check `pre-commit`, as
 the section Limits shows. The hooks still install through the shell that holds
 `standards.hooks.shellHook`, but no flake check builds them or runs the hooks
@@ -141,7 +143,7 @@ line, so one evaluation shows every mistake.
 | Situation | Problem line |
 | --------- | ------------ |
 | The argument isn't a set, such as `null` or a list. The function reports this problem and no other. | `` `mkStandards` takes one set of arguments, got `null`. `` |
-| An unknown name | ``Unknown arguments: `foo`. The arguments are `decisions`, `extraHooks`, `name`, `pkgs`, `scanner`, `src`, `treefmtModules`.`` |
+| An unknown name | ``Unknown arguments: `foo`. The arguments are `decisions`, `extraHooks`, `name`, `pkgs`, `renovateConfig`, `scanner`, `src`, `treefmtModules`.`` |
 | A required argument is missing | ``Missing required arguments: `name`.`` |
 | `pkgs` is a set without `stdenv`, such as the flake `nixpkgs` and not its `legacyPackages.<system>` | `` `pkgs` must be a package set such as `nixpkgs.legacyPackages.<system>`, and this set has no `stdenv`. `` |
 | `pkgs` isn't a set | `` `pkgs` must be a package set, got `int`. `` |
@@ -156,6 +158,7 @@ line, so one evaluation shows every mistake.
 | `decisions.exclude` isn't a list of strings | `` `decisions.exclude` must be a list of strings, got `list`. `` |
 | `scanner` isn't a package | `` `scanner` must be a package, got `string`. `` |
 | `scanner` has no `meta.mainProgram` | `` `scanner` must have `meta.mainProgram`, so that `lib.getExe` finds its command. `` |
+| `renovateConfig` isn't a boolean | `` `renovateConfig` must be a boolean, got `string`. `` |
 
 Two errors come from the functions that `mkStandards` calls. A name in
 `extraHooks` that a hub hook uses stops the evaluation with the message of
@@ -164,9 +167,9 @@ treefmt-nix rejects stops it with the message of treefmt-nix.
 
 ## Limits
 
-- The function has no switch that turns a part off. The result always holds the
-  five checks, the formatter and the six commands. To drop a part, remove it
-  from the set before you use it, for example
+- The only switch that turns a part off is `renovateConfig`. The result always
+  holds the other five checks, the formatter and the six commands. To drop one
+  of them, remove it from the set before you use it, for example
   `removeAttrs standards.checks [ "pre-commit" ]`.
 - The check `pre-commit` doesn't scan for secrets. It runs the hook
   `secrets-scan`, which reads the staged changes, but the check commits the
@@ -182,6 +185,13 @@ treefmt-nix rejects stops it with the message of treefmt-nix.
   `packages.secrets-scan`, and it doesn't reach `secrets.yml`. [Ways a
   repository switches the scan off](secrets-scan.md#ways-a-repository-switches-the-scan-off)
   lists which files can silence the scan.
+- The check `renovate-config` of `mkStandards` lists no preset. A repository
+  that publishes a shared Renovate preset, such as `default.json`, replaces the
+  attribute `renovate-config` of `checks` with a call to
+  `lib.mkRenovateConfigCheck` that lists its `presets`, as
+  [Gate the Renovate configuration](../how-to/adopt-the-hub.md#gate-the-renovate-configuration)
+  shows. The default check validates the files that Renovate reads at the root
+  and leaves a published preset unvalidated.
 - The argument `extraHooks` adds hooks. It can't replace a hub hook or
   switch one off, as the options of [Git hooks](hooks.md#options) say.
 - The owner of the repository is `sealambda`, and the argument `name` has no

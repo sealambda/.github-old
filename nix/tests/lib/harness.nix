@@ -27,10 +27,10 @@ let
     line.
 
     A case that has `expectedLog` must fail: the derivation fails unless the
-    check of the case fails with exit status 1 and its log holds each entry of
-    `expectedLog`. The failure of the derivation then names the entry that the
-    log lacks. A case without `expectedLog` must pass: the derivation is the
-    check itself.
+    check of the case fails with exit status `expectedExitCode` (default 1) and
+    its log holds each entry of `expectedLog`. The failure of the derivation
+    then names the entry that the log lacks. A case without `expectedLog` must
+    pass: the derivation is the check itself.
 
     # Inputs
 
@@ -38,16 +38,18 @@ let
     : The name of the case, the attribute name in the case file.
 
     `case`
-    : `{ check :: Derivation; expectedLog :: [String]; }`. `check` is the
-      function under test, applied to a fixture. `expectedLog` is optional.
-      An empty list is an error: the case would pass for any failure, so
-      it could not tell the failure that the requirement names from another
-      one.
+    : `{ check :: Derivation; expectedLog :: [String]; expectedExitCode :: Int; }`.
+      `check` is the function under test, applied to a fixture. `expectedLog`
+      is optional. An empty list is an error: the case would pass for any
+      failure, so it could not tell the failure that the requirement names
+      from another one. `expectedExitCode` is optional too. A case sets it
+      when the function under test ends with a status other than 1 for the
+      failure that the case names.
 
     # Type
 
     ```
-    toTest :: String -> { check :: Derivation; expectedLog :: [String]; } -> Derivation
+    toTest :: String -> { check :: Derivation; expectedLog :: [String]; expectedExitCode :: Int; } -> Derivation
     ```
   */
   toTest =
@@ -62,7 +64,7 @@ let
       pkgs.testers.testBuildFailure' {
         name = testName;
         drv = case.check.overrideAttrs { name = "${testName}-subject"; };
-        expectedBuilderExitCode = 1;
+        expectedBuilderExitCode = case.expectedExitCode or 1;
         expectedBuilderLogEntries = case.expectedLog;
       }
     else

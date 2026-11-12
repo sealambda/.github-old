@@ -3,10 +3,10 @@
 This folder is a repository that takes all the standards of the hub with one
 call. Its flake calls only `lib.mkStandards`, with the three required
 arguments, and it holds no tool configuration and no `config-in-sync` check.
-The checks `formatting`, `docs`, `decisions`, `workflows` and `pre-commit`
-come from that call. The `default` shell only puts the commands of the hub on
-`PATH`. The `hooks` shell opts in to the Git hooks, and the file `.gitignore`
-lists the link that this shell writes.
+The checks `formatting`, `docs`, `decisions`, `workflows`, `pre-commit` and
+`renovate-config` come from that call. The `default` shell only puts the
+commands of the hub on `PATH`. The `hooks` shell opts in to the Git hooks, and
+the file `.gitignore` lists the link that this shell writes.
 
 The checks that start with `variant-` call the function again, one for each
 optional argument, on a copy of this folder with one more file. Each argument
@@ -18,4 +18,8 @@ citation scan. The checks `variant-treefmt-modules-needed` and
 `variant-decisions-exclude-needed` pass only when the same files fail without
 the argument. The check `variant-hooks` passes only when a hook of the
 repository fails the check `pre-commit`, and `variant-scanner` passes only when
-`secrets-scan` runs the scanner that the repository gives.
+`secrets-scan` runs the scanner that the repository gives. The check
+`variant-renovate-config-needed` passes only when a Renovate file with an
+unknown option fails the check `renovate-config`, and
+`variant-renovate-config-off` passes only when `renovateConfig = false` leaves
+that check out of the result.

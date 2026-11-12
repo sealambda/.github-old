@@ -73,12 +73,12 @@ The repository's `flake.lock` pins the hub. To take a newer hub revision, run
 ## Take the standards in one call
 
 `lib.mkStandards` gives the checks `formatting`, `docs`, `decisions`,
-`workflows` and `pre-commit`, the formatter and the hub's commands from one
-call. It replaces the calls that the sections below add one by one, and it
-returns what those calls return. Use it when the repository takes all the
-standards and holds no synced copy of the tool configuration. The separate
-functions stay valid: a repository that keeps the synced copies, or that wants
-only some checks, follows the sections below.
+`workflows`, `pre-commit` and `renovate-config`, the formatter and the hub's
+commands from one call. It replaces the calls that the sections below add one
+by one, and it returns what those calls return. Use it when the repository
+takes all the standards and holds no synced copy of the tool configuration. The
+separate functions stay valid: a repository that keeps the synced copies, or
+that wants only some checks, follows the sections below.
 [Standards contract](../reference/standards-contract.md) defines the arguments
 and the result. The synthetic consumer `nix/tests/consumers/standards` has this
 shape.
@@ -145,7 +145,8 @@ shape.
 To add to the rules, pass the optional arguments. `treefmtModules` adds the
 repository's treefmt-nix modules. `decisions.exclude` lists the paths that the
 citation scan skips. `extraHooks` adds hooks of the repository, and `scanner`
-replaces the secret scanner. The repository's own `.vale.ini`,
+replaces the secret scanner. `renovateConfig = false` leaves the check
+`renovate-config` out. The repository's own `.vale.ini`,
 `.markdownlint-cli2.yaml` or `lychee.toml` layers over the hub's base, as
 [Layer your own configuration](#layer-your-own-configuration) says.
 
@@ -473,6 +474,35 @@ The bound of 360 minutes covers the numbers that a workflow file writes. It
 doesn't cover an expression, because the check doesn't read its value, and it
 doesn't cover the jobs of a called workflow. [Call the reusable
 workflow](#call-the-reusable-workflow) says what that means for `secrets.yml`.
+
+## Gate the Renovate configuration
+
+The `renovate-config` check fails when a Renovate file of the repository has an
+option that Renovate doesn't know, a value of the wrong type or a setting that
+Renovate would migrate. [Renovate configuration check](../reference/renovate-config-check.md)
+defines the rules. A repository that follows
+[Take the standards in one call](#take-the-standards-in-one-call) has the check
+already.
+
+1. Add the check to the set that `checks` defines through `forAllSystems` in the
+   repository's `flake.nix`. Pass `self`, because the check reads the files at
+   the root of the tree. The third argument lists each shared preset that the
+   repository publishes for other repositories to extend. A repository that
+   publishes none passes an empty set.
+
+   ```nix
+   renovate-config = hub.lib.mkRenovateConfigCheck pkgs self { presets = [ "default.json" ]; };
+   ```
+
+2. Run `nix build .#checks.<system>.renovate-config -L`. The validator prints
+   each problem with the name of the file. CI needs no separate job: the job
+   that runs `nix flake check` runs this check too.
+3. Fix the findings of the first run. A name that Renovate renames, such as
+   `config:base`, fails the check: use the new name.
+
+The check doesn't resolve `extends`, so a preset name that doesn't exist passes.
+It builds its tool from the hub's own nixpkgs, whatever nixpkgs the repository
+follows, so every repository runs the same version of Renovate.
 
 ## Gate the commits and branches
 

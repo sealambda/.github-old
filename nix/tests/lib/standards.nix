@@ -110,7 +110,7 @@ let
   invalid = {
     unknown-argument = {
       args.foo = 1;
-      message = "Unknown arguments: `foo`. The arguments are `decisions`, `extraHooks`, `name`, `pkgs`, `scanner`, `src`, `treefmtModules`.";
+      message = "Unknown arguments: `foo`. The arguments are `decisions`, `extraHooks`, `name`, `pkgs`, `renovateConfig`, `scanner`, `src`, `treefmtModules`.";
     };
     pkgs-is-a-set-without-stdenv = {
       args.pkgs = { };
@@ -184,6 +184,10 @@ let
       args.scanner = pkgs.runCommand "scanner" { } "touch $out";
       message = "`scanner` must have `meta.mainProgram`, so that `lib.getExe` finds its command.";
     };
+    renovate-config-is-not-a-boolean = {
+      args.renovateConfig = "yes";
+      message = "`renovateConfig` must be a boolean, got `string`.";
+    };
   };
 
   # One case for each row of `invalid`: the message is in the list of problems.
@@ -213,19 +217,50 @@ in
     );
   };
 
-  # Requirement: `checks` has the five checks of the contract and no other. It
+  # Requirement: `checks` has the six checks of the contract and no other. It
   # has no `config-in-sync`, because a repository that calls the function holds
   # no copy of the tool configuration.
-  standards-checks-are-the-five-of-the-contract = {
+  standards-checks-are-the-six-of-the-contract = {
     check = mustHold "The checks are ${builtins.toJSON (namesOf (standards { }).checks)}." (
       namesOf (standards { }).checks == [
         "decisions"
         "docs"
         "formatting"
         "pre-commit"
+        "renovate-config"
         "workflows"
       ]
     );
+  };
+
+  # Requirement: `renovateConfig = false` leaves `renovate-config` out of
+  # `checks` and keeps the other five. The case before this one shows that the
+  # default has the check.
+  standards-renovate-config-false-leaves-the-check-out = {
+    check =
+      mustHold
+        "The checks are ${builtins.toJSON (namesOf (standards { renovateConfig = false; }).checks)}."
+        (
+          namesOf (standards { renovateConfig = false; }).checks == [
+            "decisions"
+            "docs"
+            "formatting"
+            "pre-commit"
+            "workflows"
+          ]
+        );
+  };
+
+  # Requirement: `checks.renovate-config` is the real check of the Renovate
+  # files: a file with an option that Renovate doesn't know fails it, and the
+  # log names the option. `standards-clean-tree-passes` shows that a tree
+  # without a Renovate file passes.
+  standards-renovate-config-fails-on-unknown-option = {
+    check =
+      (standards {
+        src = tree "renovate-unknown-option" { "renovate.json" = ''{ "nope": true }''; };
+      }).checks.renovate-config;
+    expectedLog = [ "Invalid configuration option: nope" ];
   };
 
   # Requirement: `packages` has the six commands of the contract and no other,
@@ -267,7 +302,7 @@ in
       );
   };
 
-  # Requirement: a tree that satisfies every rule passes all five checks.
+  # Requirement: a tree that satisfies every rule passes all six checks.
   standards-clean-tree-passes = {
     check = pkgs.linkFarm "standards-clean" (standards { }).checks;
   };
@@ -394,7 +429,8 @@ in
   # of the other checks come from the hub's nixpkgs. A package set with other
   # `nixfmt`, `vale`, `lychee` and `markdownlint-cli2` packages changes the
   # formatter, the check `formatting` and the check `pre-commit`, which runs the
-  # hook `treefmt`. It leaves `docs`, `decisions` and `workflows` as they are.
+  # hook `treefmt`. It leaves `docs`, `decisions`, `workflows` and
+  # `renovate-config` as they are.
   # The contract page states this, so the page can't claim one version of every
   # tool.
   standards-pkgs-reach-the-formatter-and-not-the-hub-tools = {
@@ -412,14 +448,17 @@ in
         changed = standards { pkgs = changedPkgs; };
         checkDiffers = check: usual.checks.${check}.outPath != changed.checks.${check}.outPath;
       in
-      mustHold "The formatter follows pkgs, and the tools of docs, decisions and workflows don't." (
-        usual.formatter.outPath != changed.formatter.outPath
-        && checkDiffers "formatting"
-        && checkDiffers "pre-commit"
-        && !(checkDiffers "docs")
-        && !(checkDiffers "decisions")
-        && !(checkDiffers "workflows")
-      );
+      mustHold
+        "The formatter follows pkgs, and the tools of docs, decisions, workflows and renovate-config don't."
+        (
+          usual.formatter.outPath != changed.formatter.outPath
+          && checkDiffers "formatting"
+          && checkDiffers "pre-commit"
+          && !(checkDiffers "docs")
+          && !(checkDiffers "decisions")
+          && !(checkDiffers "workflows")
+          && !(checkDiffers "renovate-config")
+        );
   };
 
   # Requirement: a path in `decisions.exclude` is out of the citation scan. The
@@ -536,6 +575,7 @@ in
             entry = "${pkgs.coreutils}/bin/true";
           };
           scanner = pkgs.betterleaks;
+          renovateConfig = true;
           src = tree "all-options" (citingPage // { "example.nix" = unformatted; });
         }).checks;
   };
@@ -590,7 +630,7 @@ in
   };
 
   # Requirement: a `src` that is a string holding an absolute path with the
-  # context of a store path is a source, as `"${self}"` is, and all five checks
+  # context of a store path is a source, as `"${self}"` is, and all six checks
   # accept it, because each one puts `src` into a command or reads it as a
   # path. The row `src-is-a-relative-string` shows that a relative string is
   # refused, and the row `src-is-an-absolute-string-without-context` shows that

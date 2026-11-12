@@ -124,6 +124,20 @@
             src = self;
             scanner = pkgs.betterleaks;
           };
+
+          # `renovateConfig`: a Renovate file with an option that Renovate
+          # doesn't know fails the check `renovate-config`, and the argument
+          # false leaves the check out.
+          renovateSrc = withFiles pkgs "renovate" { "renovate.json" = ''{ "nope": true }''; };
+          withRenovateCheck = hub.lib.mkStandards {
+            inherit pkgs name;
+            src = renovateSrc;
+          };
+          withoutRenovateCheck = hub.lib.mkStandards {
+            inherit pkgs name;
+            src = renovateSrc;
+            renovateConfig = false;
+          };
         in
         {
           variant-treefmt-modules = withModule.checks.formatting;
@@ -141,6 +155,16 @@
             grep -q ${pkgs.betterleaks} ${lib.getExe withScanner.packages.secrets-scan}
             touch "$out"
           '';
+          variant-renovate-config-needed =
+            mustFail pkgs "renovate-config-needed" withRenovateCheck.checks.renovate-config
+              [ "Invalid configuration option: nope" ];
+          variant-renovate-config-off =
+            assert lib.assertMsg (
+              !(withoutRenovateCheck.checks ? renovate-config)
+            ) "renovateConfig = false left the check renovate-config in the result.";
+            pkgs.runCommand "variant-renovate-config-off" { } ''
+              touch "$out"
+            '';
         };
     in
     {
