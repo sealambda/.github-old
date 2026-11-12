@@ -17,6 +17,13 @@
 # canonical one. The unit tests are in
 # `nix/tests/versions/test_versions_read_script.py`. `jq` is on the images
 # that GitHub hosts: see `docs/reference/setup-nix-action.md`.
+#
+# The pattern below copies the `pattern` of `nix` in
+# `schemas/versions.schema.json`, because a composite action can't read the
+# schema at run time. The test `test_script_and_schema_agree_on_the_form` holds
+# the two together. One difference stays: `$(...)` drops a final newline, so
+# the script accepts a value that ends in a line break, which the schema
+# rejects. The `versions` check rejects that manifest in every pull request.
 
 set -euo pipefail
 

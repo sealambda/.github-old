@@ -6,11 +6,15 @@ The `versions` check requires the step to run this file on the root
 manifests that the tests write, so the logic of the step has a test of its own.
 """
 
+import json
 import os
+import re
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+
+from decisions.schemas import load_schema
 
 SCRIPT = Path(os.environ["READ_VERSION_SCRIPT"])
 """The script under test."""
@@ -108,6 +112,51 @@ class ReadVersionScriptTest(unittest.TestCase):
         """A value with a newline isn't a version, so it can't add a second output."""
         self.manifest.write_text('{"nix": "2.99.1\\nnix=2.18.0"}\n')
         self.assert_failure(self.run_script(), "MAJOR.MINOR.PATCH")
+
+    def test_script_and_schema_agree_on_the_form(self) -> None:
+        """The script accepts the values that `versions.schema.json` accepts.
+
+        The script copies the `pattern` of `nix` from the schema, so a change
+        of one without the other shows here. The samples hold valid versions
+        and each kind of invalid one. A final line break isn't a sample: see
+        `test_final_line_break_is_the_one_difference_from_the_schema`.
+        """
+        pattern = load_schema("versions.schema.json")["properties"]["nix"]["pattern"]
+        samples = (
+            "2.99.1",
+            "0.0.0",
+            "10.20.30",
+            "2.99",
+            "2.99.1.1",
+            "v2.99.1",
+            "02.99.1",
+            "2.99.01",
+            "2.99.1-rc1",
+            "2.99.1+build",
+            "",
+            " 2.99.1",
+            "2.99.1 ",
+            "2.99.1\nnix=2.18.0",
+        )
+        for value in samples:
+            with self.subTest(value=value):
+                self.output.unlink(missing_ok=True)
+                self.manifest.write_text(json.dumps({"nix": value}))
+                script_accepts = self.run_script().returncode == 0
+                schema_accepts = re.fullmatch(pattern, value) is not None
+                self.assertEqual(script_accepts, schema_accepts)
+
+    def test_final_line_break_is_the_one_difference_from_the_schema(self) -> None:
+        """The script drops a final line break and accepts the version.
+
+        The schema rejects such a value, and the `versions` check reports it, so
+        the difference never reaches a run of a merged change. The test keeps the
+        header of `read-version.sh` true.
+        """
+        self.manifest.write_text(json.dumps({"nix": "2.99.1\n"}))
+        result = self.run_script()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.written(), "nix=2.99.1\n")
 
     def test_missing_argument_fails(self) -> None:
         """The script needs the path of the manifest."""
