@@ -22,8 +22,10 @@ that carries a release tag of the series is released: `plan` says so, and
 `publish` asks GitHub whether the release for the tag exists. It exits 0 when
 it does, and it creates the missing release for the existing tag when it does
 not. A commit that changes no path that the series releases gets no release:
-both commands say so, call nothing and exit 0. Only the actions series has
-paths of its own, so the hub series never answers this.
+both commands say so, call nothing and exit 0. The same holds for a series
+without a release when the tree has no path that starts it (the actions series
+needs a workflow or action file). Only the actions series has paths of its
+own, so the hub series never answers this.
 
 Exit status: 0 for success, 1 when the release cannot be made (a command failed,
 the new tag exists on a commit that does not contain this one, or the tag on
@@ -134,12 +136,13 @@ def _describe(plan: Plan) -> str:
 def _describe_no_release(outcome: NoRelease) -> str:
     """Return the text for a commit that the series does not release.
 
-    The text is for information: the command exits 0 and calls nothing.
+    The text is for information: the command exits 0 and calls nothing. A
+    series without a release says that the tree has no path that starts it,
+    and a series with one says that the commit changes no path since it.
     """
     if outcome.previous is None:
         return (
-            f"commit {outcome.commit} has no path that the series releases: "
-            f"no release\n"
+            f"commit {outcome.commit} has no path that starts the series: no release\n"
         )
     return (
         f"commit {outcome.commit} changes no path that the series releases "

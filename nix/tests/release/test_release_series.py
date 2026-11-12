@@ -108,15 +108,21 @@ class ActionsBumpTest(unittest.TestCase):
         """An empty range has nothing to release."""
         self.assertIs(ACTIONS.bump_for_changes([]), Bump.NONE)
 
-    def test_the_first_release_reads_the_whole_tree_with_the_same_rule(self) -> None:
-        """A tree with an action file gives minor, with only the data file patch."""
+    def test_the_first_release_needs_a_workflow_or_action_file_in_the_tree(
+        self,
+    ) -> None:
+        """A tree with an action file gives minor, whatever else it holds."""
         tree = ["README.md", ".github/actions/setup-nix/action.yml", "versions.json"]
         self.assertIs(ACTIONS.bump_for_first_release(tree), Bump.MINOR)
+
+    def test_a_data_file_alone_does_not_start_the_series(self) -> None:
+        """The first tag can't move or go, so `versions.json` alone gives none."""
         self.assertIs(
             ACTIONS.bump_for_first_release(["README.md", "versions.json"]),
-            Bump.PATCH,
+            Bump.NONE,
         )
 
     def test_a_tree_without_an_actions_path_has_no_first_release(self) -> None:
         """Nothing to release: the series stays without a tag."""
         self.assertIs(ACTIONS.bump_for_first_release(["README.md"]), Bump.NONE)
+        self.assertIs(ACTIONS.bump_for_first_release([]), Bump.NONE)

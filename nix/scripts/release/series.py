@@ -54,7 +54,9 @@ class Series:
         bump_for_changes: The rule for the paths that differ between the
             previous release and the commit.
         bump_for_first_release: The rule for the paths of the whole tree, when
-            the series has no release yet.
+            the series has no release yet. The actions series returns `NONE`
+            for a tree without a workflow or action file, so its first tag
+            lands on the first commit that has one.
     """
 
     name: str
@@ -96,6 +98,20 @@ def _actions_bump(paths: Iterable[str]) -> Bump:
     return Bump.NONE
 
 
+def _actions_first_bump(paths: Iterable[str]) -> Bump:
+    """Return `MINOR` when the tree holds a workflow or action file, else `NONE`.
+
+    The first release of the actions series reads the whole tree. A data file
+    alone starts nothing: the tag of the first release can't move or go, and
+    `actions-v1.0.0` must mark the first file that a consumer can call. A tree
+    with `versions.json` and no workflow or action file therefore gets no
+    release, and the first file that a merge adds starts the series.
+    """
+    if any(matches_any(path, ACTIONS_FILE_PATTERNS) for path in paths):
+        return Bump.MINOR
+    return Bump.NONE
+
+
 def _actions_kind(path: str) -> Bump:
     """Return the kind of release that one path asks of the actions series."""
     if matches_any(path, ACTIONS_FILE_PATTERNS):
@@ -121,7 +137,7 @@ ACTIONS = Series(
     label="workflow or action files changed",
     make_latest=False,
     bump_for_changes=_actions_bump,
-    bump_for_first_release=_actions_bump,
+    bump_for_first_release=_actions_first_bump,
 )
 """The actions series: `actions-v<major>.<minor>.<patch>`, the called files."""
 

@@ -53,15 +53,25 @@ class ActionsPlanTest(RepoTestCase):
         plan = self.planned()
         self.assertEqual((plan.tag, plan.previous), ("actions-v1.0.0", None))
 
-    def test_a_tree_with_only_versions_json_gives_a_first_release_with_no(
-        self,
-    ) -> None:
-        """The first release is `actions-v1.0.0` and the answer follows the tree."""
-        self.commit({"versions.json": "{}\n", "README.md": "r\n"}, "feat: add pins")
+    def test_a_tree_with_only_versions_json_gives_no_first_release(self) -> None:
+        """A data file alone starts nothing: the first tag can't move or go."""
+        head = self.commit(
+            {"versions.json": "{}\n", "README.md": "r\n"}, "feat: add pins"
+        )
+        self.assertEqual(plan_release(self.git, "HEAD", ACTIONS), NoRelease(head, None))
+
+    def test_the_first_action_file_starts_the_series_after_a_data_file(self) -> None:
+        """The first tag lands on the commit that adds the file, as `yes`."""
+        self.commit({"versions.json": "{}\n"}, "feat: add pins")
+        head = self.commit({ACTION_FILE: "a\n"}, "feat: add action")
         plan = self.planned()
-        self.assertEqual(plan.tag, "actions-v1.0.0")
-        self.assertFalse(plan.rules_changed)
-        self.assertTrue(plan.notes.startswith(f"{LABEL_NO}\n"))
+        self.assertEqual(
+            (plan.tag, plan.commit, plan.previous), ("actions-v1.0.0", head, None)
+        )
+        self.assertTrue(plan.rules_changed)
+        self.assertEqual(
+            plan.notes, f"{LABEL_YES}\n\n- feat: add action\n- feat: add pins\n"
+        )
 
     def test_a_tree_without_an_actions_path_has_no_release(self) -> None:
         """No tag and no actions path in the tree: nothing to release."""

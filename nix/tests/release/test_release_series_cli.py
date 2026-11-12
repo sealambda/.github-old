@@ -91,9 +91,23 @@ class ActionsPlanCommandTest(RepoTestCase):
         self.assertEqual(result.code, cli.EXIT_OK)
         self.assertEqual(
             result.stdout,
-            f"commit {head} has no path that the series releases: no release\n",
+            f"commit {head} has no path that starts the series: no release\n",
         )
         self.assertEqual(self.gh.calls, [])
+
+    def test_a_tree_with_only_versions_json_gets_no_first_release(self) -> None:
+        """A data file alone doesn't start the series: no tag, no call, exit 0."""
+        head = self.commit({"versions.json": "{}\n"}, "feat: add the pins")
+        for command in ("plan", "publish"):
+            with self.subTest(command=command):
+                result = self.run_cli(command, "--series", "actions")
+                self.assertEqual(result.code, cli.EXIT_OK)
+                self.assertEqual(
+                    result.stdout,
+                    f"commit {head} has no path that starts the series: no release\n",
+                )
+        self.assertEqual(self.gh.calls, [])
+        self.assertEqual(self.tag_names(), [])
 
     def test_the_hub_series_never_answers_no_release(self) -> None:
         """A documentation commit still gets the next hub patch."""

@@ -58,7 +58,7 @@ class NoRelease:
     Attributes:
         commit: The full hash of the commit.
         previous: The previous release tag of the series, `None` when the
-            series has no release and no path of it is in the tree.
+            series has no release and the tree holds no file that starts it.
     """
 
     commit: str

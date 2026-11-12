@@ -51,10 +51,12 @@ The series releases these paths:
 | No path of the table above | No release. |
 
 The first release reads the paths of the whole tree, because no previous tag
-gives a range to compare. A tree with an actions path and no actions tag gets
-`actions-v1.0.0`. The answer in the notes follows the same rule: `yes` for a
-tree with a workflow or action file, and `no` for a tree with `versions.json`
-and none. A tree without an actions path gets no release.
+gives a range to compare. Only a workflow or action file starts the series: a
+tree with one and no actions tag gets `actions-v1.0.0` with the answer `yes`.
+A tree with `versions.json` and no such file gets no release, because the first
+tag can't move or go, and the version `1.0.0` must mark the first file that a
+consumer can call. The first merge that adds a workflow or action file gets
+the first tag, and its notes list every commit before it.
 
 A commit that gets no release isn't an error. `release plan` and
 `release publish` print an information line, call nothing and exit 0:
@@ -64,8 +66,8 @@ commit <hash> changes no path that the series releases since actions-v1.4.2: no 
 ```
 
 The line ends with `: no release` and names no previous tag for a tree
-without an actions path (`commit <hash> has no path that the series releases:
-no release`). The hub series never prints this line: it releases every commit.
+without a workflow or action file (`commit <hash> has no path that starts the
+series: no release`). The hub series never prints this line: it releases every commit.
 
 A release of the actions series isn't the latest release of the repository.
 `publish` adds `--latest=false` to `gh release create`, so the hub release
