@@ -16,6 +16,7 @@ shell is `base`.
 | `base` | actionlint | `actionlint` |
 | `base` | git | `git` |
 | `base` | gitleaks | `gitleaks` |
+| `base` | secrets-scan | The hub's `lib.mkSecretsScan`, with `gitleaks` |
 | `base` | zizmor | `zizmor` |
 | `elixir` | Erlang/OTP 29 | `beam.packages.erlang_29.erlang` |
 | `elixir` | Elixir 1.20 | `beam.packages.erlang_29.elixir_1_20` |

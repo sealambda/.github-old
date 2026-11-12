@@ -17,21 +17,187 @@ Both commands run at the top of the work tree, so a hook that starts in a
 subfolder finds the secrets and the `.gitleaksignore` file all the same. Any
 other arguments are a usage error.
 
-`history` checks the history before it scans, and it scans nothing when the
-history is incomplete or unreadable. A scanner reports "no leaks" for both,
+Both commands check what Git gives the scanner before they scan, and they scan
+nothing when the check fails. A scanner reports "no leaks" for each case below,
 and the result would look clean and mean nothing:
 
-- A shallow clone lacks the older commits. The command exits with status 3 and
+- A shallow clone lacks the older commits. `history` exits with status 3 and
   names the two fixes: `fetch-depth: 0` on `actions/checkout`, or
-  `git fetch --unshallow`.
-- A missing object makes the history unreadable. `git rev-list --objects --all`
-  walks every object that the refs reach, and the command exits with status 4
-  when that walk fails. Git names the missing object on standard error.
-  gitleaks exits 0 with "no leaks found" for such a history, and `betterleaks`
-  exits 1 with a "partial scan" line, the status of a finding.
+  `git fetch --unshallow`. `staged` reads the index and no history, so it needs
+  no such check.
+- Git can't produce the diff that the scanner reads. The command runs the Git
+  command that the scanner runs, with the output discarded and with the pinned
+  settings of the next section: `git log -p -U0` with the options of the scan
+  for `history`, and `git diff -U0 --no-ext-diff --staged .` for `staged`. It
+  exits with status 4 when the command exits with a status other than 0, or
+  writes a message to standard error other than the two lines about
+  `diff.renameLimit` that the scanners accept. Git names the cause on standard
+  error, and the command prints it. The causes include a missing or damaged
+  object, a setting that makes Git fail, such as `diff.orderFile` with a file
+  that doesn't exist (status 128), and a value that Git can't parse and only
+  warns about, such as `diff.dirstat = bogus` (status 0). gitleaks exits 0 with
+  "no leaks found" for all of them, and after a warning of Git it scans no
+  commit at all. `betterleaks` exits 1 with a log line, the status of a
+  finding. A walk with `git rev-list --objects --all` isn't enough for a
+  history: it only checks that each object exists, so it passes a blob that
+  holds garbage. `git cat-file --batch` and `git rev-list --verify-objects` read
+  the content, but they exit 0 for some damaged objects.
 
-`staged` needs neither check, because it reads the index and no history. A
-repository with no commit has no history, so `history` passes.
+The check reads the diff twice. On a synthetic history of 3301 commits, 300 of
+them merge commits, with 15423 objects in a 3.2 MiB pack, `secrets-scan history`
+takes 0.34 s, and gitleaks alone takes 0.17 s with the same options. On the
+history of the hub, with 52 commits and 5650 objects, it takes 0.18 s against
+0.13 s. The measurements ran on one machine with Apple silicon, Git 2.56.0 and
+gitleaks 8.30.1, and each time is the median of seven runs. The check reads the
+history once more, so the cost grows with the size of the history. A repository
+with no commit has no history, so `history` passes.
+
+### The Git output that the scan reads
+
+A scanner runs `git log -p` for `history` and `git diff --staged` for `staged`,
+and it reads the diff in the output. The command pins the settings that change
+that output, whatever the configuration of the user says:
+
+- `color.ui` and `color.diff` are `never`. With `always` in either one, gitleaks
+  reads the coloured diff as empty and exits 0 after it reports no leaks. The
+  command doesn't touch the colour of its own output: that's the flag
+  `--no-color`.
+- Every `diff.<driver>.textconv` filter that a configuration file or the
+  environment defines is `cat`. A `.gitattributes` line such as `*.yml diff=x`
+  selects a driver, and a filter that prints nothing hides the file from
+  gitleaks. A filter that exists only on the machine of a user has an effect
+  only there.
+- `GIT_NO_REPLACE_OBJECTS` is `1`. A `refs/replace` reference makes Git show
+  another object in place of a commit, and gitleaks then scans the replacement
+  and not the commit. A mirror clone brings these references. `betterleaks` sets
+  the variable itself.
+
+The command adds these settings to the end of the variable
+`GIT_CONFIG_PARAMETERS`, in the form `'key'='value'` that `git -c` writes. Git
+reads that variable after every configuration file and after the variables
+`GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_<n>` and `GIT_CONFIG_VALUE_<n>` (`config.c`
+of Git 2.56.0), and the last entry for a key wins. So a pin wins over the
+configuration files, over those variables and over the `git -c` options of a
+caller: a Git alias or a hook that Git starts from `git -c color.diff=always
+commit` gets the options in `GIT_CONFIG_PARAMETERS`, and the scan still reads an
+uncoloured diff. The command keeps every other entry of the caller, so a setting
+such as `safe.directory` still reaches Git. The command doesn't unset the
+variable, because that would lose these settings.
+
+A setting that makes Git fail has no pin. `diff.orderFile`, `diff.algorithm`,
+`diff.context`, `diff.renames`, `core.abbrev` and others make Git exit with
+status 128 when their value is wrong, and a list of pins couldn't be complete.
+A pin would also hide the mistake of a user. The check of the previous section
+catches every such setting and names it, in every version of Git.
+
+A probe of 91 settings of `diff.*`, `log.*`, `core.*`, `format.*`, `color.*`,
+`i18n.*` and a few other sections, with gitleaks 8.30.1 and `betterleaks`
+1.9.0, found four kinds of setting that make a scan pass a secret: the colour
+settings, `diff.<driver>.textconv`, `diff.<driver>.binary` and
+`core.bigFileThreshold`. The command pins the colours and the filters of
+`diff.<driver>.textconv`, and the flag `--text` of the next section covers the
+`binary` setting and the threshold. The probe also found settings that make Git
+fail or warn. The status 4 covers them. No other setting of the probe hides a
+secret. `diff.external` has no effect because the scanner
+passes `--no-ext-diff` to `git diff`, and `git log -p` runs no external diff
+program.
+
+### Files that Git treats as binary
+
+Git prints "Binary files differ" and no line for a file that it treats as
+binary, and a scanner finds nothing in such a file. A person who can commit
+decides which files are binary:
+
+- A NUL byte in the content.
+- The attribute `-diff` or `binary` in a `.gitattributes` file. The line
+  `*.txt -diff` is enough to hide every text file.
+- The same attributes in `.git/info/attributes`, a file of one clone that no
+  commit holds. It has a higher rank than a `.gitattributes` file.
+- A diff driver whose `diff.<driver>.binary` setting is true.
+
+Both commands put a `git` first on PATH that adds `--text` after `diff` or `log`
+and runs the real Git (`nix/scripts/secrets-scan-git.sh`). With `--text`, Git
+prints the lines of every file, whatever the reason for a binary diff was. The
+scanner and the check of the previous section both run `git`, so both get the
+flag from the same command, and the check reads what the scanner reads. The
+scanner must run `git` from PATH, as gitleaks and `betterleaks` do.
+
+The flag has a cost, and it has two side effects:
+
+- The scanner reads the content of every binary file that a commit changes. On
+  a history of 3 commits with 10.8 MiB of executables and random data, the diff
+  grows from 911 bytes to 12 MB. The scan of the history takes 0.15 s and 42 MiB
+  without the flag, and 2.13 s and 103 MiB with it, for gitleaks. For
+  `betterleaks` the values are 0.20 s and 29 MiB, and 0.50 s and 65 MiB. On a
+  history of 5 commits with 37.7 MiB of such files, the diff grows from 1468
+  bytes to 53 MB, and the scan takes 0.38 s without the flag and 250 s with it
+  for gitleaks, and 0.47 s and 27 s for `betterleaks`. The time of gitleaks
+  grows faster than the size, so a history with many large binary files makes
+  the CI scan slow. `staged` reads only the files of the commit, and a change of
+  a 3 MiB file takes 1.95 s with gitleaks and 0.34 s with `betterleaks`. The
+  measurements ran on one machine with Apple silicon, Git 2.56.0, gitleaks 8.30.1
+  and `betterleaks` 1.9.0, and each value is one run.
+- A binary file can hold bytes that a rule matches, and the scan reports them.
+  The scan of the history with 37.7 MiB of files reported one finding with
+  gitleaks: the rule `aws-amazon-bedrock-api-key-short-lived` matched in a copy
+  of the `betterleaks` executable, which holds no secret. A fingerprint in
+  `.gitleaksignore` suppresses such a finding.
+- `betterleaks` scans the content of an archive only in a binary diff. With the
+  flag it reads the compressed bytes as text and finds nothing in a compressed
+  zip file. Without the flag, it found the secret in one. gitleaks scans no
+  archive with or without the flag. A zip file that stores a small file without
+  compression holds the secret as plain bytes, and both scanners find it with
+  the flag.
+
+The scanner limits don't apply to the flag. The command passes no
+`--max-target-megabytes`, and a limit would let a person hide a secret by
+padding a file above the limit.
+
+### Other repository content that changes the diff
+
+A probe of the ways that the content of a repository changes what `git log -p`
+and `git diff --staged` print, with both scanners, found two more cases that
+passed a secret, and the command closes both:
+
+- A commit that turns a symbolic link into a file. The default filter of the
+  scanners, `--diff-filter=tuxdb`, has a `t` that leaves out type changes, and
+  the diff of such a commit holds the whole content of the file. The command
+  passes `--diff-filter=uxdb`.
+- A `refs/replace` reference, described in the list above.
+
+The attributes `working-tree-encoding`, `filter`, `ident`, `export-subst`,
+`text`, `eol` and `-text`, a file mode change, a symbolic link, a line of
+64 MiB and a file name with a tab, a line break or a fake diff header all leave
+the scan unchanged: the scanners find the secret. The diff holds what Git
+stores, so an encoding of the working tree has no effect. Two cases stay and
+the Limits section lists them: a file in an encoding that the scanner can't
+read, such as UTF-16, and the content of a submodule.
+
+### Merge commits
+
+`git log -p` prints no diff for a merge commit, so a secret that only the merge
+commit holds passes: the resolution of a conflict that adds it, or a change that
+the person who merged made by hand. `history` shows the diff of each merge
+commit with `--diff-merges=remerge`. The option shows the difference between
+the automatic merge of the parents and the merge commit, so it shows what the
+person added and nothing that a merged branch brought. A diff against the first
+parent would show the lines of the whole merged branch again, and a fingerprint
+of an accepted finding on that branch would not suppress it for the merge
+commit. CI on a pull request scans a merge commit that GitHub creates, and its
+hash changes with each run, so no fingerprint could suppress such a finding.
+
+The command passes the option in `--log-opts`, which replaces the default
+options of the scanners, so the command names `--full-history --all
+--diff-filter=uxdb` as well. The filter differs from the default `tuxdb` in the
+`t`, as the previous section says. The option adds about 0.1 s to the scan of a
+repository with 3300 commits, 300 merge commits and 13000 objects, and about
+0.05 s to the scan of the hub. The hub has no merge commit.
+
+A finding in a file that the merge left in conflict shows the path with the
+prefix `b/`, and its fingerprint has the prefix, as in
+`<commit>:b/<file>:<rule>:<line>`. Git prints a line `remerge CONFLICT` in the
+diff header of such a file, and both scanners then take the path from another
+line.
 
 | Exit status | Meaning |
 | ----------- | ------- |
@@ -39,7 +205,7 @@ repository with no commit has no history, so `history` passes.
 | 1 | A finding, or a failure of the scanner. The scanner uses 1 for both, and the output says which. |
 | 2 | A usage error. |
 | 3 | `history` on a shallow clone. Nothing is scanned. |
-| 4 | `history` on a history that Git can't read. Nothing is scanned. |
+| 4 | Git can't produce the diff that the scan reads: a history with a missing or damaged object, or a setting that makes Git fail or warn. Nothing is scanned. |
 | Other | A failure of `git`, such as 128 outside a work tree. |
 
 ## Where the scan runs
@@ -201,10 +367,26 @@ commit, the file, the rule and the line that the finding shows.
   read, so a repository adds no rule, no allowlist and no entropy setting.
 - Flags. The command takes no flag of the scanner.
 
-A repository can suppress any finding with a fingerprint or a comment. The hub
-doesn't prevent that, and review does: a change to `.gitleaksignore` or a new
-`gitleaks:allow` comment needs a reviewer who checks that the string is no
-secret.
+### Ways a repository switches the scan off
+
+A repository owns the files that the scan reads, and it can silence the scan
+with them. This is by design, and the hub doesn't prevent it: review does. A
+change to one of these files needs a reviewer who checks that the string is no
+secret. A probe of each way, with gitleaks 8.30.1 and `betterleaks` 1.9.0,
+gave these results:
+
+| A file or a line in the repository | `secrets-scan` | The `secrets.yml` workflow |
+| ---------------------------------- | -------------- | -------------------------- |
+| A fingerprint in `.gitleaksignore` | Suppresses that finding, in both modes. The scan reads the file from the work tree, so the file needs no commit. | The same. |
+| A `gitleaks:allow` comment | Suppresses the finding on that line. | The same. |
+| `[allowlist]` (`paths`, `regexes`) or `[extend] path` in `.gitleaks.toml` | No effect. The command passes `--config`, so the scanner reads no other file. | Suppresses what the allowlist names. The workflow passes no `--config`, and gitleaks reads `.gitleaks.toml` at the top of the repository. |
+| `.betterleaksignore` and `betterleaks:allow` | Suppress findings with `betterleaks` only. | No effect: the workflow runs gitleaks. |
+| A change to the workflow call, to the hook configuration or to the CI step that runs the command | The scan doesn't run. | The scan doesn't run. |
+
+A hook is local and `git commit --no-verify` skips it, so a scan of the history
+in CI is what stops a secret that a hook missed. The workflow and the command
+guard the history differently, as
+[The workflow and the command](#the-workflow-and-the-command) shows.
 
 ## Output
 
@@ -228,8 +410,9 @@ and the command doesn't filter the output:
 - The scan finds what the rules of the scanner match. A clean result doesn't
   prove that a repository holds no secret.
 - `history` scans the commits that the clone holds, so it refuses a shallow
-  clone (status 3) and a history with a missing object (status 4). A CI step
-  fetches the whole history, as `secrets.yml` does.
+  clone (status 3). Both commands refuse (status 4) when Git can't produce the
+  diff, for example for a missing or damaged object or for a setting that makes
+  Git fail. A CI step fetches the whole history, as `secrets.yml` does.
 - `staged` scans the index only. A file that isn't staged isn't scanned, and a
   hook can be skipped with `git commit --no-verify`. A scan of the history in
   CI finds what the hook missed, with the guards of the workflow or of the
@@ -238,11 +421,29 @@ and the command doesn't filter the output:
 - `staged` scans the lines that the change adds. A staged deletion and a staged
   rename without an edit add no line, so they pass. The secret that they leave
   or move is in the history, and the scan of the history finds it.
-- A secret in a binary file passes `history` and `staged`. A file is binary
-  when it holds a NUL byte or when a `binary` or `-diff` attribute marks it.
-  Both scanners also skip a file with the extension of a binary format, such as
-  `.png` or `.bin`, even when the file is text. A repository that keeps secrets
-  in such files needs another control.
+- A merge commit with three or more parents, an octopus merge, has no `remerge`
+  diff: Git prints the line `diff: warning: Skipping remerge-diff for octopus
+  merges.` in place of a diff. A secret that only such a merge commit holds
+  passes `history` with both scanners, whether the merge adds it in a new file
+  or edits a file by hand. A secret that a merged branch brought is in the
+  commit on that branch, and the scan finds it there. `git rev-list
+  --min-parents=3 --all` lists the octopus merges, and `git show --cc
+  <commit>` shows what one holds that none of its parents has.
+- A submodule isn't scanned. `history` and `staged` read the commit ID of the
+  submodule in the repository, and neither the history nor the files of the
+  submodule. Run `secrets-scan` in the repository of the submodule itself.
+- The scan reads a file that Git treats as binary, because of a NUL byte or of
+  the attribute `binary` or `-diff`, as text: see the section about binary
+  files. These files still pass:
+  - A file whose path the default rules of the scanner allow. Both scanners skip
+    the extensions of binary formats, such as `.png`, `.bin` and `.exe`, even
+    when the file is text. They also skip `node_modules/`, lock files such as
+    `package-lock.json`, and files with `gitleaks.toml` in the name.
+  - A file in an encoding that the scanner can't read, such as UTF-16, and a
+    secret in an encoded form, such as base64.
+  - A compressed archive, such as a gzip or a deflated zip file.
+
+  A repository that keeps secrets in such files needs another control.
 - A secret in the history stays there after a commit removes it. Rotate the
   secret. A fingerprint only silences the finding.
 - The command makes no network call. It doesn't enable the validation of
@@ -259,8 +460,9 @@ secrets-scan = hub.lib.mkSecretsScan {
 };
 ```
 
-The scanner must provide the `git` command with the flags above, and it must
-read `.gitleaksignore`. The same 26 cases of `nix/tests/secrets-scan.sh` run
+The scanner must provide the `git` command with the flags above, it must run
+`git` from PATH so that the flag `--text` of the command reaches it, and it must
+read `.gitleaksignore`. The same 43 cases of `nix/tests/secrets-scan.sh` run
 with gitleaks and with `betterleaks`, and both pass. These differences of
 `betterleaks` 1.9.0 don't break the contract, and a repository that replaces the
 scanner meets them:
@@ -269,7 +471,9 @@ scanner meets them:
   key is on a line within five lines. A lone access key ID passes, and gitleaks
   reports it.
 - Its default output has no fingerprint line.
-- It scans archives to a depth of 8 by default, and gitleaks scans none.
+- It scans archives to a depth of 8 by default, and gitleaks scans none. The
+  flag `--text` of the command stops that for a compressed archive: see the
+  section about binary files.
 - It reads `.betterleaks.toml` when it gets no `--config`. The command always
   passes one.
 - It gives its own confidence levels to findings, and its rule set differs from
