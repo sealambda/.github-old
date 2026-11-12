@@ -5,8 +5,8 @@
 # check, `secrets-scan` and `gitpolicy`. This file only wires them to the Git
 # stages. The input `git-hooks` (git-hooks.nix) turns the wiring into a
 # configuration file for `prek`, and the hub's `hooks` dev shell installs it.
-# The stages and the limits are in the reference page on the Git hooks, and
-# the choice is in the decision record on offering them.
+# The stages and the limits are in `docs/reference/hooks.md`, and the choice
+# is in `docs/decisions/0008-offer-git-hooks-through-git-hooks-nix.md`.
 {
   lib,
   git-hooks,

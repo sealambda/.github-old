@@ -21,11 +21,11 @@
 # the `pre-commit` stage, one refusal for each hook, so a hook that stops
 # running fails a case.
 #
-# Some cases pin behavior of prek and of the installation script that the
-# reference page on the Git hooks states: what the hooks read when a file is
-# staged in part, which pushes run `pre-push`, what the installer does to an
-# earlier `core.hooksPath`, and what it does in linked work trees. An update of
-# the inputs that changes one of them fails a case. Then update the page.
+# Some cases pin behavior of prek and of the installation script that
+# `docs/reference/hooks.md` states: what the hooks read when a file is staged
+# in part, which pushes run `pre-push`, what the installer does to an earlier
+# `core.hooksPath`, and what it does in linked work trees. An update of the
+# inputs that changes one of them fails a case. Then update the page.
 #
 # Each case builds a Git repository under a temporary directory. The secret
 # that the cases stage has the shape of a GitHub token, and the file assembles
@@ -295,7 +295,7 @@ write_global_hooks_path_config() {
 # global hooks and leaves no hook at all. The check that `lib.mkHooks` runs
 # first refuses: the installation script exits with status 1, names the value
 # and the repair, and changes nothing. The global hook keeps running. This case
-# pins the behavior that the reference page on the Git hooks states.
+# pins the behavior that `docs/reference/hooks.md` states.
 case_global_core_hooks_path_makes_the_install_fail_and_changes_nothing() {
   init_repository global-path
   local global_config
@@ -422,9 +422,8 @@ case_empty_global_core_hooks_path_is_refused_and_shown() {
 # `.git/hooks`. Git resolves that path from the root of each work tree, and a
 # linked work tree has a `.git` file, not a directory. So no hook runs in a
 # linked work tree that never ran the installer, and a bad message passes. This
-# case pins the limit that the reference page on the Git hooks states. A
-# change of git-hooks.nix that removes it makes the case fail: then update the
-# page.
+# case pins the limit that `docs/reference/hooks.md` states. A change of
+# git-hooks.nix that removes it makes the case fail: then update the page.
 case_linked_worktree_runs_no_hook_before_its_install() {
   new_repository relative
   git -C "$REPO" worktree add --quiet -b feat/linked "$WORK/relative-linked"
