@@ -10,8 +10,9 @@ gives the tool to every repository as `lib.mkGitPolicyTool`, as the package
 ## Where the rules run
 
 A flake check can't enforce these rules. A flake source holds no Git history
-and no branch name: `self` has only `rev`, `shortRev`, `lastModified` and
-`revCount`. The rules therefore run where Git is present:
+and no branch name: `self` carries the revision metadata of the source (`rev`,
+`shortRev`, `revCount` and `lastModified`), and the check runs in a sandbox
+with no repository. The rules therefore run where Git is present:
 
 - The CI job `git-policy` of the hub checks every commit of a pull request and
   the name of its head branch.
