@@ -68,8 +68,11 @@ that release:
 
 Without `install_url`, the action installs the version that its own revision
 carries as its default, and an update of the action changes Nix without a
-change in the hub. The hub's `ci.yml` and `secrets.yml` set it. A repository
-that calls the reusable workflow `secrets.yml` runs the same Nix.
+change in the hub. The hub's `secrets.yml` sets it. The jobs of `ci.yml` that
+need Nix call the local action `.github/actions/setup-nix`, whose own steps
+read `versions.json` and set it
+([Setup Nix action](setup-nix-action.md)). A repository that calls the reusable
+workflow `secrets.yml` runs the same Nix.
 
 A developer's local Nix isn't checked, and neither is the `nix` package of the
 locked nixpkgs. The version in `versions.json` is the one that the hub's CI
@@ -89,7 +92,9 @@ action is `cachix/install-nix-action` with the `install_url` of
   the schema.
 - A step that uses `cachix/install-nix-action` has an `install_url` that isn't
   exactly the installer address of the version in `versions.json`. A missing
-  `install_url` and an expression are findings too.
+  `install_url` is a finding too, and so is an expression, except the one
+  form that the setup action of the hub may use, as the paragraph after this
+  list states.
 - A `uses` step installs Nix with another action, because the check can't read
   the version that it installs. The name of the action, `owner/name` in any
   case, holds the word `nix` together with `install` in either order, or one
@@ -100,6 +105,39 @@ action is `cachix/install-nix-action` with the `install_url` of
 - A `run` script downloads or runs another installer. The script, in any
   case, holds `nixos.org/nix/install`, `releases.nixos.org/nix/`,
   `install.determinate.systems`, `install.lix.systems` or `nix-installer`.
+
+The expression form is for one file only, the setup action of the hub,
+`.github/actions/setup-nix/action.yml`, at that path from the root of the
+checked tree. Its `install_url` may be this exact text, with one space inside
+each pair of braces:
+
+```yaml
+install_url: https://releases.nixos.org/nix/nix-${{ steps.version.outputs.nix }}/install
+```
+
+It passes when exactly one earlier step of the action has the `id` `version`
+and that step equals the constant `READ_VERSION_STEP` in
+`nix/scripts/versions/action_output.py`, key for key. The step runs the file
+`read-version.sh` of the action folder on the `versions.json` at the root of
+the tree. It has no other key, so no condition, working directory or ignored
+failure can change it. A finding names the keys in which the step differs.
+The same expression in any other file, a workflow or another `action.yml`, is a
+finding like any other address that differs from the version. A literal
+address stays valid in every file.
+
+The guarantee has three parts, and each part proves a different thing:
+
+- The `versions` check proves, from the files only, that the setup action runs
+  `read-version.sh` on the root `versions.json` and gives its output to the
+  installer. It doesn't read the script and doesn't run the action.
+- The script has unit tests in the flake check `check-versions-tests`. They run
+  it with `jq` on valid and invalid manifests.
+- The job `flake-check` of `ci.yml` asserts at run time that the installed
+  `nix --version` and the output of the action equal the value in
+  `versions.json`.
+
+The use of the action from another repository isn't verified: see
+[Not verified](setup-nix-action.md#not-verified).
 
 The files are every `.yml` or `.yaml` file directly in a folder
 `.github/workflows`, at any depth of the tree, so a workflow skeleton under
@@ -117,7 +155,9 @@ folder below the root.
 A file in a subfolder of `workflows` isn't a workflow, because GitHub doesn't
 run it. A file that isn't valid YAML is a finding, because it could hide a
 step. A local action (`uses: ./path`) and a Docker image are skipped, and the
-`action.yml` of a local action is read.
+`action.yml` of a local action is read. So a job that installs Nix through the
+local action carries no number, and the installer step of that action is the
+one that the check holds to `versions.json`.
 
 [starter]: https://docs.github.com/en/actions/how-tos/reuse-automations/create-workflow-templates
 

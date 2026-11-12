@@ -16,9 +16,11 @@ the rules.
 
 ## Change the Nix version
 
-The version of Nix isn't a nixpkgs attribute. `versions.json` holds it, and the
-workflows pin it with `install_url`
-([Nix](../reference/versions.md#nix)).
+The version of Nix isn't a nixpkgs attribute. `versions.json` holds it
+([Nix](../reference/versions.md#nix)). The jobs of `ci.yml` call the local
+action `.github/actions/setup-nix`, which reads the file
+([Setup Nix action](../reference/setup-nix-action.md)). Only `secrets.yml`
+repeats the number, in `install_url`.
 
 1. Pick a release that has an installer. This command exits 0 when it does,
    and it exits with another status when the installer is missing:
@@ -28,9 +30,12 @@ workflows pin it with `install_url`
    ```
 
 2. In `versions.json`, set `nix` to the version as `MAJOR.MINOR.PATCH`.
-3. In every step that uses `cachix/install-nix-action`, set `install_url` to
-   `https://releases.nixos.org/nix/nix-<version>/install`. The hub has these
-   steps in `.github/workflows/ci.yml` and `.github/workflows/secrets.yml`.
+3. In every step that uses `cachix/install-nix-action` with a literal
+   `install_url`, set it to
+   `https://releases.nixos.org/nix/nix-<version>/install`. The hub has this
+   step in `.github/workflows/secrets.yml`. The action
+   `.github/actions/setup-nix` needs no edit: it reads the new version from
+   `versions.json`.
 4. Run `nix flake check`. The check `versions` lists each step whose address
    differs from `versions.json`, with its file and line. It also lists a step
    that installs Nix another way, as the
