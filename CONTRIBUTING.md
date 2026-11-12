@@ -29,7 +29,7 @@ Assisted-by: <tool> (<model>)
   ```
 
 - When an AI tool helped, add the `Assisted-by: <tool> (<model>)` trailer.
-  Never add an AI as `Co-authored-by`. Don't add `Signed-off-by`.
+  Never add an AI as `Co-authored-by`. Do not add `Signed-off-by`.
 - Never use `--no-verify`. If a hook refuses a commit, fix the cause.
 - Each commit passes the repository's checks.
 
@@ -46,7 +46,7 @@ Assisted-by: <tool> (<model>)
 
 ## Review and landing
 
-- A code owner who didn't commit to the pull request approves it.
+- A code owner who did not commit to the pull request approves it.
 - Fix review findings with fixup commits. Fold them in before landing with
   `git rebase -i --autosquash`.
 - Land with **Rebase and merge**. `main` stays linear. Nobody pushes to
@@ -56,7 +56,7 @@ Assisted-by: <tool> (<model>)
 ## Dependencies
 
 [Renovate](https://docs.renovatebot.com/) is the only dependency updater.
-Commit lock files. Don't write update scripts.
+Commit lock files. Do not write update scripts.
 
 ## Documentation
 
@@ -69,7 +69,7 @@ and use one term for one concept.
 - A document describes what exists now. Plans and open questions are issues.
   History lives in git and in decision records.
 - Delete a dead document in the pull request that makes it dead.
-- A design spec (`docs/specs/`) describes work that isn't built yet. The pull
+- A design spec (`docs/specs/`) describes work that is not built yet. The pull
   request that implements a spec moves its verified behavior into reference or
   explanation pages, moves its decisions into decision records, opens issues
   for what remains, and deletes the spec. Code cites the current pages, never a
@@ -116,7 +116,7 @@ record in
 An agent follows this guide and these rules:
 
 - Never push to `main`. Never merge a pull request unless a person asks. This
-  rule doesn't cover the Renovate merge of a security fix inside the declared
+  rule does not cover the Renovate merge of a security fix inside the declared
   range.
 - Open pull requests as drafts.
 - Disclose AI help with the `Assisted-by` trailer.

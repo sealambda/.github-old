@@ -19,7 +19,7 @@ every repository evaluates one nixpkgs revision.
    supports. `forAllSystems` applies a function to the package set of each
    system, and the later snippets of this page add their checks to the set that
    `checks` builds with it. CI runs `nix flake check` on Linux, so a check that
-   only `aarch64-darwin` defines doesn't run there.
+   only `aarch64-darwin` defines does not run there.
 
    ```nix
    {
@@ -100,7 +100,7 @@ the hub.
    ```
 
 2. Keep the repository's own `enabledManagers`, `constraints` and
-   `packageRules` in the same file. Don't repeat a setting that the
+   `packageRules` in the same file. Do not repeat a setting that the
    [preset](../reference/renovate-preset.md) already sets. To change one, such
    as the `schedule`, set it in the repository.
 
@@ -118,8 +118,8 @@ the hub's version of each file into the repository.
 3. Run Vale in the hub's `docs` dev shell. Its Vale comes from the hub's
    `vale.withStyles` package, which sets `VALE_STYLES_PATH`, so Vale finds the
    Google and Sealambda styles in the Nix store. The project
-   `StylesPath`, `.vale/styles`, holds only the tracked vocabularies. Don't run
-   `vale sync`: the synced `.vale.ini` lists no packages. Don't pass
+   `StylesPath`, `.vale/styles`, holds only the tracked vocabularies. Do not run
+   `vale sync`: the synced `.vale.ini` lists no packages. Do not pass
    `--no-global`: that flag makes Vale ignore `VALE_STYLES_PATH`, and Vale
    then stops with the error "Style isn't on StylesPath."
 
@@ -178,7 +178,7 @@ its configuration from the repository, so the repository needs the files that
 
 1. Add the check to the set that `checks` defines through `forAllSystems` in the
    repository's `flake.nix`. Pass `self`, not a list of Markdown files, because
-   lychee also checks links to files that aren't Markdown.
+   lychee also checks links to files that are not Markdown.
 
    ```nix
    docs = hub.lib.mkDocsCheck pkgs self;
@@ -213,11 +213,11 @@ The Vale style `Sealambda` keeps a page in the present tense.
 
 - `Sealambda.CurrentState` has the level error. It fails the check on a word of
   a plan or a gap, such as `currently` or `will be`.
-- `Sealambda.History` has the level suggestion. The check doesn't report it. It
+- `Sealambda.History` has the level suggestion. The check does not report it. It
   shows in an editor that runs Vale.
 
 The synced `.vale.ini` turns `Sealambda.CurrentState` off for `docs/decisions/`
-and `docs/specs/`. To keep a listed word that's true in one passage, turn the
+and `docs/specs/`. To keep a listed word that is true in one passage, turn the
 rule off for that passage with a Vale comment, as the reference shows.
 
 The synced `lychee.toml` also checks the anchors of local links. A link such as
@@ -232,7 +232,7 @@ repository whose pages break them.
 1. Run `nix flake update hub`, then
    `nix run --inputs-from . hub#sync-config`. Commit the files that it writes.
 2. Run `nix build .#checks.<system>.docs -L`. Change each page that
-   `Sealambda.CurrentState` flags to state what's true now. Move a plan or an
+   `Sealambda.CurrentState` flags to state what is true now. Move a plan or an
    open question into an issue. Fix each link that the anchor check reports.
 3. Remove the hub package set that the repository's `mkDocsCheck` call passed
    by hand, if there is one. The old call `hub.lib.mkDocsCheck pkgs self` still

@@ -1,7 +1,7 @@
 # Security policy
 
 This policy describes how to report a vulnerability to Sealambda and how
-Sealambda handles the report. It's a coordinated vulnerability disclosure
+Sealambda handles the report. It is a coordinated vulnerability disclosure
 policy, modeled on ISO/IEC 29147.
 
 ## Scope
@@ -44,7 +44,7 @@ Research follows this policy when it keeps to these rules:
 
 - Test only your own accounts and data.
 - Access no more data than a proof needs, and keep none of it.
-- Don't run denial-of-service, social-engineering or physical tests.
+- Do not run denial-of-service, social-engineering or physical tests.
 - Stop and report at once.
 
 ## Credit

@@ -1,7 +1,7 @@
 # Sealambda hub
 
-This repository holds Sealambda's engineering standards. It isn't a community
-project. It's public because GitHub reads default community files only from a
+This repository holds Sealambda's engineering standards. It is not a community
+project. It is public because GitHub reads default community files only from a
 public `.github` repository, and private repositories consume it without
 credentials ([ADR 0002](docs/decisions/0002-public-hub-repository.md)). It
 holds no secrets and no operational detail.
@@ -44,7 +44,7 @@ The pages follow [Diátaxis](https://diataxis.fr/).
   [decision records](docs/reference/decision-records.md) and
   [writing style](docs/reference/writing-style.md).
 - **Explanation.** The [decision records](docs/decisions/) say why the hub
-  works as it does. They're Markdown files that people review.
+  works as it does. They are Markdown files that people review.
 - **Templates.** [Templates](templates/README.md) for decision records and
   pages. A decision record starts from the MADR 4.0.0 template.
 

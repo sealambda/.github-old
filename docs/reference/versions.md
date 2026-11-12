@@ -34,6 +34,6 @@ shell is `base`.
 - Renovate bumps the nixpkgs revision in `flake.lock`. A major version changes
   only when the attribute name changes.
 - Node.js moves between long-term support (LTS) majors only.
-- Organization repositories use pnpm. They don't use npm, npx, Yarn, Bun or
+- Organization repositories use pnpm. They do not use npm, npx, Yarn, Bun or
   Corepack.
 - Library versions stay in the lock file of each application.

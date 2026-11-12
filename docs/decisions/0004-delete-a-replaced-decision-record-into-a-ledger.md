@@ -58,9 +58,9 @@ immutable. The `sealambda/infra` repository decided this first, in its record
 - Good, because every file in the folder, and every record that code cites, is
   true today.
 - Good, because the replaced text stays one permalink away, and a commit
-  permalink doesn't change.
-- Good, because the ledger adds no tool: it's one YAML file in the folder.
-- Bad, because a search of the repository doesn't find the text of a replaced
+  permalink does not change.
+- Good, because the ledger adds no tool: it is one YAML file in the folder.
+- Bad, because a search of the repository does not find the text of a replaced
   record. The reader follows the permalink.
 - Bad, because the permalinks depend on GitHub and on the name of the
   repository.
@@ -90,7 +90,7 @@ keeps the old record and marks it superseded. The
 marks a replaced ADR superseded, and allows an update for a minor
 clarification.
 
-- Good, because it's the common practice, and tools support it.
+- Good, because it is the common practice, and tools support it.
 - Good, because a search finds the old text, and no link changes.
 - Bad, because a reader can take an old record for a decision that holds.
   Only its status line tells the difference.

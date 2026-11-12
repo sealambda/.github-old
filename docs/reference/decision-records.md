@@ -79,7 +79,7 @@ deletion writes the entry, and the reviewer opens its permalink.
 | `title` | Yes | The title of the record at its last text. |
 | `commit` | Yes | The full 40-character hash of the last commit on `main` that changed the file. That commit holds the last text of the record. |
 | `path` | Yes | The path of the record in that commit. The folder can differ from `docs/decisions/` when the folder had another name then. The file name is the `number`, a dash and a slug, and ends in `.md`: `NNNN-slug.md`. |
-| `successor` | Yes, except for a withdrawn record | The number of the record in force that replaced this one. When several records took over parts, the one that took over the decision. A record that no longer applies, and has no replacement, omits the key: it's withdrawn. |
+| `successor` | Yes, except for a withdrawn record | The number of the record in force that replaced this one. When several records took over parts, the one that took over the decision. A record that no longer applies, and has no replacement, omits the key: it is withdrawn. |
 | `date` | Yes | `YYYY-MM-DD`. The day the record was replaced or withdrawn. |
 
 Rules for the entries:

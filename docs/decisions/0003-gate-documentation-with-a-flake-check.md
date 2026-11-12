@@ -46,7 +46,7 @@ markdownlint-cli2, lychee and Vale on `src`. A repository adds
 does the same, and removes the `docs.yml` workflow and the `docs` job of its
 `ci` workflow. This amends ADR 0001 for documentation only: `secrets.yml` stays
 a reusable workflow, because gitleaks needs the Git history, which a flake
-source doesn't contain.
+source does not contain.
 
 The `docs` dev shell stays for interactive runs and editors.
 
@@ -55,7 +55,7 @@ The `docs` dev shell stays for interactive runs and editors.
 - Good, because `nix flake check`, or `nix build .#checks.<system>.docs -L`, is
   the one command, in CI and locally.
 - Good, because Nix caches the result by the hash of the source, so a local
-  re-run on an unchanged tree doesn't check it again. CI gains this caching
+  re-run on an unchanged tree does not check it again. CI gains this caching
   only with a binary cache.
 - Good, because the check reads no personal configuration and, on Linux, has no
   network. lychee runs offline, and the Vale styles are in the Nix store.
@@ -82,9 +82,9 @@ The `docs` dev shell stays for interactive runs and editors.
 
 ### A flake check
 
-- Good, because it's the usual Nix form of a lint gate, as in treefmt-nix.
+- Good, because it is the usual Nix form of a lint gate, as in treefmt-nix.
 - Good, because the sandbox gives a repeatable result without a flag.
-- Good, because it's cached and runs the same way everywhere.
+- Good, because it is cached and runs the same way everywhere.
 - Bad, because a consumer must change its flake and its CI.
 
 ### git-hooks.nix
@@ -92,7 +92,7 @@ The `docs` dev shell stays for interactive runs and editors.
 - Good, because it runs the same tools on a commit and in a flake check.
 - Bad, because it adds an input and a layer to maintain for three commands.
 - Bad, because a hook that runs Vale from a flake check meets the same Vale
-  lookup problem, so it solves nothing that the flake check doesn't.
+  lookup problem, so it solves nothing that the flake check does not.
 
 ## More Information
 

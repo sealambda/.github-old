@@ -1,7 +1,7 @@
 # Writing style
 
-A page states what's true now. This page defines the Vale rules that check
-that, and the places where they don't apply. The rule that a document describes
+A page states what is true now. This page defines the Vale rules that check
+that, and the places where they do not apply. The rule that a document describes
 only the current state is in
 [CONTRIBUTING.md](../../CONTRIBUTING.md#current-state-only). Google's
 style guide gives the same advice: write in the present tense.
@@ -38,19 +38,19 @@ blocks, so a flag or a command in code font never matches.
 - `FIXME`
 
 These words mark a plan or a gap. A page that has them describes a system that
-doesn't exist yet. Write what's true today, and open an issue for the rest.
+does not exist yet. Write what is true today, and open an issue for the rest.
 The rule is the same as the rule of the `sealambda/infra` repository.
 
-The words `target` and `planned` aren't on the list. Each has a true present
+The words `target` and `planned` are not on the list. Each has a true present
 meaning, such as a build target or a planned maintenance window, that a word
-list can't tell from a plan.
+list cannot tell from a plan.
 
 ### Where the rule is off
 
 `config/vale.ini` turns `Sealambda.CurrentState` off in two folders:
 
 - `docs/decisions/`, because a decision record states what a decision changes.
-- `docs/specs/`, because a design spec describes work that isn't built yet.
+- `docs/specs/`, because a design spec describes work that is not built yet.
 
 The folders can sit under another folder. A path such as `services/api/docs/specs/`
 counts too.

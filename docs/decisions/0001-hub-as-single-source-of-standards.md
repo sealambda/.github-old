@@ -58,7 +58,7 @@ Library versions stay in the lock file of each application.
 - Good, because the hub has no version engine to maintain.
 - Bad, because a synced file needs one extra command, `sync-config`, after
   each hub update.
-- Bad, because a consumer can't edit a synced file. A new setting belongs in
+- Bad, because a consumer cannot edit a synced file. A new setting belongs in
   the hub, for every repository, or in a file that the tool reads besides the
   synced one, such as the Vale `Repository` vocabulary.
 

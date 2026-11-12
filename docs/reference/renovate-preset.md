@@ -31,7 +31,7 @@ always `*`, because Renovate has no minute granularity.
 | `lockFileMaintenance` | `* 0-9 1 * *`: the first day of the month, before 10:00. |
 | `minimumReleaseAge` | 7 days, for every package that has a release date. A withdrawn or compromised release is less likely to reach a repository. |
 
-Renovate can't check the age of a lock file maintenance, a pin, a
+Renovate cannot check the age of a lock file maintenance, a pin, a
 replacement, a bump, a lock file update or a rollback, nor of a Nix flake
 input that follows a Git ref, because none has a release date. The age check
 stays pending for them and Renovate never creates the branch, so two rules

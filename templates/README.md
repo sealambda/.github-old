@@ -3,7 +3,7 @@
 Copy a template into your repository when you start a page or a decision
 record. Drop the `.tmpl` suffix. The suffix keeps the placeholders out of the
 Markdown checks. Replace every `{placeholder}`, and delete the optional parts
-you don't need.
+you do not need.
 
 | Template | Use it for |
 | -------- | ---------- |
@@ -14,7 +14,7 @@ you don't need.
 | `explanation.md.tmpl` | The reasons behind a design |
 
 The page templates follow [Diátaxis](https://diataxis.fr/). One page has one
-type: don't mix a tutorial with reference facts.
+type: do not mix a tutorial with reference facts.
 
 ## Source of `adr.md.tmpl`
 
