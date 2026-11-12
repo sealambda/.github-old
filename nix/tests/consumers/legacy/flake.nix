@@ -40,8 +40,11 @@
         formatting = treefmtFor.${pkgs.stdenv.hostPlatform.system}.config.build.check self;
         config-in-sync = hub.lib.mkConfigCheck pkgs self;
         docs = hub.lib.mkDocsCheck pkgs self;
+        # `repository` only has to be a valid `owner/name`. It names the hub
+        # repository, which the leak list of the hub always holds, so a change
+        # of that list does not touch this file.
         decisions = hub.lib.mkDecisionsCheck pkgs self {
-          repository = "sealambda/quints";
+          repository = "sealambda/.github";
           exclude = [ ];
         };
       });
