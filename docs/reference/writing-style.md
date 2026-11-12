@@ -25,12 +25,18 @@ shows. A repository can switch a rule off in its own `.vale.ini`, as
 | `Sealambda.HowToTitle` | warning | A page title that isn't a task. |
 | `Sealambda.SentenceLength` | warning | A sentence of more than 25 words. |
 | `Sealambda.ParagraphLength` | warning | A paragraph of more than 6 sentences. |
+| `Sealambda.ListLength` | warning | A list of 1 item or of more than 7. |
+| `Sealambda.StepLength` | warning | A numbered step of more than 20 words. |
 
 The `docs` check runs Vale with `--minAlertLevel=error`. A finding of level
 error fails the check. A finding of level warning or suggestion doesn't fail
 it, and the check doesn't print it. It shows in an editor that runs Vale, and
 in a run of Vale without that flag. A rule of level warning tells you what to
 change, and it blocks no merge.
+
+The hub's own pages trip the warning rules too, and the `docs` check stays
+green because it reports errors only. Run `vale .` in the `docs` dev shell at
+the root of the hub to print every finding of level warning and suggestion.
 
 No rule of this page checks code. A code span and a code block never match, so
 a flag or a command in code font stays silent.
@@ -320,6 +326,58 @@ with the reason in a comment before it:
 <!-- vale Sealambda.ParagraphLength = NO -->
 One. Two. Three. Four. Five. Six. Seven.
 <!-- vale Sealambda.ParagraphLength = YES -->
+```
+
+## List length
+
+`Sealambda.ListLength` flags a list of one item and a list of more than seven
+items. A list of one item is a sentence, and it reads better as text. A reader
+can't scan more than seven items, so group them under headings or split the
+list.
+
+The rule checks bulleted and numbered lists. A nested list counts on its own,
+and its items don't count for the list around it. The finding is at the first
+item of the list.
+
+### A true use of a short or long list
+
+A list can be right at its length, for example a closed set of options that has
+eight members. Turn the rule off for the list, with the reason in a comment
+before it:
+
+```markdown
+<!-- These are the eight levels of the scale. -->
+<!-- vale Sealambda.ListLength = NO -->
+- One
+- Two
+<!-- vale Sealambda.ListLength = YES -->
+```
+
+## Step length
+
+`Sealambda.StepLength` flags a step of a numbered list that has more than 20
+words. A reader who follows the steps holds one step in mind while they act, so
+a step names one action. Split a long step into two steps, and move the
+explanation out of the step.
+
+The rule counts the words of each item of a numbered list, and it doesn't count
+code. It counts the first paragraph of a step. A second paragraph and a nested
+list under a step aren't counted. A bulleted list isn't checked.
+
+Vale can't limit a rule to a folder, and the hub's base file, `config/vale.ini`,
+has no section for `docs/how-to/`. So the rule checks every numbered list on
+every page, not only the steps of a how-to page.
+
+### A true use of a long step
+
+A step can need more words, for example a command that the step quotes in
+prose. Turn the rule off for the list, with the reason in a comment before it:
+
+```markdown
+<!-- This step quotes the output of the tool word for word. -->
+<!-- vale Sealambda.StepLength = NO -->
+1. Read the line that says one two three four five six seven eight nine ten.
+<!-- vale Sealambda.StepLength = YES -->
 ```
 
 ## Test the rules

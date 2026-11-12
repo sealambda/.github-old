@@ -1,0 +1,18 @@
+# A step of a numbered list has at most 20 words, so a reader who follows the
+# steps can hold one in mind while they act
+# (docs/reference/writing-style.md#step-length).
+#
+# The scope selects the items of an ordered list, and `metric` counts the words
+# of each item. It counts only the first paragraph of a step. A nested list
+# under a step counts as its own list, not as part of the step. Vale can't limit a rule to a folder, so the rule checks every
+# ordered list, not only the steps of a how-to page. A bulleted list isn't
+# checked. The message has no count, because Vale prints a metric value with
+# two decimals.
+# Level: warning. Tests: StepLength.test.yml.
+extends: metric
+message: "This step has more than 20 words. Split it into two steps."
+link: https://github.com/sealambda/.github/blob/main/docs/reference/writing-style.md#step-length
+level: warning
+scope: 'list & doc(ol > li)'
+formula: words
+condition: "> 20"
