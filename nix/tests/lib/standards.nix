@@ -71,8 +71,7 @@ let
   standards = args: hub.mkStandards (minimal // args);
 
   # The ids of the hooks in the result of `mkStandards` with `args` added.
-  hookIds =
-    args: map (hook: hook.id) (builtins.head (standards args).hooks.config.rawConfig.repos).hooks;
+  hookIds = args: harness.hookIds (standards args).hooks;
 
   # Whether the evaluation of `value` to its attributes succeeds. A set is
   # forced to the depth of its names, which is where `mkStandards` checks its
@@ -515,13 +514,11 @@ in
     check =
       let
         betterleaks = standards { scanner = pkgs.betterleaks; };
-        hook = lib.findFirst (
-          hook: hook.id == "secrets-scan"
-        ) null (builtins.head betterleaks.hooks.config.rawConfig.repos).hooks;
+        entry = harness.hookEntry betterleaks.hooks "secrets-scan";
       in
-      mustHold "The hook runs ${hook.entry}, not the command with betterleaks." (
-        hook.entry == "${lib.getExe (secretsScan pkgs.betterleaks)} staged"
-        && hook.entry != "${lib.getExe (secretsScan pkgs.gitleaks)} staged"
+      mustHold "The hook runs ${entry}, not the command with betterleaks." (
+        entry == "${lib.getExe (secretsScan pkgs.betterleaks)} staged"
+        && entry != "${lib.getExe (secretsScan pkgs.gitleaks)} staged"
       );
   };
 

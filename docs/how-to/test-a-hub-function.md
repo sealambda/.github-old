@@ -78,7 +78,9 @@ that builds it, and test that a call fails with `builtins.tryEval`. Pass the
 result to `harness.mustHold`, which builds when its condition is true and
 fails the evaluation with your message when it's false. Pair a call that must
 fail with a call that must work, so the failure comes from the part under test.
-`nix/tests/lib/standards.nix` shows both forms.
+`nix/tests/lib/standards.nix` shows both forms. To read the hooks of an
+evaluation of `lib.mkHooks`, call `harness.hookIds` and `harness.hookEntry`.
+They hold the shape of its configuration in one place.
 
 ```nix
 standards-unknown-argument-stops-the-evaluation = {

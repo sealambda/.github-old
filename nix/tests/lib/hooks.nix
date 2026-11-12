@@ -28,12 +28,7 @@ let
   };
 
   # The ids of the hooks in the configuration of `mkHooks` with `extraHooks`.
-  hookIds =
-    extraHooks:
-    let
-      hooks = hub.mkHooks { inherit pkgs src extraHooks; };
-    in
-    map (hook: hook.id) (builtins.head hooks.config.rawConfig.repos).hooks;
+  hookIds = extraHooks: harness.hookIds (hub.mkHooks { inherit pkgs src extraHooks; });
 
   # Whether `mkHooks` with `extraHooks` evaluates. It forces the result of the
   # function and no part of the configuration that git-hooks.nix builds, so the
@@ -46,14 +41,7 @@ let
   # The command of the hook `secrets-scan` in the configuration of `mkHooks`
   # with the arguments `args` added to the call.
   secretsHookEntry =
-    args:
-    let
-      hooks = hub.mkHooks ({ inherit pkgs src; } // args);
-      hook = builtins.head (
-        builtins.filter (hook: hook.id == "secrets-scan") (builtins.head hooks.config.rawConfig.repos).hooks
-      );
-    in
-    hook.entry;
+    args: harness.hookEntry (hub.mkHooks ({ inherit pkgs src; } // args)) "secrets-scan";
 
   # The command that a hook of the scanner `scanner` must run: the command of
   # `mkSecretsScan` with that scanner, and the subcommand for the index.
