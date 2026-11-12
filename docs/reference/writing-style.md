@@ -170,9 +170,9 @@ A quotation or the name of a product can use the unused spelling. Turn the rule
 off for the passage, with the reason in a comment before it:
 
 ```markdown
-<!-- This sentence quotes the title of a book. -->
+<!-- This sentence quotes the title of a talk. -->
 <!-- vale Sealambda.OneSpelling = NO -->
-The book is called "The Work Flow".
+The talk is titled "A work flow for small teams".
 <!-- vale Sealambda.OneSpelling = YES -->
 ```
 
@@ -305,7 +305,8 @@ comment before it:
 <!-- This sentence quotes a clause of the licence word for word. -->
 <!-- vale Sealambda.SentenceLength = NO -->
 The clause states that the licence grants to each recipient a worldwide,
-royalty-free, non-exclusive and irrevocable right to use the work.
+royalty-free, non-exclusive and irrevocable right to use, copy, change and
+share the work in any medium.
 <!-- vale Sealambda.SentenceLength = YES -->
 ```
 
@@ -354,6 +355,12 @@ before it:
 <!-- vale Sealambda.ListLength = NO -->
 - One
 - Two
+- Three
+- Four
+- Five
+- Six
+- Seven
+- Eight
 <!-- vale Sealambda.ListLength = YES -->
 ```
 
@@ -380,7 +387,9 @@ prose. Turn the rule off for the list, with the reason in a comment before it:
 ```markdown
 <!-- This step quotes the output of the tool word for word. -->
 <!-- vale Sealambda.StepLength = NO -->
-1. Read the line that says one two three four five six seven eight nine ten.
+1. Read the line that says one two three four five six seven eight nine ten
+   eleven twelve thirteen fourteen fifteen sixteen seventeen.
+2. Stop.
 <!-- vale Sealambda.StepLength = YES -->
 ```
 
