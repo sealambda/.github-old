@@ -247,12 +247,10 @@
 
         # `base`, plus the Git hooks of the hub's own repository. Entering it
         # installs the hooks in the clone (`lib.mkHooks`,
-        # `docs/reference/hooks.md`) and replaces the local `core.hooksPath`
-        # that the clone had. Under a global or system `core.hooksPath` the
-        # shell prints the cause and exits with status 1, and installs nothing.
-        # The hook is only here and not in `base`, because every other shell,
-        # and the shells of the repositories that consume the hub, include
-        # `base` and would install the hooks too.
+        # `docs/reference/hooks.md`), and the page says what that changes in
+        # the clone. The hook is only here and not in `base`, because every
+        # other shell, and the shells of the repositories that consume the hub,
+        # include `base` and would install the hooks too.
         hooks = pkgs.mkShell {
           inputsFrom = [ base ];
           inherit (hooksFor.${pkgs.stdenv.hostPlatform.system}) shellHook;

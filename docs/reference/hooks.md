@@ -349,12 +349,9 @@ the ones that a repository uses:
   the shell. An update of the hub input changes the configuration, and the next
   entry of the shell links and installs it again.
 - The link to the configuration is per work tree, and `core.hooksPath` is per
-  repository. A linked work tree that never ran the installer runs no hook
-  after an install in the main checkout, and prek refuses every commit there
-  after an install in a linked work tree, as [Work trees](#work-trees) shows.
-  git-hooks.nix has no option for this, so `mkHooks` can't remove the limit,
-  and the hub's `shellHook` doesn't work around it, for the reason that section
-  gives.
+  repository, so each work tree needs one entry of the shell. `mkHooks` can't
+  remove the limit and the hub's `shellHook` doesn't work around it, as
+  [Work trees](#work-trees) shows.
 - The installer replaces a local `core.hooksPath`. Under a system or global one
   the shell fails and installs nothing, as
   [An earlier `core.hooksPath`](#an-earlier-corehookspath) shows.

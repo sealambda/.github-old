@@ -27,19 +27,15 @@
     - `config.configFile` is the `prek` configuration. Every hook runs a tool
       by its store path, so the file needs nothing else on `PATH`.
     - `shellHook` installs the configuration and the hooks in the current
-      repository. It replaces the `core.hooksPath` that the repository sets
-      (the installer sets it to the hooks folder of prek), so the hooks that
-      the old folder holds stop running. When Git reads `core.hooksPath` from
-      the system or the global configuration, prek can't install: the hook
-      then prints the cause, changes nothing and ends the shell with status 1,
-      so a clone is never left with no hook and no message. In a repository
-      with no work tree, such as a bare repository, it prints one line,
-      installs nothing and lets the shell go on, and the `PATH` stays as it
-      is. Put it in the
-      `shellHook` of one dev shell. A shell that other shells include through
-      `inputsFrom` passes the hook on to all of them, so use it in a shell of
-      the repository that nothing includes, and not in the shell that people
-      enter today.
+      repository. It replaces the local `core.hooksPath` of the repository. A
+      `core.hooksPath` from the system or the global configuration, and a Git
+      that can't read its configuration, end the shell with status 1 and
+      change nothing. A repository with no work tree gets no installation, and
+      the shell goes on. `docs/reference/hooks.md` explains each case. Put it
+      in the `shellHook` of one dev shell. A shell that other shells include
+      through `inputsFrom` passes the hook on to all of them, so use it in a
+      shell of the repository that nothing includes, and not in the shell that
+      people enter today.
     - `config.installationScript` is the script of the `shellHook` without the
       `PATH` change, with the same check. The tests of the hub run it.
     - `enabledPackages` lists the tools that the hooks use.
@@ -173,13 +169,11 @@
         hooks = hubHooks // extraHooks;
       };
 
-      # The check that decides whether the installer may run: see
-      # `nix/scripts/hooks-guard.sh`. The installer of git-hooks.nix goes on
-      # after prek refuses to install under an outside `core.hooksPath`, and it
-      # leaves the repository with no hook and no error. It also goes on in a
-      # repository with no work tree and writes a `core.hooksPath` that no work
-      # tree can use. The command exits with status 0 to let the installer run,
-      # with status 1 to refuse, and with status 2 to skip the installation.
+      # The check that decides whether the installer may run, because the
+      # installer goes on where it should stop. `nix/scripts/hooks-guard.sh`
+      # says when, and `docs/reference/hooks.md` says why. The command exits
+      # with status 0 to let the installer run, with status 1 to refuse, and
+      # with status 2 to skip the installation.
       guardCommand = lib.getExe (
         hubPkgs.writeShellApplication {
           name = "hooks-guard";

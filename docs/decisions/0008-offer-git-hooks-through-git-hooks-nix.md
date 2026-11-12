@@ -101,20 +101,17 @@ and it chooses whether the shell that people already enter is that shell.
 - Bad, because entering the `hooks` shell changes the Git configuration of the
   clone: it replaces the local `core.hooksPath` and writes
   `.pre-commit-config.yaml`. A clone that kept its hooks in another folder,
-  such as a husky folder, stops running them. The setting and the hooks go to
-  the Git directory that all work trees share, but the link
-  `.pre-commit-config.yaml` belongs to one work tree. After an install in the
-  main checkout, a linked work tree runs no hook. After an install in a linked
-  work tree, every work tree finds the hooks, and a work tree that never ran
-  the installer has no link, so prek refuses every commit there. The tests pin
-  both outcomes, and a person enters the shell once in each work tree.
+  such as a husky folder, stops running them. The hooks go to the Git directory
+  that all work trees share, and the link belongs to one work tree, so a person
+  enters the shell once in each work tree. The tests pin both limits, and
+  [Work trees](../reference/hooks.md#work-trees) explains them.
 - Bad, because a global or system `core.hooksPath` stops prek from installing,
   and the installer of git-hooks.nix then sets the local value anyway, which
   leaves the clone with no hook and no error. The hub's `shellHook` checks for
-  such a value first. It prints the cause, changes nothing and ends the shell
-  with status 1. A warning would let the shell go on, and a missing hook
-  doesn't show until a bad commit passes. The reference page shows how to
-  repair it.
+  such a value first and ends the shell with status 1. A warning would let the
+  shell go on, and a missing hook doesn't show until a bad commit passes.
+  [An earlier `core.hooksPath`](../reference/hooks.md#an-earlier-corehookspath)
+  explains the check and the repair.
 - Bad, because the flake check `pre-commit` repeats the work of the checks
   `formatting`, `docs` and `workflows`: it runs the same tools over the same
   source in a second derivation, because the inputs of the two derivations

@@ -334,13 +334,11 @@ write_global_hooks_path_config() {
   printf '%s\n' "$config"
 }
 
-# A `core.hooksPath` in the global configuration stops `prek` from installing
-# hooks. The installer of git-hooks.nix would still set the local
-# `core.hooksPath` to the empty hooks folder of the repository, which hides the
-# global hooks and leaves no hook at all. The check that `lib.mkHooks` runs
-# first refuses: the installation script exits with status 1, names the value
-# and the repair, and changes nothing. The global hook keeps running. This case
-# pins the behavior that `docs/reference/hooks.md` states.
+# A `core.hooksPath` in the global configuration makes the check that
+# `lib.mkHooks` runs first refuse: the installation script exits with status 1,
+# names the value and the repair, and changes nothing. The global hook keeps
+# running. This case pins the behavior that "An earlier `core.hooksPath`" in
+# `docs/reference/hooks.md` explains.
 case_global_core_hooks_path_makes_the_install_fail_and_changes_nothing() {
   init_repository global-path
   local global_config
@@ -408,9 +406,8 @@ case_global_core_hooks_path_outside_a_work_tree_is_no_failure() {
 # Fails unless the installation script, run in the directory $1 of a repository
 # with no work tree, exits with status 0, prints the one line that says so, and
 # leaves the repository as it was: no `core.hooksPath`, no hook, and no output
-# line of the installer. The installer of git-hooks.nix runs `git rev-parse
-# --show-toplevel` there, gets nothing, links the configuration at
-# `/.pre-commit-config.yaml` and writes a `core.hooksPath` without a work tree.
+# line of the installer. "A repository without a work tree" in
+# `docs/reference/hooks.md` explains why the installer must not run there.
 assert_install_skipped_in() {
   try_install_in "$1"
   [ "$STATUS" = 0 ] || fail "expected status 0 in $1, got $STATUS"
@@ -421,11 +418,9 @@ assert_install_skipped_in() {
   [ ! -e "$1/hooks/pre-commit" ] || fail "the installer wrote a hook in $1"
 }
 
-# A bare repository and the `.git` folder of a work tree are inside a Git
-# repository but not inside a work tree. The installer of git-hooks.nix goes on
-# there and writes a malformed `core.hooksPath`, so the check that `lib.mkHooks`
-# runs first skips the installation, also when a global `core.hooksPath` exists:
-# nothing can be installed, so nothing is refused.
+# A bare repository and the `.git` folder of a work tree get no installation,
+# also when a global `core.hooksPath` exists: nothing can be installed, so
+# nothing is refused.
 case_install_skips_a_repository_without_a_work_tree() {
   git init --quiet --bare "$WORK/bare.git"
   assert_install_skipped_in "$WORK/bare.git"
@@ -467,8 +462,8 @@ case_empty_global_core_hooks_path_is_refused_and_shown() {
 # check, so it can't tell whether a `core.hooksPath` exists outside the
 # repository. The check refuses, as it does for a value, and prints the message
 # of Git. The installer alone would print that it found no `.git` and skip the
-# installation with status 0, and the user would not learn the cause. The refusal
-# holds inside a repository and outside one, and it changes nothing.
+# installation with status 0. The refusal holds inside a repository and outside
+# one, and it changes nothing.
 case_unreadable_git_configuration_makes_the_install_fail() {
   init_repository unreadable
   local config=$WORK/broken-config
@@ -490,11 +485,9 @@ case_unreadable_git_configuration_makes_the_install_fail() {
   assert_output_contains "bad config line"
 }
 
-# The installer in the main checkout sets `core.hooksPath` to the relative path
-# `.git/hooks`. Git resolves that path from the root of each work tree, and a
-# linked work tree has a `.git` file, not a directory. So no hook runs in a
-# linked work tree that never ran the installer, and a bad message passes. This
-# case pins the limit that `docs/reference/hooks.md` states. A change of
+# After an install in the main checkout, no hook runs in a linked work tree that
+# never ran the installer, and a bad message passes. This case pins the limit
+# that "Work trees" in `docs/reference/hooks.md` explains. A change of
 # git-hooks.nix that removes it makes the case fail: then update the page.
 case_linked_worktree_runs_no_hook_before_its_install() {
   new_repository relative
@@ -507,12 +500,10 @@ case_linked_worktree_runs_no_hook_before_its_install() {
   assert_output_lacks "gitpolicy-commit-msg"
 }
 
-# The installer links the configuration in the work tree that runs it, and it
-# writes `core.hooksPath` and the hooks into the Git directory that all work
-# trees share. After an install in a linked work tree, `core.hooksPath` is the
-# absolute path of the shared directory, so each work tree runs the hooks, and
-# a work tree that never ran the installer has no configuration: `prek` refuses
+# After an install in a linked work tree, each work tree runs the hooks, and a
+# work tree that never ran the installer has no configuration: `prek` refuses
 # every commit there. Removing a linked work tree breaks no other work tree.
+# "Work trees" in `docs/reference/hooks.md` explains why.
 case_linked_worktree_install_is_per_worktree() {
   new_repository shared
   local main=$REPO

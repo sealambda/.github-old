@@ -8,18 +8,14 @@
 #   1  Refuse. The shell ends with status 1 and the installer doesn't run.
 #   2  Skip. The installer doesn't run, and the shell goes on.
 #
-# The installer of git-hooks.nix changes the Git configuration of a clone. When
-# Git reads `core.hooksPath` from outside the repository, in the system or the
-# global configuration, prek refuses to install and prints a message. The
-# installer ignores that refusal and sets the local `core.hooksPath` to the
-# empty `hooks` folder of the repository. That setting hides the hooks that the
-# outside setting names, no hook runs, and the shell prints no error.
+# The installer of git-hooks.nix goes on where it should stop: under a
+# `core.hooksPath` from outside the repository, and in a repository with no work
+# tree. The causes and the effects are in `docs/reference/hooks.md`, in the
+# sections "An earlier `core.hooksPath`" and "A repository without a work tree".
+# This file holds what the check does about them.
 #
-# The installer also goes on in a repository that has no work tree, such as a
-# bare repository or the `.git` folder of a work tree. It finds no top-level
-# folder there, links the configuration at `/.pre-commit-config.yaml` and writes
-# a `core.hooksPath` that no work tree can use. A hook needs a work tree, so
-# this check skips the installation there (status 2) and prints one line.
+# In a repository with no work tree, such as a bare repository or the `.git`
+# folder of a work tree, the check prints one line and exits with status 2.
 #
 # Outside a Git repository the check exits with status 0, and the installer
 # prints its own warning. When Git fails for another reason, such as a
@@ -31,10 +27,9 @@
 # scope. It exits with status 0 when no value comes from outside the local
 # configuration of the repository. When one does, it prints the values, the
 # cause and the repair on standard error, changes nothing and exits with
-# status 1. The scopes `worktree` and `command` count as outside too:
-# a value of either scope wins over the value that the installer writes. An
-# empty value counts as well, and the message shows it as `(empty)`: Git runs
-# no hook with an empty `core.hooksPath`, and prek refuses to install under it.
+# status 1. The scopes `worktree` and `command` count as outside too: a value of
+# either scope wins over the value that the installer writes. An empty value
+# counts as well, and the message shows it as `(empty)`.
 
 # Prints why `git rev-parse` fails in the current directory, in the C locale so
 # that the text of the message doesn't depend on the language of the user.
