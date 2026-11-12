@@ -504,14 +504,16 @@
           type = "app";
           program = nixpkgs.lib.getExe (mkDecisionsTool pkgs);
         };
+      });
 
-        # `release plan` and `release publish` in the current repository. The
-        # tools come from the hub's nixpkgs. The CI runs `publish` for each
-        # merge to `main`.
-        release = {
-          type = "app";
-          program = nixpkgs.lib.getExe (mkReleaseTool pkgs);
-        };
+      # The `release` command for the releases of this repository. It is not a
+      # tool for consumers: it reads the changed paths against the rules of the
+      # hub (`nix/scripts/release/paths.py`). `nix run .#release -- plan` runs
+      # it in the current repository. The CI builds it first and runs the
+      # result in a later step, so that Nix runs without the token that
+      # `publish` needs. The tool comes from the hub's nixpkgs.
+      packages = eachSystem (pkgs: {
+        release = mkReleaseTool pkgs;
       });
 
       # Version policy: a toolchain version is the name of a nixpkgs attribute

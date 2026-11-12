@@ -161,8 +161,13 @@ release doesn't fail the checks of the merge.
 | ------- | ----- |
 | Permission | `contents: write` on this job only. |
 | Checkout | The whole history and every tag, without stored credentials. |
-| Command | `nix run .#release -- publish --commit "$GITHUB_SHA"` |
-| Environment | `GH_TOKEN` is the job token and `GH_REPO` is the repository. |
+| Build step | `nix build .#release --out-link "$RUNNER_TEMP/release"`, with no token. |
+| Command | `"$RUNNER_TEMP/release/bin/release" publish --commit "$GITHUB_SHA"` |
+| Environment | `GH_TOKEN` is the job token and `GH_REPO` is the repository. Only the command step has them. |
+
+Nix evaluates the flake, fetches its inputs and builds the command in the
+build step. That step has no token. The command step runs the built command
+and no Nix, so no Nix process holds the token.
 
 The workflow concurrency group cancels a run in progress only for a pull
 request. A run on `main` is never cancelled while it runs. A group holds one
@@ -172,8 +177,11 @@ its own, and the next release covers its commits.
 
 ## Commands
 
-The `release` app runs in the current Git repository. `git` and `gh` come from
-the hub's nixpkgs.
+The `release` command runs in the current Git repository. `git` and `gh` come
+from the hub's nixpkgs. The flake exports it as `packages.release`, and
+`nix run .#release` runs it. It belongs to this repository: it plans from the
+paths that the hub's own rules classify, so a consumer has no use for it, and
+the hub makes no promise about its interface to other repositories.
 
 | Command | What it does |
 | ------- | ------------ |
