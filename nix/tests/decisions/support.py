@@ -15,7 +15,7 @@ from decisions import cli
 from decisions.check import run_checks
 from decisions.walk import parse_exclude
 
-REPOSITORY = "sealambda/hub-test"
+REPOSITORY = "example/hub-test"
 """The repository name that the tests check as."""
 
 LEDGER = "docs/decisions/superseded.yaml"

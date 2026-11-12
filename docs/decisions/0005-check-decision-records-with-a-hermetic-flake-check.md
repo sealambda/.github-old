@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-08
+date: 2026-11-12
 decision-makers: Sealambda maintainers
 ---
 
@@ -30,7 +30,7 @@ repository find them, and how does it keep its records and its ledger valid?
 ## Considered Options
 
 - Python with JSON Schema, in a flake check of the hub
-- Extend the bash script of `sealambda/infra`
+- Extend an existing bash script
 - `adrs` or `adr-tools`
 - lychee and Vale only
 
@@ -74,8 +74,8 @@ Three further choices:
 
 - Good, because a citation of a deleted record, spec or page fails at
   `path:line`, in any text file, and one run lists every finding.
-- Good, because editors can use the two JSON Schemas, and the ledger entries of
-  `sealambda/infra` stay valid.
+- Good, because editors can use the two JSON Schemas, and the ledger
+  fields are the ones in `schemas/superseded.schema.json`.
 - Good, because the check needs no network and no configuration of the user.
 - Good, because a repository adds it with one line in its flake.
 - Bad, because the hub owns a Python package with tests, a type check and a
@@ -106,16 +106,15 @@ check runs the tool on the hub itself.
   the same as `mkDocsCheck`.
 - Bad, because it's a new language in a hub that has shell and Nix.
 
-### Extend the bash script of `sealambda/infra`
+### Extend an existing bash script
 
-The `sealambda/infra` repository has `scripts/decisions-index.sh`, a bash
-script of about 600 lines. It checks the front matter and the ledger, checks
-the citations of records, and writes an index.
+A bash script checks the front matter and the ledger, checks the citations of
+records, and writes an index.
 
-- Good, because it exists, it works in infra, and it also checks the commit of
-  each ledger entry in the Git history.
-- Bad, because it needs `git`, `yq`, `check-jsonschema` and Prettier from a dev
-  shell, so it isn't a derivation that a repository adds to its flake checks.
+- Good, because it exists, and it also checks the commit of each ledger entry
+  in the Git history.
+- Bad, because it needs external tools from a dev shell, so it isn't a
+  derivation that a repository adds to its flake checks.
 - Bad, because it has no check for specs and for bare `docs/` paths.
 - Bad, because a bash script of this size is hard to test and to change, and
   more citation forms make it larger.

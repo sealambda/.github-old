@@ -335,8 +335,8 @@
         `repository`
         : The `owner/name` of the repository that holds `src`, for example
           `sealambda/.github`. A citation that another repository qualifies, as
-          in `sealambda/infra ADR 0038`, is about that repository, and the check
-          skips it.
+          in `sealambda/<repo> ADR NNNN`, is about that repository, and the
+          check skips it.
 
         `exclude`
         : A list of paths relative to the root of `src`, default empty. The

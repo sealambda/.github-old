@@ -29,8 +29,8 @@ class ParseGithubRemoteTest(unittest.TestCase):
     def test_dots_dashes_and_underscores_stay_in_names(self) -> None:
         """A name may hold dots, so only a final `.git` is a suffix."""
         self.assertEqual(
-            parse_github_remote("git@github.com:sealambda/.github.git"),
-            "sealambda/.github",
+            parse_github_remote("git@github.com:example/.github.git"),
+            "example/.github",
         )
         self.assertEqual(
             parse_github_remote("https://github.com/a_b/c-d.e"), "a_b/c-d.e"

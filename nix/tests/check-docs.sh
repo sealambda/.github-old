@@ -246,7 +246,7 @@ case_current_state_term_fails() {
 
 # Text in the present tense passes. So do the words that the rule leaves out on
 # purpose, `planned` and `target`, and a listed word in a code span or a code
-# block: these are the expected non-hits of the rule of `sealambda/infra`.
+# block: these are the expected non-hits of the rule.
 case_current_state_non_hits_pass() {
   new_project non-hits
   cat >"$PROJECT/guide.md" <<'EOF'
