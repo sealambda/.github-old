@@ -8,7 +8,14 @@ installer that no fragment matches isn't found: review covers it
 (`docs/reference/versions.md`).
 """
 
+import re
 from dataclasses import dataclass
+
+_NIX_WORD = re.compile(r"(?:(?<![a-z0-9])|(?<=install))nix")
+"""`nix` at the start of a word, or right after `install`, in a lower-case name.
+
+A plain substring test would find `nix` in `unix`, `minix` and `phoenix`.
+"""
 
 
 @dataclass(frozen=True)
@@ -20,7 +27,8 @@ class KnownInstallers:
     Attributes:
         action_fragments: A `uses` step whose action name (`owner/name`)
             contains one of these is an installer action. The name also
-            matches when it holds `nix` and `install` in any order.
+            matches when it holds `nix` as a word and `install`, in any
+            order (see `is_other_installer_action`).
         script_fragments: A `run` script that contains one of these downloads
             or runs an installer: an installer address, or the name of the
             installer program.
@@ -60,12 +68,14 @@ def is_other_installer_action(action_name: str) -> bool:
             after `@`, in any case.
 
     Returns:
-        `True` when the name holds `nix` together with `install`, or one of
-        `KNOWN_INSTALLERS.action_fragments`. The caller excludes the accepted
-        installer first.
+        `True` when the name holds `nix` as a word together with `install`,
+        or one of `KNOWN_INSTALLERS.action_fragments`. The word `nix` starts
+        the name or follows a character that isn't a letter or a digit, or it
+        follows `install`: `unix` and `phoenix` don't hold it. The caller
+        excludes the accepted installer first.
     """
     name = action_name.lower()
-    if "nix" in name and "install" in name:
+    if _NIX_WORD.search(name) and "install" in name:
         return True
     return any(fragment in name for fragment in KNOWN_INSTALLERS.action_fragments)
 

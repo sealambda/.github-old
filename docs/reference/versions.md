@@ -81,9 +81,11 @@ action is `cachix/install-nix-action` with the `install_url` of
   `install_url` and an expression are findings too.
 - A `uses` step installs Nix with another action, because the check can't read
   the version that it installs. The name of the action, `owner/name` in any
-  case, holds `nix` together with `install` in either order, or one of the
-  fragments `determinate-nix`, `nix-quick-install`, `lix-installer`,
-  `install-nix` and `nix-installer`.
+  case, holds the word `nix` together with `install` in either order, or one
+  of the fragments `determinate-nix`, `nix-quick-install`, `lix-installer`,
+  `install-nix` and `nix-installer`. The word `nix` starts the name, follows a
+  character that isn't a letter or a digit, or follows `install`, so the name
+  `phoenix-install` isn't a finding.
 - A `run` script downloads or runs another installer. The script, in any
   case, holds `nixos.org/nix/install`, `releases.nixos.org/nix/`,
   `install.determinate.systems`, `install.lix.systems` or `nix-installer`.

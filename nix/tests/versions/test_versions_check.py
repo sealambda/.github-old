@@ -273,6 +273,8 @@ class OtherInstallerTest(TreeTestCase):
             "someone/nix-toolchain-install@v1",
             "someone/install-the-nix-toolchain@v1",
             "NixOS/Installer@v1",
+            "someone/installnix@v1",
+            "someone/nixinstall@v1",
         ):
             with self.subTest(uses=uses):
                 text = workflow(installer_step(install_url=None, uses=uses))
@@ -284,7 +286,11 @@ class OtherInstallerTest(TreeTestCase):
                 self.assertIn("can't read", lines[0])
 
     def test_actions_that_are_not_installers_of_nix_are_clean(self) -> None:
-        """A name with only `nix` or only `install` isn't an installer of Nix."""
+        """A name with only `nix` or only `install` isn't an installer of Nix.
+
+        The letters `nix` inside another word, as in `unix` or `phoenix`, aren't
+        the word `nix`.
+        """
         steps = "".join(
             installer_step(install_url=None, uses=uses)
             for uses in (
@@ -293,6 +299,9 @@ class OtherInstallerTest(TreeTestCase):
                 "cachix/cachix-action@v16",
                 "DeterminateSystems/magic-nix-cache-action@v13",
                 "someone/install-tools@v1",
+                "someone/setup-phoenix-install@v1",
+                "someone/unix-install-tool@v1",
+                "someone/minix-installing-kit@v1",
             )
         )
         self.write(WORKFLOW_PATH, workflow(steps))
