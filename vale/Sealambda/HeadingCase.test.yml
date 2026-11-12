@@ -1,0 +1,87 @@
+# Cases for HeadingCase.yml: a heading is in sentence case. The rule accepts an
+# acronym, a listed tool name and a MADR section heading, and it checks only
+# headings. The cases use `contains` because the flake check loads the style
+# under a name that has a store hash.
+- name: title-case-heading-is-flagged
+  rule: HeadingCase.yml
+  input: |
+    # Install The Git Hooks
+  contains: "Sealambda.HeadingCase:Write 'Install The Git Hooks' in sentence case."
+
+- name: lowercase-first-word-is-flagged
+  rule: HeadingCase.yml
+  input: |
+    ## install the hooks
+  contains: "Sealambda.HeadingCase:Write 'install the hooks' in sentence case."
+
+- name: title-case-in-a-second-level-heading-is-flagged
+  rule: HeadingCase.yml
+  input: |
+    # Guide
+
+    ## Why a Hub Is Good
+  contains: "Sealambda.HeadingCase:Write 'Why a Hub Is Good' in sentence case."
+
+- name: sentence-case-heading-is-clean
+  rule: HeadingCase.yml
+  input: |
+    # Install the hooks
+
+    ## What the check can't verify
+
+    ## Third-party content
+  want: ""
+
+- name: listed-proper-names-are-clean
+  rule: HeadingCase.yml
+  input: |
+    # Extend the Renovate preset
+
+    ## Use the Nix flake with GitHub Apps
+  want: ""
+
+- name: acronyms-are-clean
+  rule: HeadingCase.yml
+  input: |
+    # AWS resources
+
+    ## The hub's CI job
+  want: ""
+
+- name: listed-lowercase-tool-name-at-the-start-is-clean
+  rule: HeadingCase.yml
+  input: |
+    # lychee and Vale only
+  want: ""
+
+- name: madr-section-headings-are-clean
+  rule: HeadingCase.yml
+  input: |
+    # Keep the standards in one hub
+
+    ## Context and Problem Statement
+
+    ## Decision Drivers
+
+    ## Considered Options
+
+    ## Decision Outcome
+
+    ## Pros and Cons of the Options
+
+    ## More Information
+  want: ""
+
+- name: title-case-outside-a-heading-is-clean
+  rule: HeadingCase.yml
+  input: |
+    # Install the hooks
+
+    The Install The Git Hooks Step Is Short.
+  want: ""
+
+- name: code-in-a-heading-is-clean
+  rule: HeadingCase.yml
+  input: |
+    # Run the `Foo Bar Baz` command
+  want: ""

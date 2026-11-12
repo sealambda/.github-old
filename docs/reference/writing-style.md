@@ -21,6 +21,7 @@ shows. A repository can switch a rule off in its own `.vale.ini`, as
 | `Sealambda.DefineAcronyms` | warning | An acronym with no definition. |
 | `Sealambda.OneSpelling` | warning | The unused spelling of a word pair. |
 | `Sealambda.FillerWords` | warning | A word that adds no fact. |
+| `Sealambda.HeadingCase` | warning | A heading that isn't in sentence case. |
 
 The `docs` check runs Vale with `--minAlertLevel=error`. A finding of level
 error fails the check. A finding of level warning or suggestion doesn't fail
@@ -194,6 +195,42 @@ with the reason in a comment before it:
 <!-- vale Sealambda.FillerWords = NO -->
 The charter requires a just cause for a dismissal.
 <!-- vale Sealambda.FillerWords = YES -->
+```
+
+## Heading case
+
+`Sealambda.HeadingCase` flags a heading that isn't in sentence case. In
+sentence case, the first word and the proper names start with a capital letter,
+and the other words don't. `Install the Git hooks` is in sentence case, and
+`Install The Git Hooks` isn't.
+
+One case for all headings makes the pages look alike, and it makes a proper name
+stand out. The rule checks headings only, and it skips code in a heading.
+
+The rule accepts these words with their own case:
+
+- An acronym of two to six capital letters, such as `CI` or `AWS`.
+- The names of the tools and products that the hub's pages mention, such as
+  `GitHub`, `Nix`, `Renovate` and `Vale`. The list is in the key `exceptions`
+  of the rule file.
+- The names of tools that start with a lowercase letter, such as `lychee`.
+- The six section headings of the MADR template for decision records, such as
+  `Context and Problem Statement`. The template fixes their case.
+
+A repository adds the proper names of its own to its `Repository` vocabulary,
+and the rule reads that file. The rule flags a heading when fewer than 80
+percent of its words are in the expected case, so a single name that the lists
+don't know can pass in a long heading and fail in a short one.
+
+### A true use of a heading in another case
+
+A heading that quotes a title needs a Vale comment with the reason before it:
+
+```markdown
+<!-- This heading quotes the title of a standard. -->
+<!-- vale Sealambda.HeadingCase = NO -->
+## The Open Source Definition
+<!-- vale Sealambda.HeadingCase = YES -->
 ```
 
 ## Test the rules
