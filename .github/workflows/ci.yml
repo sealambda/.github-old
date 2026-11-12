@@ -234,8 +234,8 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           "$RUNNER_TEMP/release/bin/release" publish --commit "$GITHUB_SHA"
-      # `--latest=false` keeps the "latest" label on the hub release: the tool
-      # adds it for this series. A re-run after a partial failure repairs a tag
+      # The tool adds `--latest=false` for this series, so the hub release keeps
+      # the "latest" label. A re-run after a partial failure repairs a tag
       # without a release in the same way as for the hub series.
       - name: Publish the actions release
         if: ${{ !cancelled() }}
