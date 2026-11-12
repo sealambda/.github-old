@@ -271,8 +271,10 @@ SKIP=gitpolicy-branch git push
 ```
 
 `git commit --no-verify` and `git push --no-verify` skip every hook.
-[CONTRIBUTING.md](../../CONTRIBUTING.md) forbids `--no-verify`: skip the one hook
-that fails for a reason that you can name, and fix the cause afterwards.
+[CONTRIBUTING.md](../../CONTRIBUTING.md) forbids `--no-verify` and says what to
+do when a hook refuses a commit: fix the cause. `SKIP` fixes no cause. The CI
+checks run the same tools on the pull request, so a skipped hook moves the
+failure to CI.
 
 ## Options
 

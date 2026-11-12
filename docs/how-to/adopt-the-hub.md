@@ -473,8 +473,10 @@ at each stage and what the installer does.
    and exit with status 1, and it installs nothing. The
    [reference page](../reference/hooks.md#an-earlier-corehookspath) shows the
    repair.
-6. To skip one hook for one command, set `SKIP` to its id, for example
-   `SKIP=docs git commit`.
+6. The variable `SKIP` names hooks to leave out of one command, for example
+   `SKIP=docs git commit`. A skipped hook moves its failure to CI, and the
+   [reference page](../reference/hooks.md#skip-one-hook) states the rule of the
+   hub for a commit that a hook refuses.
 
 Pass `extraHooks` to `mkHooks` to add a hook of the repository. A name that a
 hub hook uses is an error.
