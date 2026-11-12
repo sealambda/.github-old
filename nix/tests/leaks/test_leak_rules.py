@@ -95,6 +95,30 @@ class AwsResourceTest(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertEqual(leaks(text), [])
 
+    def test_path_style_bucket_address_is_found(self) -> None:
+        """A path with a name after a one-label host names a bucket."""
+        cases = {
+            "https://s3.amazonaws.com/example-bucket/key": "s3.amazonaws.com",
+            "https://s3-us-west-2.amazonaws.com/example-bucket/key": (
+                "s3-us-west-2.amazonaws.com"
+            ),
+            r"https:\/\/s3.amazonaws.com\/example-bucket": "s3.amazonaws.com",
+            "see s3.amazonaws.com%2Fexample-bucket": "s3.amazonaws.com",
+        }
+        for text, leaked in cases.items():
+            with self.subTest(text=text):
+                self.assertEqual(leaks(text), [("aws-resource", leaked)])
+
+    def test_service_host_with_a_root_or_a_query_path_is_public(self) -> None:
+        """A slash with no name after it is the root of the service."""
+        for text in (
+            "https://sts.amazonaws.com/",
+            "https://sts.amazonaws.com/?Action=GetCallerIdentity",
+            "sts.amazonaws.com/ is the endpoint",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(leaks(text), [])
+
     def test_host_with_a_region_an_account_or_a_bucket_is_found(self) -> None:
         """Two or more labels before the domain name a region or a resource."""
         cases = {
@@ -706,6 +730,38 @@ class RepositoryTest(unittest.TestCase):
             "https://github.com/Acme/HUB/blob/main/README.md",
             "git@github.com:acme/.github.git",
             "* @acme/maintainers",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(leaks(text), [])
+
+    def test_team_addresses_off_the_public_list_are_found(self) -> None:
+        """The web and API addresses of a team, plain, escaped and with a host."""
+        cases = {
+            "https://github.com/orgs/acme/teams/billing": "orgs/acme/teams/billing",
+            "https://api.github.com/orgs/Acme/teams/billing/repos": (
+                "orgs/Acme/teams/billing"
+            ),
+            "gh api /orgs/acme/teams/billing/members": "orgs/acme/teams/billing",
+            "gh api orgs/acme/teams/billing": "orgs/acme/teams/billing",
+            r"https:\/\/github.com\/orgs\/acme\/teams\/billing": (
+                r"orgs\/acme\/teams\/billing"
+            ),
+            "https%3A%2F%2Fgithub.com%2Forgs%2Facme%2Fteams%2Fbilling": (
+                "orgs%2Facme%2Fteams%2Fbilling"
+            ),
+        }
+        for text, leaked in cases.items():
+            with self.subTest(text=text):
+                self.assertEqual(leaks(text), [("repository", leaked)])
+
+    def test_public_team_and_other_addresses_are_not_found(self) -> None:
+        """A public team, another owner, another page and a longer word pass."""
+        for text in (
+            "https://github.com/orgs/acme/teams/maintainers",
+            "https://github.com/orgs/Acme/teams/Maintainers/members",
+            "https://github.com/orgs/example/teams/billing",
+            "https://github.com/orgs/acme/people",
+            "https://github.com/myorgs/acme/teams/billing",
         ):
             with self.subTest(text=text):
                 self.assertEqual(leaks(text), [])

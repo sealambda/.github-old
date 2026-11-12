@@ -111,7 +111,11 @@ _ARN_ACCOUNT_FIELD = 4
 _AWS_MANAGED_ACCOUNT = "aws"
 # A service endpoint, a registry or a bucket address. The name of a service
 # principal has one label before the domain: `sts.amazonaws.com`. That name is
-# public, and a host with a region, an account or a bucket label is not.
+# public, and a host with a region, an account or a bucket label is not. A
+# path that starts with a name after the host is not public either: the
+# path-style address of a bucket, `s3.amazonaws.com/<bucket>/key`, has one
+# label and names a bucket. The slash may be escaped, as in JSON or in a URL.
+_PATH_AFTER_HOST = re.compile(r"(?:/|\\/|%2[Ff])[A-Za-z0-9]")
 _AWS_HOST = re.compile(
     _NO_NAME_BEFORE
     + r"(?P<labels>"
@@ -325,6 +329,11 @@ _ESCAPED_REPOSITORY_PREFIX = (
 _PAGES_SEPARATOR = r"(?i:\.github\.io)(?:/|" + _ESCAPED_SLASH + r")"
 _NAME = r"(?P<name>[A-Za-z0-9._-]+)"
 
+# The address of a team: `orgs/<organization>/teams/<team>`, in the web
+# address of the team and in the path of the API, with a plain or an escaped
+# slash. The word `orgs` starts a token, or it follows an escaped slash.
+_TEAM_PATH_START = r"(?:(?<![A-Za-z0-9._-])|(?<=%2[Ff]))orgs"
+
 
 def _pattern_finder(*patterns: str) -> Finder:
     """Build a finder that yields every match of every pattern.
@@ -369,8 +378,15 @@ def _is_managed_policy_arn(match: re.Match[str]) -> bool:
 
 
 def _is_service_principal(match: re.Match[str]) -> bool:
-    """Tell whether an AWS host has exactly one label before the domain."""
-    return match["labels"].count(".") == 1
+    """Tell whether an AWS host names a service and not a resource.
+
+    A service has exactly one label before the domain and no path that starts
+    with a name after the host. A path after one label is the path-style
+    address of a bucket.
+    """
+    if match["labels"].count(".") != 1:
+        return False
+    return _PATH_AFTER_HOST.match(match.string, match.end()) is None
 
 
 def _is_public_bot(match: re.Match[str]) -> bool:
@@ -692,6 +708,18 @@ def _organization_name_finder(organization: str) -> Finder:
     )
 
 
+def _team_path_pattern(organization: str, slash: str) -> re.Pattern[str]:
+    """Compile the pattern of the address of a team of the organization.
+
+    Args:
+        organization: The pattern of the name of the organization.
+        slash: The pattern of the slash: a plain or an escaped one.
+    """
+    return re.compile(
+        _TEAM_PATH_START + slash + organization + slash + "teams" + slash + _NAME
+    )
+
+
 def _repository_finder(policy: Policy) -> Finder:
     """Build a finder of repository and team names that are not public.
 
@@ -714,22 +742,33 @@ def _repository_finder(policy: Policy) -> Finder:
     `q=repo%3A<organization>%2F<name>`: any encoded byte except `%2D`, `%2E`,
     `%5F`, `%7E` and `%2F` is one.
 
+    The address of a team, `orgs/<organization>/teams/<team>`, with a plain or
+    an escaped slash and with any host or none, names a team: the finder
+    compares its name with the public teams.
+
     Args:
         policy: The organization and the names that are public.
     """
     organization = r"(?i:" + re.escape(policy.organization) + r")"
     patterns = [
-        re.compile(_REPOSITORY_PREFIX + organization + "/" + _NAME),
-        re.compile(_ESCAPED_REPOSITORY_PREFIX + organization + _ESCAPED_SLASH + _NAME),
-        re.compile(_HOST_START + organization + _PAGES_SEPARATOR + _NAME),
+        (re.compile(_REPOSITORY_PREFIX + organization + "/" + _NAME), False),
+        (
+            re.compile(
+                _ESCAPED_REPOSITORY_PREFIX + organization + _ESCAPED_SLASH + _NAME
+            ),
+            False,
+        ),
+        (re.compile(_HOST_START + organization + _PAGES_SEPARATOR + _NAME), False),
+        (_team_path_pattern(organization, "/"), True),
+        (_team_path_pattern(organization, _ESCAPED_SLASH), True),
     ]
 
     def find(text: str) -> Iterator[Leak]:
         """Yield each repository or team name that is not on the public list."""
-        for pattern in patterns:
+        for pattern, is_team_path in patterns:
             for match in pattern.finditer(text):
                 name = match["name"].rstrip(".").removesuffix(".git").lower()
-                is_team = match.groupdict().get("team")
+                is_team = is_team_path or bool(match.groupdict().get("team"))
                 public = policy.public_teams if is_team else policy.public_repositories
                 if name not in public:
                     yield Leak(match.start(), match.group(0))

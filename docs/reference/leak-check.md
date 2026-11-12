@@ -14,12 +14,12 @@ names isn't in the hub.
 | Rule | What it finds |
 | ---- | ------------- |
 | `aws-account` | A number of 12 digits that stands alone, plain or in three groups of four with dashes. |
-| `aws-resource` | An Amazon Resource Name, and a host name below the AWS endpoint domain. |
+| `aws-resource` | An Amazon Resource Name, a host name below the AWS endpoint domain, and a path-style bucket address. |
 | `bucket` | An address with the S3 scheme, a Cloudflare R2 bucket address, the value of a bucket key, and a lower-case name that starts with the organization name and a dash. |
 | `runner-label` | A label of a `runs-on` key that isn't a label of a GitHub-hosted runner, a list of labels that has `self-hosted` as an element, and a runner type of the form project, architecture, size. |
 | `internal-host` | A host name under a private suffix or a Tailscale network, a private IPv4 address, and a host name below a domain of the organization other than the `www` site. |
 | `github-app` | A client identifier of a GitHub App, a numeric App, installation or client identifier next to its key, an installation address, and the commit address of an App. |
-| `repository` | The name of a repository of the organization that isn't on the public list, in the short form, in an address, in a flake reference, in a GitHub Pages address or with an escaped slash, and a mention of a team that isn't on the public list. |
+| `repository` | The name of a repository of the organization that isn't on the public list, in the short form, in an address, in a flake reference, in a GitHub Pages address or with an escaped slash, a mention of a team that isn't on the public list, and the address of such a team. |
 
 ## What each rule reads
 
@@ -30,6 +30,11 @@ An ARN is a finding, except an ARN with the account `aws`, such as
 below `amazonaws.com` is a finding, except a host with exactly one label before
 the domain, such as `sts.amazonaws.com`: that's the name of a service. A
 region, an account or a bucket adds a second label, so that host is a finding.
+A path that starts with a letter or a digit after a one-label host, as in the
+path-style address `https://s3.amazonaws.com/<bucket>/key`, names a bucket, so
+that host is a finding too. The slash of that path may be escaped, as in JSON
+or in a URL. A root path or a query, as in `https://sts.amazonaws.com/`, isn't
+a finding.
 
 ### Buckets
 
@@ -148,6 +153,13 @@ letter case. A `+` is a delimiter too. So `example%2F<organization>%2F<name>`
 is the name of another owner, and it isn't a finding. The exception for `%2F`
 doesn't apply to a host name and to a Pages address, which `%2F` starts, as in
 `https%3A%2F%2Fgithub.com%2F<organization>%2F<name>`.
+
+The address of a team, `orgs/<organization>/teams/<team>`, is read in the same
+way, in the web address of the team and in the path of the API, with a plain or
+an escaped slash and with any host or none. It's a finding unless the team is
+on the public list, in any letter case. The word `orgs` starts a token, so
+`myorgs/<organization>/teams/<team>` isn't an address. Another page of the
+organization, such as `orgs/<organization>/people`, isn't a finding.
 
 A folder with the name of the organization inside a relative path, such as
 `styles/<Organization>/rule.yml` or `./<organization>/name`, and a path with
