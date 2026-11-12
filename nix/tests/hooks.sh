@@ -215,6 +215,51 @@ case_install_writes_the_three_hooks() {
     fail "core.hooksPath doesn't name the hooks directory"
 }
 
+# Prints what an install leaves in REPO, one fact on each line: the local
+# `core.hooksPath`, the target of the configuration link, and the name and the
+# checksum of each file in the hooks folder. Two installs that change nothing
+# print the same text.
+describe_installation() {
+  local hook
+  git -C "$REPO" config --local --get core.hooksPath
+  readlink "$REPO/.pre-commit-config.yaml"
+  for hook in "$REPO"/.git/hooks/*; do
+    printf '%s %s\n' "${hook##*/}" "$(cksum <"$hook")"
+  done
+}
+
+# Fails unless the output of the last Git command has $2 lines that contain
+# the text $1.
+assert_output_line_count() {
+  local count
+  count=$(grep -cF -- "$1" "$OUT" || true)
+  [ "$count" = "$2" ] || fail "expected $2 lines with '$1', found $count"
+}
+
+# Entering the shell a second time in the same work tree changes nothing, as
+# `docs/reference/hooks.md` states. A second install that moved the hook of
+# prek to `.legacy`, as it does for a hook of another tool, would run every hook
+# twice, and one that rewrote the setting would change what Git reads. The case
+# compares the installation before and after the second entry, then commits and
+# counts the lines of two hooks: each runs once.
+case_entering_the_shell_again_changes_nothing() {
+  new_repository again
+  local before after
+  before=$(describe_installation)
+
+  install_hooks
+  assert_output_lacks "git-hooks.nix: updating"
+  after=$(describe_installation)
+  [ "$after" = "$before" ] || fail "the second install changed the installation"
+  [ ! -e "$REPO/.git/hooks/pre-commit.legacy" ] || fail "the second install made a .legacy hook"
+
+  stage_file notes.txt "plain text"
+  run_git commit --quiet --message "docs: add the notes"
+  assert_accepted
+  assert_output_line_count "secrets-scan" 1
+  assert_output_line_count "gitpolicy-commit-msg" 1
+}
+
 # A hook that another tool wrote isn't deleted. The installer moves it to
 # `<name>.legacy`, and `prek` runs it after its own hooks.
 case_install_keeps_a_foreign_hook() {
@@ -757,6 +802,7 @@ case_push_without_a_new_commit_skips_the_branch_hook() {
 main() {
   local -a cases=(
     case_install_writes_the_three_hooks
+    case_entering_the_shell_again_changes_nothing
     case_install_keeps_a_foreign_hook
     case_failing_foreign_hook_stops_the_commit
     case_install_replaces_an_earlier_core_hooks_path

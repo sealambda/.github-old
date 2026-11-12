@@ -308,17 +308,18 @@ the ones that a repository uses:
   says.
 - The flake check `hooks-tests` runs `nix/tests/hooks.sh`. Each case installs
   the hooks with the installation script into a new repository and uses real
-  Git. The cases cover the installation, an old hook that passes and one that
-  fails, an earlier local `core.hooksPath`, a global one and an empty one that
-  make the installation fail, a Git configuration that Git can't read, the skip
-  in a bare repository and in a `.git` folder, the installation in linked work
-  trees, a clean commit and one refusal for each hook of the `pre-commit`
-  stage: a badly formatted file, a Markdown violation, a workflow without
-  `timeout-minutes` and a staged false secret. They also cover the secret scan
-  of a commit that only deletes a file, what the hooks read when a file is
-  staged in part, a bad message, a `fixup!` commit, `SKIP`, a push from a branch
-  with a bad name and the pushes that skip the hook. The false secret is
-  assembled when the test runs, so no file holds it.
+  Git. The cases cover the installation, a second entry of the shell that
+  changes nothing, an old hook that passes and one that fails, an earlier local
+  `core.hooksPath`, a global one and an empty one that make the installation
+  fail, a Git configuration that Git can't read, the skip in a bare repository
+  and in a `.git` folder, the installation in linked work trees, a clean commit
+  and one refusal for each hook of the `pre-commit` stage: a badly formatted
+  file, a Markdown violation, a workflow without `timeout-minutes` and a staged
+  false secret. They also cover the secret scan of a commit that only deletes a
+  file, what the hooks read when a file is staged in part, a bad message, a
+  `fixup!` commit, `SKIP`, a push from a branch with a bad name and the pushes
+  that skip the hook. The false secret is assembled when the test runs, so no
+  file holds it.
 - The flake check `dev-shells` fails when a dev shell other than `hooks`
   carries a shell hook, or when `default` isn't `base`.
 - The flake check `lib-functions` has two cases for `extraHooks`.
