@@ -1,5 +1,7 @@
 Corepack
 Dialyxir
 fixup
+Kopp
 Nygard
 Sobelow
+Zimmermann

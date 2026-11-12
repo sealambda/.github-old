@@ -23,8 +23,9 @@ type: don't mix a tutorial with reference facts.
 [adr/madr](https://github.com/adr/madr/tree/4.0.0) repository, with one
 change to the front matter. The `status` line reads `proposed`, with a comment
 that lists the three values of the hub: `proposed`, `accepted` and `rejected`.
-A comment also names the required keys. MADR is available under the MIT
-license or CC0 1.0. Name a record `NNNN-title-with-dashes.md`, and number the
+A comment also names the required keys. The copyright notice and the license
+of the file are in [Licensing](../docs/reference/licensing.md#third-party-content).
+Name a record `NNNN-title-with-dashes.md`, and number the
 records in the order you write them. The
 [decision records reference](../docs/reference/decision-records.md) defines the
 format.

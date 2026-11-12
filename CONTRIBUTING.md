@@ -43,6 +43,9 @@ Assisted-by: <tool> (<model>)
 - Update a branch by rebase. Never merge the base into it.
 - Make dependent changes a stack: one pull request per layer, each on the
   branch of the layer below.
+- A contribution is under the license that the repository gives to the file
+  that it changes. That's the license of the repository, except for a file of
+  third-party content, which keeps the license of its source.
 
 ## Review and landing
 
