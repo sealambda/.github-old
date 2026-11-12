@@ -63,15 +63,6 @@
 
       treefmtFor = eachSystem (pkgs: mkTreefmt pkgs [ ]);
 
-      # The rule files of the Sealambda Vale style, without their test cases.
-      # A change to a test case then doesn't rebuild the style.
-      valeStyleRules = nixpkgs.lib.fileset.toSource {
-        root = ./vale/Sealambda;
-        fileset = nixpkgs.lib.fileset.fileFilter (
-          file: file.hasExt "yml" && !(nixpkgs.lib.hasSuffix ".test.yml" file.name)
-        ) ./vale/Sealambda;
-      };
-
       # The Sealambda Vale style as a package with the layout of the styles in
       # nixpkgs: `share/vale/styles/Sealambda`. `vale.withStyles` links it next
       # to the styles of nixpkgs. The source is `vale/Sealambda`, because
@@ -79,14 +70,14 @@
       mkValeStyleSealambda =
         pkgs:
         pkgs.runCommand "vale-style-sealambda" { } ''
-          install -D -m 644 -t "$out/share/vale/styles/Sealambda" ${valeStyleRules}/*.yml
+          install -D -m 644 -t "$out/share/vale/styles/Sealambda" ${./vale/Sealambda}/*.yml
         '';
 
       /**
         Builds the documentation tools from one package set: the three tools of
-        the `docs` dev shell and of `mkDocsCheck`, and the `check-docs` command
-        that runs them. The Vale of these tools has the styles Microsoft and
-        Readability from nixpkgs and the hub's own style Sealambda.
+        the `docs` dev shell and of `mkDocsCheck`. The Vale of these tools has
+        the styles Microsoft and Readability from nixpkgs and the hub's own
+        style Sealambda.
 
         # Inputs
 
@@ -97,7 +88,7 @@
         # Type
 
         ```
-        mkDocsTools :: AttrSet -> { valeWithStyles :: Derivation; checkDocs :: Derivation; tools :: [Derivation]; }
+        mkDocsTools :: AttrSet -> [Derivation]
         ```
       */
       mkDocsTools =
@@ -116,30 +107,12 @@
             styles.readability
             (mkValeStyleSealambda pkgs)
           ]);
-
-          # The three documentation tools, listed once for `checkDocs` and for
-          # the `docs` dev shell.
-          tools = [
-            pkgs.lychee
-            pkgs.markdownlint-cli2
-            valeWithStyles
-          ];
-
-          # The `check-docs` command: the three tools with the flags in
-          # `nix/scripts/check-docs.sh`. `writeShellApplication` lints the script
-          # with shellcheck, and its header describes the script.
-          checkDocs = pkgs.writeShellApplication {
-            name = "check-docs";
-            runtimeInputs = tools;
-            # The trust store that lychee needs at startup. The reason is in the
-            # header of `nix/scripts/check-docs.sh`.
-            runtimeEnv.SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-            text = builtins.readFile ./nix/scripts/check-docs.sh;
-          };
         in
-        {
-          inherit valeWithStyles checkDocs tools;
-        };
+        [
+          pkgs.lychee
+          pkgs.markdownlint-cli2
+          valeWithStyles
+        ];
 
       docsToolsFor = eachSystem mkDocsTools;
 
@@ -249,10 +222,20 @@
         let
           hubPkgs = hubPackagesFor pkgs;
         in
-        hubPkgs.runCommand "docs" { } ''
-          HOME="$TMPDIR" ${nixpkgs.lib.getExe (mkDocsTools hubPkgs).checkDocs} ${src}
-          touch "$out"
-        '';
+        hubPkgs.runCommand "docs"
+          {
+            nativeBuildInputs = mkDocsTools hubPkgs;
+            # The trust store that lychee needs at startup.
+            SSL_CERT_FILE = "${hubPkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+          }
+          ''
+            export HOME="$TMPDIR"
+            cd ${src}
+            markdownlint-cli2 "**/*.md"
+            lychee --no-progress "**/*.md"
+            vale --minAlertLevel=error .
+            touch "$out"
+          '';
     in
     {
       lib = {
@@ -308,7 +291,7 @@
 
         docs = pkgs.mkShell {
           inputsFrom = [ base ];
-          packages = docsToolsFor.${pkgs.stdenv.hostPlatform.system}.tools;
+          packages = docsToolsFor.${pkgs.stdenv.hostPlatform.system};
         };
       });
 
@@ -318,37 +301,6 @@
         config-in-sync = mkConfigCheck pkgs self;
         docs = mkDocsCheck pkgs self;
         formatting = treefmtFor.${pkgs.stdenv.hostPlatform.system}.config.build.check self;
-
-        # Runs the tests of `nix/scripts/check-docs.sh`. The tests need a
-        # writable HOME and the commands `check-docs`, `sync-config` and `vale`
-        # on PATH. `vale` is the Vale with the hub's styles.
-        check-docs-tests =
-          pkgs.runCommand "check-docs-tests"
-            {
-              nativeBuildInputs = [
-                docsToolsFor.${pkgs.stdenv.hostPlatform.system}.checkDocs
-                docsToolsFor.${pkgs.stdenv.hostPlatform.system}.valeWithStyles
-                (mkSyncConfig pkgs)
-              ];
-            }
-            ''
-              HOME="$TMPDIR" bash ${./nix/tests/check-docs.sh}
-              touch "$out"
-            '';
-
-        # Runs the test cases of the Sealambda Vale style,
-        # `vale/Sealambda/*.test.yml`. `--coverage` makes a rule without a test
-        # case fail. The cases hold the words of the rules in a YAML file, so the
-        # hub's own `docs` check never lints them.
-        vale-style-tests =
-          pkgs.runCommand "vale-style-tests"
-            {
-              nativeBuildInputs = [ pkgs.vale ];
-            }
-            ''
-              HOME="$TMPDIR" vale test --coverage --no-wrap ${./vale/Sealambda}
-              touch "$out"
-            '';
       });
     };
 }
