@@ -428,7 +428,7 @@
           pkgs.runCommand "check-ci-tests"
             {
               nativeBuildInputs = [
-                (tools.decisionsPython pkgs)
+                (tools.decisions.python pkgs)
                 pkgs.jq
               ];
               env.CI_WORKFLOW = "${./.github/workflows/ci.yml}";
