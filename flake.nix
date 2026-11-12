@@ -568,12 +568,21 @@
 
         # Runs the unit tests of `nix/scripts/versions`: the manifest with
         # valid and invalid files, and the rules for the installer steps with
-        # trees that the tests write.
+        # trees that the tests write. `SETUP_NIX_ACTION` is the action of the
+        # hub, which the tests run through the rule for the expression form.
+        # `READ_VERSION_SCRIPT` is the script that the action's step runs, and
+        # the tests run it with `jq`.
         check-versions-tests =
           pkgs.runCommand "check-versions-tests"
             {
-              nativeBuildInputs = [ (tools.decisions.python pkgs) ];
-              env = tools.versions.env;
+              nativeBuildInputs = [
+                (tools.decisions.python pkgs)
+                pkgs.jq
+              ];
+              env = tools.versions.env // {
+                SETUP_NIX_ACTION = "${./.github/actions/setup-nix/action.yml}";
+                READ_VERSION_SCRIPT = "${./.github/actions/setup-nix/read-version.sh}";
+              };
             }
             ''
               export HOME="$TMPDIR"

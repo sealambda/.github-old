@@ -7,10 +7,14 @@ output of an earlier step, and only when that step is the canonical step that
 tree. Most of them are probes: each changes the step, or the place of the
 action, in a way that installs another Nix version than `versions.json`. The
 probes of the review pass a rule that reads the shape of the step, so each
-must give one finding here.
+must give one finding here. One test runs the real action of the hub
+(`SETUP_NIX_ACTION`, set by the flake check) through the same check, so the
+rule and the action can't drift apart.
 """
 
+import os
 import unittest
+from pathlib import Path
 
 from versions.cli import EXIT_FINDINGS
 from versions_fixtures import (
@@ -129,6 +133,11 @@ class ExpressionInSetupActionTest(TreeTestCase):
         """Assert one finding that names the keys in which the step differs."""
         text = action_text(step, installer_in_action(EXPRESSION))
         self.assert_one_finding(text, f"{DIFFERS}it differs in {keys}")
+
+    def test_real_action_of_the_hub_is_clean(self) -> None:
+        """The action that the hub's jobs call passes the rule as written."""
+        real = Path(os.environ["SETUP_NIX_ACTION"]).read_text(encoding="utf-8")
+        self.assertEqual(self.check_action(real), [])
 
     def test_canonical_step_before_the_installer_is_clean(self) -> None:
         """The canonical step and the expression pass in the setup action."""

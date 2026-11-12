@@ -37,11 +37,23 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # `install_url` pins the Nix version. `versions.json` holds it, and the
-      # flake check `versions` fails when the two differ.
-      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
-        with:
-          install_url: https://releases.nixos.org/nix/nix-2.35.4/install
+      # The local action installs the Nix version that `versions.json` pins, so
+      # no job repeats the number. The flake check `versions` reads the action.
+      # The `./` form stays, as in the `secrets` job.
+      - id: nix
+        uses: ./.github/actions/setup-nix # zizmor: ignore[self-repository]
+      # The end-to-end proof for the action: the `nix` that the runner holds
+      # and the output of the action both equal the version in `versions.json`.
+      # No other job repeats this step, because each calls the same action.
+      - name: Check the installed Nix version
+        env:
+          ACTION_OUTPUT: ${{ steps.nix.outputs.version }}
+        run: |
+          expected="$(jq -er .nix versions.json)"
+          installed="$(nix --version | awk '{print $NF}')"
+          echo "versions.json: $expected, nix --version: $installed, action output: $ACTION_OUTPUT"
+          test "$installed" = "$expected"
+          test "$ACTION_OUTPUT" = "$expected"
       - run: nix flake check
 
   # Builds the checks of the synthetic consumers `nix/tests/consumers/legacy`,
@@ -59,11 +71,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # `install_url` pins the Nix version. `versions.json` holds it, and the
-      # flake check `versions` fails when the two differ.
-      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
-        with:
-          install_url: https://releases.nixos.org/nix/nix-2.35.4/install
+      # The local action installs the Nix version that `versions.json` pins, so
+      # no job repeats the number. The flake check `versions` reads the action.
+      # The `./` form stays, as in the `secrets` job.
+      - uses: ./.github/actions/setup-nix # zizmor: ignore[self-repository]
       # `--override-input` replaces the hub on GitHub with this checkout, and
       # `--no-write-lock-file` keeps the run from writing a lock file.
       # `--all-systems` evaluates the outputs of every system that the fixture
@@ -124,11 +135,10 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      # `install_url` pins the Nix version. `versions.json` holds it, and the
-      # flake check `versions` fails when the two differ.
-      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
-        with:
-          install_url: https://releases.nixos.org/nix/nix-2.35.4/install
+      # The local action installs the Nix version that `versions.json` pins, so
+      # no job repeats the number. The flake check `versions` reads the action.
+      # The `./` form stays, as in the `secrets` job.
+      - uses: ./.github/actions/setup-nix # zizmor: ignore[self-repository]
       - name: Check the commit messages
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -218,11 +228,10 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      # `install_url` pins the Nix version. `versions.json` holds it, and the
-      # flake check `versions` fails when the two differ.
-      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
-        with:
-          install_url: https://releases.nixos.org/nix/nix-2.35.4/install
+      # The local action installs the Nix version that `versions.json` pins, so
+      # no job repeats the number. The flake check `versions` reads the action.
+      # The `./` form stays, as in the `secrets` job.
+      - uses: ./.github/actions/setup-nix # zizmor: ignore[self-repository]
       # Nix evaluates the flake and builds the command in this step, which has
       # no token: only the two publish steps hold the token, and they run the
       # built command and no Nix.

@@ -1,0 +1,32 @@
+name: Set up Nix
+description: >-
+  Install the version of Nix that `versions.json` of the hub pins. The action
+  reads the version from the file, so a job never repeats the number.
+
+# The reference page is docs/reference/setup-nix-action.md.
+
+outputs:
+  version:
+    description: The Nix version that the action installed, as MAJOR.MINOR.PATCH.
+    value: ${{ steps.version.outputs.nix }}
+
+runs:
+  using: composite
+  steps:
+    # `github.action_path` is the folder of this action. `versions.json` is
+    # three folders above it, at the root of the repository that holds the
+    # action. The path reaches the shell through `env`, never through the
+    # script text. The logic is in `read-version.sh`. The `versions` check
+    # requires this step to equal `READ_VERSION_STEP` in
+    # `nix/scripts/versions/action_output.py`, key for key: to change the
+    # step, change the constant too.
+    - id: version
+      shell: bash
+      env:
+        ACTION_DIR: ${{ github.action_path }}
+      run: bash "$ACTION_DIR/read-version.sh" "$ACTION_DIR/../../../versions.json"
+    # `install_url` pins the Nix version. The `versions` check accepts this
+    # expression only here, and only after the step above.
+    - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+      with:
+        install_url: https://releases.nixos.org/nix/nix-${{ steps.version.outputs.nix }}/install
