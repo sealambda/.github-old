@@ -86,7 +86,9 @@ Commit. The message says to write `revert: <description>` instead.
 A merge commit fails whatever its header says. The message names the case and
 the fix: rebase the branch onto its base, so that the history stays linear. The
 "Update branch" button of GitHub creates a merge commit by default. Its rebase
-option, or a local rebase, avoids the merge commit.
+option, or a local rebase, avoids the merge commit. The hook gives the same
+advice for the header that `git merge` and `git pull` write, which starts with
+the word `Merge` and a space.
 
 A commit whose message isn't valid UTF-8 is a problem of that commit: it has
 status 1 and its short hash, and the other commits are still checked. A commit

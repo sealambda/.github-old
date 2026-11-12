@@ -99,6 +99,36 @@ class HeaderRuleTest(unittest.TestCase):
             'Revert "feat: add x"', "write 'revert: description' instead"
         )
 
+    def test_git_merge_header_names_the_case_and_gives_the_advice_of_range(
+        self,
+    ) -> None:
+        """The header of `git merge` or `git pull` says that merges are refused.
+
+        The advice is the text that `range` gives for a merge commit, so a
+        person gets the same answer from the hook and from the check of the
+        history.
+        """
+        advice = check_stored_commit("Merge branch 'a'", is_merge=True)[0].removeprefix(
+            "this is a merge commit: "
+        )
+        for header in (
+            "Merge branch 'main' of https://example.com/x into topic",
+            "Merge remote-tracking branch 'origin/main'",
+            "Merge pull request #3 from a/b",
+            "Merge tag 'v1'",
+        ):
+            with self.subTest(header):
+                self.assert_one_problem(header, "this is a merge commit: " + advice)
+                self.assert_one_problem(header, "type(scope)!: description")
+
+    def test_a_header_that_only_starts_like_a_merge_has_no_merge_hint(self) -> None:
+        """`Merged` and `Merge:` are not the header of Git, so the hint is absent."""
+        for header in ("Merged the branch", "Merge: x"):
+            with self.subTest(header):
+                found = check_commit_message(header, allow_autosquash=False)
+                self.assertEqual(1, len(found), found)
+                self.assertNotIn("merge commit", found[0])
+
     def test_unknown_or_cased_type(self) -> None:
         """A type outside the list fails, and so does a type in capitals."""
         for header in ("wip: x", "feature: x", "Feat: x", "FIX: x", "style: x"):

@@ -34,7 +34,18 @@ _SCOPE = re.compile(r"[a-z0-9]+(?:[-_./][a-z0-9]+)*")
 # The header that `git revert` writes by default.
 _GIT_REVERT_START = 'Revert "'
 
+# The start of the header that `git merge` and `git pull` write: `Merge branch`,
+# `Merge remote-tracking branch`, `Merge pull request` and `Merge tag`.
+_GIT_MERGE_START = "Merge "
+
 _FORM = "the header must be 'type(scope)!: description'"
+
+# What a person does about a merge commit. The hook and `range` both give it.
+_MERGE_ADVICE = (
+    "rebase the branch onto its base so that the history stays linear (the "
+    "'Update branch' button of GitHub creates a merge commit; use its rebase "
+    "option, or rebase locally)"
+)
 
 
 def _check_type(commit_type: str) -> list[str]:
@@ -91,7 +102,9 @@ def _check_form(header: str) -> list[str]:
 
     A header that does not start with `type(scope)!:` gets one problem that
     names the form. A header that `git revert` wrote gets the hint for the
-    `revert` type instead.
+    `revert` type instead, and a header that `git merge` or `git pull` wrote
+    gets the advice about merge commits. A person meets that header in the
+    hook first, so the hook explains the case as `range` does.
     """
     match = _HEADER_START.fullmatch(header)
     if match is None:
@@ -100,6 +113,8 @@ def _check_form(header: str) -> list[str]:
                 f"{_FORM}; write '{REVERT_TYPE}: description' instead of the "
                 "default header of git revert"
             ]
+        if header.startswith(_GIT_MERGE_START):
+            return [f"{_FORM}; this is a merge commit: {_MERGE_ADVICE}"]
         return [_FORM]
     return [
         *_check_type(match["type"]),
@@ -167,11 +182,7 @@ def check_stored_commit(message: str | None, *, is_merge: bool) -> list[str]:
         problem each, and a commit that is both gets the merge problem only.
     """
     if is_merge:
-        return [
-            "this is a merge commit: rebase the branch onto its base so that "
-            "the history stays linear (the 'Update branch' button of GitHub "
-            "creates a merge commit; use its rebase option, or rebase locally)"
-        ]
+        return [f"this is a merge commit: {_MERGE_ADVICE}"]
     if message is None:
         return [
             "the message is not valid UTF-8 text: amend the commit with a UTF-8 message"
