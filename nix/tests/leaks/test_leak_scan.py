@@ -8,9 +8,10 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from decisions.walk import SNIFF_BYTES
-from leaks.cli import EXIT_CLEAN, EXIT_FINDINGS, EXIT_USAGE, main
+from leaks.cli import EXIT_CLEAN, EXIT_FINDINGS, EXIT_INTERNAL, EXIT_USAGE, main
 from leaks.scan import mask
 
 ACCOUNT_LINE = "account 123456789012\n"
@@ -145,6 +146,16 @@ class ScanTest(ScanTestCase):
         self.assertEqual(status, EXIT_FINDINGS)
         self.assertEqual([line.split(":")[0] for line in lines], ["late.txt"])
 
+    def test_ignore_files_and_changelogs_are_scanned(self) -> None:
+        """A leak in a file that the citation scan skips is as public."""
+        self.write(".gitignore", ACCOUNT_LINE)
+        self.write("CHANGELOG.md", ACCOUNT_LINE)
+        status, lines, _ = self.run_cli()
+        self.assertEqual(status, EXIT_FINDINGS)
+        self.assertEqual(
+            sorted(line.split(":")[0] for line in lines), [".gitignore", "CHANGELOG.md"]
+        )
+
     def test_symbolic_link_is_not_followed(self) -> None:
         """A link is not read, so a file outside the tree is never scanned."""
         elsewhere = tempfile.TemporaryDirectory()
@@ -160,6 +171,25 @@ class ScanTest(ScanTestCase):
         self.write("CODEOWNERS", "* @acme/maintainers\n")
         self.assertEqual(self.run_cli()[0], EXIT_FINDINGS)
         self.assertEqual(self.run_cli("--public-team", "Maintainers")[0], EXIT_CLEAN)
+
+
+class FailureTest(ScanTestCase):
+    """The exit statuses for a file that cannot be read and for a bug."""
+
+    def test_unreadable_file_exits_with_the_usage_status(self) -> None:
+        """An `OSError` is status 2 with its message, and it is not a finding."""
+        with mock.patch("leaks.cli.scan_tree", side_effect=OSError("denied")):
+            status, lines, stderr = self.run_cli()
+        self.assertEqual((status, lines), (EXIT_USAGE, []))
+        self.assertIn("denied", stderr)
+
+    def test_unexpected_exception_exits_with_the_internal_status(self) -> None:
+        """A bug is status 3 with its traceback, apart from status 1 of a leak."""
+        with mock.patch("leaks.cli.scan_tree", side_effect=RuntimeError("bug")):
+            status, lines, stderr = self.run_cli()
+        self.assertEqual((status, lines), (EXIT_INTERNAL, []))
+        self.assertIn("Traceback", stderr)
+        self.assertIn("RuntimeError: bug", stderr)
 
 
 class UsageTest(ScanTestCase):
