@@ -1,6 +1,8 @@
 # The helpers of the tests of the functions in `nix/lib`. `default.nix` in this
 # folder calls them, and each case file (`docs.nix`, `decisions.nix`,
-# `config.nix`, `treefmt.nix`) uses `mkTree` to write its fixtures.
+# `config.nix`, `treefmt.nix`) uses `mkTree` to write its fixtures. The case
+# files that decide a case in the evaluation, `hooks.nix` and `standards.nix`,
+# use `mustHold`.
 {
   pkgs,
   syncConfig,
@@ -108,6 +110,35 @@ in
       ${lib.optionalString synced "sync-config"}
       ${writeFiles files}
       ${setup}
+    '';
+
+  /**
+    Builds a derivation for a case that the evaluation decides. The derivation
+    builds when `condition` is true. When it is false, the evaluation fails
+    with `message`, so a case that must fail with an evaluation error, which
+    `expectedLog` can't read, still fails the check with a text that names the
+    problem. Build `condition` from `builtins.tryEval` to ask whether an
+    expression fails.
+
+    # Inputs
+
+    `message`
+    : The text of the failure. It is evaluated only when `condition` is false.
+
+    `condition`
+    : A boolean.
+
+    # Type
+
+    ```
+    mustHold :: String -> Bool -> Derivation
+    ```
+  */
+  mustHold =
+    message: condition:
+    assert lib.assertMsg condition message;
+    pkgs.runCommand "holds" { } ''
+      touch "$out"
     '';
 
   /**

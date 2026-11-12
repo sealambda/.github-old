@@ -60,14 +60,7 @@ let
   secretsScanCommand =
     scanner: "${pkgs.lib.getExe (hub.mkSecretsScan { inherit pkgs scanner; })} staged";
 
-  # A derivation that builds when `condition` is true and fails the evaluation
-  # with `message` when it is false.
-  mustHold =
-    message: condition:
-    assert pkgs.lib.assertMsg condition message;
-    pkgs.runCommand "holds" { } ''
-      touch "$out"
-    '';
+  inherit (harness) mustHold;
 in
 {
   # Requirement: a hook in `extraHooks` runs in addition to the hooks of the
