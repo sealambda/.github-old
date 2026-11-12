@@ -30,7 +30,8 @@ trap 'rm -rf -- "$WORK"' EXIT
 
 readonly OUT=$WORK/output
 
-# Set by `new_project`: the project directory of the running case.
+# Set by `new_project` and `new_bare_project`: the project directory of the
+# running case.
 PROJECT=
 # Set by `run_check`: the exit status of the last run.
 STATUS=0
@@ -424,11 +425,14 @@ case_no_local_file_applies_the_hub_rules() {
 }
 
 # A bare project can use the terms of the hub's own vocabulary `Sealambda`,
-# `treefmt` and `zizmor` here, with no vocabulary of its own. Vale's dictionary
-# doesn't know the two terms, so the page passes only when the base lists and
-# loads the hub's vocabulary. The unknown term `zorblax` in a second page fails
-# in the same project, and the output lacks the two terms: the spelling rule is
-# on, and the vocabulary is what lets the first page pass.
+# `treefmt` and `zizmor` here, with no vocabulary of its own. The three terms
+# are entries of `config/vale-vocabulary.txt`: a case that fails on a missing
+# term means that the file dropped it, and the case must name another entry.
+# Vale's dictionary doesn't know the terms, so the page passes only when the
+# base lists and loads the hub's vocabulary. The unknown term `zorblax` in a
+# second page fails in the same project, and the output lacks two of the
+# terms: the spelling rule is on, and the vocabulary is what lets the first page
+# pass.
 case_hub_vocabulary_is_loaded() {
   new_bare_project hub-vocabulary
   write_page terms.md "Run treefmt and zizmor for Sealambda."
