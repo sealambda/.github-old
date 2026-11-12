@@ -58,8 +58,9 @@ work, or when you change such a copy. These cases aren't third-party:
 5. Add a row to the table in
    [Licensing](../reference/licensing.md#third-party-content) with the file,
    the source, the version, the license and the local changes.
-6. Run the checks. Nix reads only the files that Git knows, so add a new file
-   with `git add -N <path>` first:
+6. Run the checks. Nix reads only the files that Git knows, so add every new
+   file with `git add -N <path>` first: the third-party file and each text
+   that step 4 added to `LICENSES/`:
 
    ```sh
    nix flake check
@@ -67,15 +68,23 @@ work, or when you change such a copy. These cases aren't third-party:
 
 ## Check the result
 
-The check ends with the line "Congratulations! Your project is compliant" and
-exit status 0. To see the data of the file, run `reuse lint --json` in a shell
-with the `reuse` tool and find the path in the output. The entry lists the
-copyright notices and the license expression that apply.
+`nix flake check` shows only the exit status of the check, which is 0 when it
+passes. To read the report, run the check alone. It ends with the line
+"Congratulations! Your project is compliant":
+
+```sh
+nix build .#checks.<system>.licenses -L
+```
+
+Replace `<system>` with your system, for example `x86_64-linux`. To see the
+data of the file, run `reuse lint --json` in a shell with the `reuse` tool and
+find the path in the output. The entry lists the copyright notices and the
+license expression that apply.
 
 ## If it fails
 
 - **Missing licenses.** A license that a table names has no text in
-  `LICENSES/`. Run step 4.
+  `LICENSES/`. Run step 4, and run `git add -N` on the text.
 - **A file takes its notice or license from its own text.** The file holds the
   word `Copyright` followed by a space, or an SPDX tag, and its table doesn't
   win. Set `precedence = "override"` in the table of the file.

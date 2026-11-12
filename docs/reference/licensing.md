@@ -17,8 +17,9 @@ check `licenses` checks the licensing data of every file.
 GitHub reads `LICENSE` to show the license of the repository. `REUSE.toml`
 declares the copyright and the license of each file, so no file has a license
 header. `REUSE.toml` sets `precedence = "override"` in each table, so its data
-wins over any text in a file. A contribution is under the license of the
-repository that it changes
+wins over any text in a file. A contribution is under the license that the
+repository gives to the file that it changes: the license of the hub, or the
+license of the source for a file in the table below
 ([CONTRIBUTING.md](../../CONTRIBUTING.md#pull-requests)).
 
 ## Third-party content
