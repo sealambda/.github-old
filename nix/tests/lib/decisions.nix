@@ -7,11 +7,20 @@
   harness,
 }:
 let
+  inherit (pkgs) lib;
+
   # The folder of the records, built from two parts. The hub's own decisions
   # check reads the files of this repository for citations, and it would
   # resolve a path or a citation that this file writes out, so this file
-  # writes neither.
+  # writes neither: a citation is "ADR " and a number from `existingNumber` or
+  # `missingNumber`.
   recordsFolder = "docs" + "/decisions";
+
+  # The number of the record that every tree has.
+  existingNumber = "0001";
+
+  # The path of that record in a tree.
+  recordPath = "${recordsFolder}/${existingNumber}-first.md";
 
   # A record with valid front matter and a title.
   record = ''
@@ -24,14 +33,19 @@ let
     # A decision
   '';
 
-  # A tree with the record 0001, a page of the text `readme`, and the files of
-  # `extraFiles`.
+  # The same record with a status that the schema does not list.
+  unknownStatus = "wished";
+  recordWithUnknownStatus = lib.replaceStrings [ "accepted" ] [ unknownStatus ] record;
+
+  # A tree with the record `existingNumber`, a page of the text `readme`, and
+  # the files of `extraFiles`. A file of `extraFiles` replaces a file of the
+  # tree with the same path.
   tree =
     name: readme: extraFiles:
     harness.mkTree {
       name = "decisions-${name}";
       files = {
-        "${recordsFolder}/0001-first.md" = record;
+        ${recordPath} = record;
         "README.md" = readme;
       }
       // extraFiles;
@@ -60,7 +74,22 @@ in
   # Requirement: a set of records with valid front matter, and a citation of a
   # record that exists, pass the check.
   decisions-valid-set-passes = {
-    check = decisionsCheck (tree "valid-set" "# Title\n\nSee ADR 0001.\n" { });
+    check = decisionsCheck (tree "valid-set" "# Title\n\nSee ADR ${existingNumber}.\n" { });
+  };
+
+  # Requirement: a record whose front matter breaks the schema fails the
+  # check, and the log names the record and the field. The tree is the one of
+  # `decisions-valid-set-passes` with one changed field, so only the record
+  # can cause the failure.
+  decisions-unknown-status-fails = {
+    check = decisionsCheck (
+      tree "unknown-status" "# Title\n\nSee ADR ${existingNumber}.\n" {
+        ${recordPath} = recordWithUnknownStatus;
+      }
+    );
+    expectedLog = [
+      "${recordPath}:2: status: '${unknownStatus}' is not one of"
+    ];
   };
 
   # Requirement: a citation of a record that does not exist fails the check,
@@ -100,7 +129,7 @@ in
   # `decisions-no-exclude-fails`.
   decisions-exclude-passes = {
     check = decisionsCheckWith { exclude = [ "fixtures" ]; } (
-      tree "exclude" "# Title\n\nSee ADR 0001.\n" citingPage
+      tree "exclude" "# Title\n\nSee ADR ${existingNumber}.\n" citingPage
     );
   };
 
@@ -108,7 +137,7 @@ in
   # `decisions-exclude-passes` fails, and the log names the file of the
   # citation.
   decisions-no-exclude-fails = {
-    check = decisionsCheck (tree "no-exclude" "# Title\n\nSee ADR 0001.\n" citingPage);
+    check = decisionsCheck (tree "no-exclude" "# Title\n\nSee ADR ${existingNumber}.\n" citingPage);
     expectedLog = [
       "fixtures/cites.md:3: decision record ${missingNumber} does not exist"
     ];
