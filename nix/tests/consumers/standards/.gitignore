@@ -1,0 +1,2 @@
+# The dev shell links the Git hook configuration here.
+.pre-commit-config.yaml
