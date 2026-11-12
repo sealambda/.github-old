@@ -35,8 +35,8 @@ that no longer applies unless they check its status.
 Chosen option: "Delete the record and list it in a ledger" because the folder
 and the code then hold only records in force, and git keeps every old text.
 
-A record that a new record replaces is deleted in the pull request that adds
-the new record. The new record restates the whole current decision, so a reader
+A record that a new record replaces is deleted in the pull request that adds the
+new record. The new record restates the whole current decision, so a reader
 needs no other record to understand it. The ledger
 `docs/decisions/superseded.yaml` gets one entry for the deleted record: its
 number, title, the commit of its last text, its path in that commit, its
@@ -50,8 +50,8 @@ format of the record and the ledger. The hub's
 
 No surveyed source deletes a record, so this is a deliberate deviation from
 them. The deviation keeps their main rule, which is that an accepted record is
-immutable. The `sealambda/infra` repository decided this first, in its record
-0038. This record makes the rule that of every Sealambda repository.
+immutable. The `sealambda/infra` repository decided this first, in its
+record 0038. This record makes the rule that of every Sealambda repository.
 
 ### Consequences
 
@@ -80,22 +80,20 @@ that no file cites the deleted record except the ledger and its successor.
 
 [MADR](https://adr.github.io/madr/) lists "superseded by" as a status.
 [AWS Prescriptive Guidance](https://docs.aws.amazon.com/prescriptive-guidance/latest/architectural-decision-records/adr-process.html)
-says that an accepted ADR becomes immutable and that the new ADR supersedes
-it. The
+says that an accepted ADR becomes immutable and that the new ADR supersedes it.
+The
 [Azure Well-Architected Framework](https://learn.microsoft.com/en-us/azure/well-architected/architect-role/architecture-decision-record)
 calls the log append-only.
 [Michael Nygard](https://www.cognitect.com/blog/2011/11/15/documenting-architecture-decisions)
 keeps the old record and marks it superseded. The
 [GDS Way](https://gds-way.digital.cabinet-office.gov.uk/standards/architecture-decisions.html)
-marks a replaced ADR superseded, and allows an update for a minor
-clarification.
+marks a replaced ADR superseded, and allows an update for a minor clarification.
 
 - Good, because it is the common practice, and tools support it.
 - Good, because a search finds the old text, and no link changes.
-- Bad, because a reader can take an old record for a decision that holds.
-  Only its status line tells the difference.
-- Bad, because the folder grows with records that describe no current
-  decision.
+- Bad, because a reader can take an old record for a decision that holds. Only
+  its status line tells the difference.
+- Bad, because the folder grows with records that describe no current decision.
 
 ### Move the record to a subfolder for superseded records
 

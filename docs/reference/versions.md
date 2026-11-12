@@ -9,28 +9,28 @@ name of a nixpkgs attribute, and `flake.lock` pins one revision of
 Each shell except `base` includes `base` through `inputsFrom`. The `default`
 shell is `base`.
 
-| Shell | Package | nixpkgs attribute |
-| ----- | ------- | ----------------- |
-| `base` | actionlint | `actionlint` |
-| `base` | git | `git` |
-| `base` | gitleaks | `gitleaks` |
-| `base` | zizmor | `zizmor` |
-| `elixir` | Erlang/OTP 29 | `beam.packages.erlang_29.erlang` |
-| `elixir` | Elixir 1.20 | `beam.packages.erlang_29.elixir_1_20` |
-| `node` | Node.js 26 (LTS), without npm | `nodejs-slim_26` |
-| `node` | pnpm 12 | `pnpm_12` |
-| `tofu` | OpenTofu | `opentofu` |
-| `docs` | lychee | `lychee` |
-| `docs` | markdownlint-cli2 | `markdownlint-cli2` |
-| `docs` | Vale | `vale` |
-| `docs` | Vale style Google | `valeStyles.google` |
-| `docs` | Vale style Sealambda | The hub's `vale/Sealambda` folder |
+| Shell    | Package                       | nixpkgs attribute                     |
+| -------- | ----------------------------- | ------------------------------------- |
+| `base`   | actionlint                    | `actionlint`                          |
+| `base`   | git                           | `git`                                 |
+| `base`   | gitleaks                      | `gitleaks`                            |
+| `base`   | zizmor                        | `zizmor`                              |
+| `elixir` | Erlang/OTP 29                 | `beam.packages.erlang_29.erlang`      |
+| `elixir` | Elixir 1.20                   | `beam.packages.erlang_29.elixir_1_20` |
+| `node`   | Node.js 26 (LTS), without npm | `nodejs-slim_26`                      |
+| `node`   | pnpm 12                       | `pnpm_12`                             |
+| `tofu`   | OpenTofu                      | `opentofu`                            |
+| `docs`   | lychee                        | `lychee`                              |
+| `docs`   | markdownlint-cli2             | `markdownlint-cli2`                   |
+| `docs`   | Vale                          | `vale`                                |
+| `docs`   | Vale style Google             | `valeStyles.google`                   |
+| `docs`   | Vale style Sealambda          | The hub's `vale/Sealambda` folder     |
 
 ## Rules
 
 - Toolchains come from `nixpkgs-unstable`.
-- A consumer sets `inputs.nixpkgs.follows = "hub/nixpkgs"`, so every
-  repository evaluates the same nixpkgs revision.
+- A consumer sets `inputs.nixpkgs.follows = "hub/nixpkgs"`, so every repository
+  evaluates the same nixpkgs revision.
 - Renovate bumps the nixpkgs revision in `flake.lock`. A major version changes
   only when the attribute name changes.
 - Node.js moves between long-term support (LTS) majors only.

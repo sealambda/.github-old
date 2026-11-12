@@ -3,21 +3,20 @@
 A page states what is true now. This page defines the Vale rules that check
 that, and the places where they do not apply. The rule that a document describes
 only the current state is in
-[CONTRIBUTING.md](../../CONTRIBUTING.md#current-state-only). Google's
-style guide gives the same advice: write in the present tense.
+[CONTRIBUTING.md](../../CONTRIBUTING.md#current-state-only). Google's style
+guide gives the same advice: write in the present tense.
 
 The rules are the Vale style `Sealambda`. Its source is the folder
-`vale/Sealambda` in the hub. The `docs` check runs it with the style Google,
-as [Adopt the hub](../how-to/adopt-the-hub.md#gate-the-documentation)
-shows.
+`vale/Sealambda` in the hub. The `docs` check runs it with the style Google, as
+[Adopt the hub](../how-to/adopt-the-hub.md#gate-the-documentation) shows.
 
 ## Rules
 
-| Rule | Level | What it flags |
-| ---- | ----- | ------------- |
-| `Sealambda.CurrentState` | error | A word of a plan or a gap. |
-| `Sealambda.History` | suggestion | A word of a history. |
-| `Sealambda.Contractions` | error | A contraction, such as `isn't`. |
+| Rule                     | Level      | What it flags                   |
+| ------------------------ | ---------- | ------------------------------- |
+| `Sealambda.CurrentState` | error      | A word of a plan or a gap.      |
+| `Sealambda.History`      | suggestion | A word of a history.            |
+| `Sealambda.Contractions` | error      | A contraction, such as `isn't`. |
 
 The `docs` check runs Vale with `--minAlertLevel=error`. A finding of level
 error fails the check. A finding of level suggestion shows in an editor that
@@ -53,13 +52,13 @@ list cannot tell from a plan.
 - `docs/decisions/`, because a decision record states what a decision changes.
 - `docs/specs/`, because a design spec describes work that is not built yet.
 
-The folders can sit under another folder. A path such as `services/api/docs/specs/`
-counts too.
+The folders can sit under another folder. A path such as
+`services/api/docs/specs/` counts too.
 
 ### A true use of a listed word
 
-When a listed word is true, turn the rule off for the passage. Put the reason
-in a comment before it:
+When a listed word is true, turn the rule off for the passage. Put the reason in
+a comment before it:
 
 ```markdown
 <!-- This section quotes the wording of the vendor contract. -->
@@ -89,5 +88,5 @@ comments of code files (Python, Elixir, TypeScript, JavaScript, Go and Rust).
 These words describe the past of the system. History lives in git and in
 decision records, and a page states the current rationale. The level is
 suggestion, because a word of the list can have a true present meaning. An
-example is the sentence `The script is used to run the tests`. Change a
-flagged sentence when it tells a history. Leave it when it states a fact.
+example is the sentence `The script is used to run the tests`. Change a flagged
+sentence when it tells a history. Leave it when it states a fact.

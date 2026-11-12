@@ -12,13 +12,13 @@ decision-makers: Sealambda maintainers
 as the way to share CI steps. The hub's `docs.yml` workflow runs
 markdownlint-cli2, lychee and Vale in `nix develop .#docs`. That design has two
 costs. Vale reads the personal global configuration of each developer, so the
-same command can give different results on two machines. The flag
-`--no-global` stops that, but it also makes Vale ignore `VALE_STYLES_PATH`,
-which the Nix package of the styles sets. With the workflow, a repeatable
-result would need a step that links the styles into the project `StylesPath`,
-and a garbage-collector root that keeps the linked styles alive. The workflow
-has neither. How can one command give the same result locally and in CI,
-without that glue?
+same command can give different results on two machines. The flag `--no-global`
+stops that, but it also makes Vale ignore `VALE_STYLES_PATH`, which the Nix
+package of the styles sets. With the workflow, a repeatable result would need a
+step that links the styles into the project `StylesPath`, and a
+garbage-collector root that keeps the linked styles alive. The workflow has
+neither. How can one command give the same result locally and in CI, without
+that glue?
 
 ## Decision Drivers
 

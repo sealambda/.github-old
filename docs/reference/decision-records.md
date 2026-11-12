@@ -10,12 +10,12 @@ deleting a replaced record are in
 
 ## File name
 
-| Part | Rule |
-| ---- | ---- |
-| Folder | `docs/decisions/` |
-| Name | `NNNN-slug.md`: four digits, a dash, and a lowercase slug with dashes. |
+| Part   | Rule                                                                                      |
+| ------ | ----------------------------------------------------------------------------------------- |
+| Folder | `docs/decisions/`                                                                         |
+| Name   | `NNNN-slug.md`: four digits, a dash, and a lowercase slug with dashes.                    |
 | Number | Unique in the repository. A number is never reused, not even after the record is deleted. |
-| Format | [MADR 4.0.0](https://adr.github.io/madr/). Start from `templates/adr.md.tmpl`. |
+| Format | [MADR 4.0.0](https://adr.github.io/madr/). Start from `templates/adr.md.tmpl`.            |
 
 The folder holds the records, an optional `README.md`, and the ledger
 `superseded.yaml`.
@@ -24,26 +24,26 @@ The folder holds the records, an optional `README.md`, and the ledger
 
 Every record starts with a YAML block.
 
-| Key | Required | Value |
-| --- | -------- | ----- |
-| `status` | Yes | `proposed`, `accepted` or `rejected`. |
-| `date` | Yes | `YYYY-MM-DD`. The day the record was last updated. |
-| `decision-makers` | Yes | A name or a list of names. |
-| `consulted` | No | The people whose opinion was sought. |
-| `informed` | No | The people who are kept up to date. |
+| Key               | Required | Value                                              |
+| ----------------- | -------- | -------------------------------------------------- |
+| `status`          | Yes      | `proposed`, `accepted` or `rejected`.              |
+| `date`            | Yes      | `YYYY-MM-DD`. The day the record was last updated. |
+| `decision-makers` | Yes      | A name or a list of names.                         |
+| `consulted`       | No       | The people whose opinion was sought.               |
+| `informed`        | No       | The people who are kept up to date.                |
 
 A record may hold other keys, such as `domain`.
 
 ### Status
 
-| Value | Meaning |
-| ----- | ------- |
-| `proposed` | The decision is open for review. |
+| Value      | Meaning                                      |
+| ---------- | -------------------------------------------- |
+| `proposed` | The decision is open for review.             |
 | `accepted` | The decision holds. The record is immutable. |
-| `rejected` | The decision was considered and refused. |
+| `rejected` | The decision was considered and refused.     |
 
-There is no `superseded` status. A replaced record is deleted and listed in
-the ledger.
+There is no `superseded` status. A replaced record is deleted and listed in the
+ledger.
 
 ### Changes to an accepted record
 
@@ -59,10 +59,10 @@ holds.
 
 ## Ledger
 
-`docs/decisions/superseded.yaml` lists each record that a pull request
-deleted. The first deletion creates the file. It holds a YAML list with one
-entry for each deleted record, in the order of deletion. The author of the
-deletion writes the entry, and the reviewer opens its permalink.
+`docs/decisions/superseded.yaml` lists each record that a pull request deleted.
+The first deletion creates the file. It holds a YAML list with one entry for
+each deleted record, in the order of deletion. The author of the deletion writes
+the entry, and the reviewer opens its permalink.
 
 ```yaml
 - number: "NNNN"
@@ -73,22 +73,22 @@ deletion writes the entry, and the reviewer opens its permalink.
   date: YYYY-MM-DD
 ```
 
-| Field | Required | Value |
-| ----- | -------- | ----- |
-| `number` | Yes | The number of the deleted record, as a quoted string so that YAML keeps the leading zeros. Four digits. |
-| `title` | Yes | The title of the record at its last text. |
-| `commit` | Yes | The full 40-character hash of the last commit on `main` that changed the file. That commit holds the last text of the record. |
-| `path` | Yes | The path of the record in that commit. The folder can differ from `docs/decisions/` when the folder had another name then. The file name is the `number`, a dash and a slug, and ends in `.md`: `NNNN-slug.md`. |
+| Field       | Required                           | Value                                                                                                                                                                                                                         |
+| ----------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `number`    | Yes                                | The number of the deleted record, as a quoted string so that YAML keeps the leading zeros. Four digits.                                                                                                                       |
+| `title`     | Yes                                | The title of the record at its last text.                                                                                                                                                                                     |
+| `commit`    | Yes                                | The full 40-character hash of the last commit on `main` that changed the file. That commit holds the last text of the record.                                                                                                 |
+| `path`      | Yes                                | The path of the record in that commit. The folder can differ from `docs/decisions/` when the folder had another name then. The file name is the `number`, a dash and a slug, and ends in `.md`: `NNNN-slug.md`.               |
 | `successor` | Yes, except for a withdrawn record | The number of the record in force that replaced this one. When several records took over parts, the one that took over the decision. A record that no longer applies, and has no replacement, omits the key: it is withdrawn. |
-| `date` | Yes | `YYYY-MM-DD`. The day the record was replaced or withdrawn. |
+| `date`      | Yes                                | `YYYY-MM-DD`. The day the record was replaced or withdrawn.                                                                                                                                                                   |
 
 Rules for the entries:
 
 - A number in the ledger has no record file in the folder.
-- The file name of the `path` starts with the `number` of its entry and a
-  dash. A typo there would make a permalink to another record.
-- A successor is a record in force. When the successor is replaced in turn,
-  the entries that name it name its successor.
+- The file name of the `path` starts with the `number` of its entry and a dash.
+  A typo there would make a permalink to another record.
+- A successor is a record in force. When the successor is replaced in turn, the
+  entries that name it name its successor.
 - Only the ledger and the successor of a deleted record cite its number.
 
 The fields are the same as those of the ledger in the `sealambda/infra`

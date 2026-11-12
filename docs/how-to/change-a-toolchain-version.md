@@ -1,8 +1,8 @@
 # Change a toolchain version
 
 Move a package of a hub dev shell to another version. The
-[Toolchain versions](../reference/versions.md) page lists the attributes and
-the rules.
+[Toolchain versions](../reference/versions.md) page lists the attributes and the
+rules.
 
 ## Steps
 
