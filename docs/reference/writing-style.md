@@ -17,12 +17,13 @@ shows.
 | ---- | ----- | ------------- |
 | `Sealambda.CurrentState` | error | A word of a plan or a gap. |
 | `Sealambda.History` | suggestion | A word of a history. |
+| `Sealambda.Contractions` | error | A contraction, such as `isn't`. |
 
 The `docs` check runs Vale with `--minAlertLevel=error`. A finding of level
 error fails the check. A finding of level suggestion shows in an editor that
 runs Vale, and in a run of Vale without that flag.
 
-Both rules match whole words in any letter case. They skip code spans and code
+The rules match whole words in any letter case. They skip code spans and code
 blocks, so a flag or a command in code font never matches.
 
 ## Current state
@@ -66,6 +67,13 @@ in a comment before it:
 The vendor will be paid on the first day of the month.
 <!-- vale Sealambda.CurrentState = YES -->
 ```
+
+## Full forms
+
+`Sealambda.Contractions` flags a contraction, such as `isn't` or `it's`. Write
+the full form: `is not`, `it is`. The rule applies to Markdown and to the
+comments of code files (Python, Elixir, TypeScript, JavaScript, Go and Rust).
+`Google.Contractions` is off, because it asks for the opposite.
 
 ## History
 

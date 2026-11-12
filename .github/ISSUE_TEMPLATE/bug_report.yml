@@ -1,10 +1,10 @@
 name: Bug report
-description: Report something that doesn't work as documented.
+description: Report something that does not work as documented.
 body:
   - type: markdown
     attributes:
       value: |
-        Don't report a security vulnerability here. Read the security policy
+        Do not report a security vulnerability here. Read the security policy
         of this repository and report the vulnerability privately.
   - type: textarea
     id: summary

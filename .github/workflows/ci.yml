@@ -25,7 +25,7 @@ jobs:
       - run: nix flake check
 
   # The hub runs its own reusable workflow, as a consumer does. The `./`
-  # form stays because actionlint doesn't yet accept the `$/` form that
+  # form stays because actionlint does not yet accept the `$/` form that
   # zizmor suggests. No job lints the workflows or the documentation: the
   # flake check does both. The treefmt module runs actionlint and zizmor, and
   # the `docs` check runs markdownlint-cli2, lychee and Vale. The secrets scan
@@ -37,7 +37,7 @@ jobs:
       contents: read
 
   # The one required status check. It fails unless every job it needs
-  # succeeded, so a skipped or cancelled job can't pass by omission.
+  # succeeded, so a skipped or cancelled job cannot pass by omission.
   ci:
     name: ci
     if: always()

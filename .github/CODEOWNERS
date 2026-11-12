@@ -1,3 +1,3 @@
-# Code owners of this repository. GitHub doesn't inherit CODEOWNERS from the
+# Code owners of this repository. GitHub does not inherit CODEOWNERS from the
 # organization's .github repository, so each repository has its own file.
 * @sealambda/maintainers

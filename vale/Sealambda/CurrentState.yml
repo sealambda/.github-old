@@ -2,8 +2,8 @@
 # (docs/reference/writing-style.md).
 #
 # The words are signs of a plan or a gap: they belong in an issue. The match
-# is case-insensitive and word-bounded. Code spans and code blocks aren't
-# checked, so a flag in code font, such as `tofu apply -target`, doesn't match.
+# is case-insensitive and word-bounded. Code spans and code blocks are not
+# checked, so a flag in code font, such as `tofu apply -target`, does not match.
 # A true use of a listed word needs a Vale comment, with the reason in a
 # comment before it:
 #   <!-- vale Sealambda.CurrentState = NO -->
@@ -11,9 +11,9 @@
 #   <!-- vale Sealambda.CurrentState = YES -->
 # `config/vale.ini` turns the rule off for `docs/decisions/` and `docs/specs/`,
 # because a record states what a decision will change and a spec describes work
-# that isn't built yet.
-# The words "target" and "planned" aren't listed: they have a true present
-# meaning (a build target, a planned maintenance window) that a word list can't
+# that is not built yet.
+# The words "target" and "planned" are not listed: they have a true present
+# meaning (a build target, a planned maintenance window) that a word list cannot
 # tell from a plan.
 # Level: error. This rule is the same as the rule
 # of the sealambda/infra repository.

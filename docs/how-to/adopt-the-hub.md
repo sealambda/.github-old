@@ -121,7 +121,7 @@ the hub's version of each file into the repository.
    `StylesPath`, `.vale/styles`, holds only the tracked vocabularies. Do not run
    `vale sync`: the synced `.vale.ini` lists no packages. Do not pass
    `--no-global`: that flag makes Vale ignore `VALE_STYLES_PATH`, and Vale
-   then stops with the error "Style isn't on StylesPath."
+   then stops with the error `Style isn't on StylesPath.`
 
    To reproduce the gate, run `nix build .#checks.<system>.docs -L`, as
    [Gate the documentation](#gate-the-documentation) describes. For an
@@ -209,12 +209,14 @@ reference result.
 ### Write the current state
 
 The Vale style `Sealambda` keeps a page in the present tense.
-[Writing style](../reference/writing-style.md) defines its two rules:
+[Writing style](../reference/writing-style.md) defines its rules:
 
 - `Sealambda.CurrentState` has the level error. It fails the check on a word of
   a plan or a gap, such as `currently` or `will be`.
 - `Sealambda.History` has the level suggestion. The check does not report it. It
   shows in an editor that runs Vale.
+- `Sealambda.Contractions` has the level error. It fails the check on a
+  contraction.
 
 The synced `.vale.ini` turns `Sealambda.CurrentState` off for `docs/decisions/`
 and `docs/specs/`. To keep a listed word that is true in one passage, turn the
