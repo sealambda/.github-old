@@ -653,6 +653,35 @@ case_markdown_check_reads_untracked_files() {
   assert_commit_count 1
 }
 
+# The result of `docs` for every page depends on the configuration files of its
+# tools, so a commit that stages one of them and no Markdown file runs the hook
+# too. A commit of another file doesn't. Without the files in the pattern the
+# commits of the configuration files skip the hook, and CI is the first to run
+# it.
+case_docs_runs_when_a_configuration_file_of_its_tools_changes() {
+  new_repository docs-config
+
+  local file
+  for file in .markdownlint-cli2.yaml docs/.markdownlint-cli2.yaml lychee.toml \
+    .lycheeignore .vale/styles/config/vocabularies/Repository/accept.txt .vale.ini; do
+    mkdir -p "$(dirname "$REPO/$file")"
+    case $file in
+    *.yaml) stage_file "$file" $'config:\n  default: true' ;;
+    *.toml) stage_file "$file" "timeout = 20" ;;
+    .vale.ini) stage_file "$file" $'StylesPath = .vale/styles\nMinAlertLevel = suggestion' ;;
+    *) stage_file "$file" "example" ;;
+    esac
+    run_git commit --quiet --message "docs: change the configuration of the checks"
+    assert_accepted
+    assert_output_matches 'docs\.+Passed'
+  done
+
+  stage_file notes.txt "plain text"
+  run_git commit --quiet --message "docs: add the notes"
+  assert_accepted
+  assert_output_matches 'docs\.+\(no files to check\)Skipped'
+}
+
 # A staged workflow without `timeout-minutes` stops the commit at `workflows`.
 # The workflow passes the formatter, which also runs the workflow linters, so
 # the hook `workflows` is the one that refuses it. Without the hook the commit
@@ -822,6 +851,7 @@ main() {
     case_formatting_is_reverted_when_the_file_has_an_unstaged_edit
     case_markdown_violation_is_refused
     case_markdown_check_reads_untracked_files
+    case_docs_runs_when_a_configuration_file_of_its_tools_changes
     case_workflow_without_a_time_limit_is_refused
     case_hooks_read_the_staged_text
     case_secrets_scan_runs_on_a_commit_without_files

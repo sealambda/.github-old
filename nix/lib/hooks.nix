@@ -103,13 +103,17 @@
         };
 
         # The check of the Markdown files runs on the whole work tree, because
-        # lychee also checks the links to files that a changed page names.
+        # lychee also checks the links to files that a changed page names. It
+        # also runs when a staged file is a configuration file of its tools:
+        # the result for every page depends on those files. The pattern names
+        # the files that `docs/reference/wrapped-tools.md` lists as the
+        # configuration of a repository.
         docs = {
           enable = true;
           name = "docs";
           description = "Lints the Markdown files with the hub's rules.";
           entry = "${lib.getExe (mkDocsTools hubPkgs).checkDocs} .";
-          files = "\\.md$";
+          files = "\\.md$|(^|/)\\.markdownlint-cli2\\.|^(\\.vale/|\\.vale\\.ini$|lychee\\.toml$|\\.lycheeignore$)";
           pass_filenames = false;
         };
 

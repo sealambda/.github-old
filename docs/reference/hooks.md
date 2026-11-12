@@ -15,7 +15,7 @@ that a problem shows before CI does. The reasons for the design are in
 | Stage | Hook id | Command | Runs when | Fails when |
 | ----- | ------- | ------- | --------- | ---------- |
 | `pre-commit` | `treefmt` | The formatter of the repository, with `--fail-on-change`. | A staged file exists. | The formatter changed a file. The hook has formatted it: stage the result and commit again. |
-| `pre-commit` | `docs` | `check-docs .` | A staged file ends in `.md`. | markdownlint-cli2, lychee or Vale reports a problem. |
+| `pre-commit` | `docs` | `check-docs .` | A staged file ends in `.md`, or is a configuration file of the documentation tools. | markdownlint-cli2, lychee or Vale reports a problem. |
 | `pre-commit` | `workflows` | `workflows .` | A staged file is below `.github/workflows` or `workflow-templates`. | A job has no `timeout-minutes`, or a pull request workflow has no `concurrency` group. |
 | `pre-commit` | `secrets-scan` | `secrets-scan staged` | Every commit. | The scanner finds a secret in the staged changes. |
 | `commit-msg` | `gitpolicy-commit-msg` | `gitpolicy commit-msg --allow-autosquash` | Every commit. | The header isn't a Conventional Commit. |
@@ -27,8 +27,11 @@ rules of each tool are on its own page. Four facts about the hooks themselves:
 
 - `docs` checks the whole work tree, not only the staged files, because lychee
   also checks the links to files that a changed page names. It runs when a
-  staged file is Markdown. A change that only deletes a linked file doesn't run
-  it.
+  staged file is Markdown or a configuration file of the three tools:
+  `.vale.ini`, a file below `.vale/`, a file named `.markdownlint-cli2.*` in
+  any folder, `lychee.toml` or `.lycheeignore` at the top of the work tree,
+  because each of them changes the result for every page. A change that only
+  deletes a linked file doesn't run it.
 - `treefmt` formats the staged files in the work tree and then fails. What it
   leaves behind depends on the unstaged changes of the file, as
   [What the hooks read](#what-the-hooks-read) explains.
@@ -315,11 +318,11 @@ the ones that a repository uses:
   and in a `.git` folder, the installation in linked work trees, a clean commit
   and one refusal for each hook of the `pre-commit` stage: a badly formatted
   file, a Markdown violation, a workflow without `timeout-minutes` and a staged
-  false secret. They also cover the secret scan of a commit that only deletes a
-  file, what the hooks read when a file is staged in part, a bad message, a
-  `fixup!` commit, `SKIP`, a push from a branch with a bad name and the pushes
-  that skip the hook. The false secret is assembled when the test runs, so no
-  file holds it.
+  false secret. They also cover the run of `docs` for a configuration file, the
+  secret scan of a commit that only deletes a file, what the hooks read when a
+  file is staged in part, a bad message, a `fixup!` commit, `SKIP`, a push from
+  a branch with a bad name and the pushes that skip the hook. The false secret
+  is assembled when the test runs, so no file holds it.
 - The flake check `dev-shells` fails when a dev shell other than `hooks`
   carries a shell hook, or when `default` isn't `base`.
 - The flake check `lib-functions` has two cases for `extraHooks`.
