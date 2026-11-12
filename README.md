@@ -23,12 +23,15 @@ and keeps its own facts.
   organization's treefmt configuration, `lib.mkTreefmt`.
 - **Nix version.** `versions.json` holds the version of Nix that the hub's CI
   runs, with a JSON Schema in `schemas/`. A repository that calls the reusable
-  workflow `secrets.yml` runs the same version. The hub's workflows install it
-  with `cachix/install-nix-action`, and the flake check `versions` fails when a
-  step sets another `install_url` or uses an installer of Nix that it knows by
-  name or address. An unknown installer passes, and review covers it. The
-  check reads only the hub's own files, and the other workflows of a consumer
-  choose their own Nix.
+  workflow `secrets.yml` runs the same version. The jobs of the hub's `ci.yml`
+  install that version through the composite action `setup-nix`, which reads
+  `versions.json`
+  ([Setup Nix action](docs/reference/setup-nix-action.md)). The reusable
+  workflow `secrets.yml` sets the `install_url` of `cachix/install-nix-action`
+  as a literal. The flake check `versions` fails when a step sets another
+  `install_url` or uses an installer of Nix that it knows by name or address.
+  An unknown installer passes, and review covers it. The check reads only the
+  hub's own files, and the other workflows of a consumer choose their own Nix.
 - **Releases.** Every merge to `main` is covered by a release, a tag
   `v1.<minor>.<patch>` on the merged commit or on a later one. The first line
   of the note says

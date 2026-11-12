@@ -5,10 +5,19 @@ from pathlib import Path
 
 from decisions.findings import Finding
 from decisions.workflow_files import ActionsFile, Location, read_actions_files
+from versions.action_output import (
+    EXPRESSION_URL,
+    SETUP_NIX_ACTION,
+    check_producer,
+    is_expression_form,
+)
 from versions.installers import is_other_installer_action, script_installer_fragment
 
 INSTALL_ACTION = "cachix/install-nix-action"
 """The installer action whose `install_url` input pins the Nix version."""
+
+_EXPRESSION_HINT = f"; only {SETUP_NIX_ACTION} may use that expression"
+"""The ending of a finding on the expression form in another file."""
 
 
 def check_workflows(root: Path, expected_url: str | None) -> list[Finding]:
@@ -132,7 +141,8 @@ def _check_action(
 
     A step that doesn't install Nix is fine. A local action (`./path`) and a
     Docker image are skipped: the files of a local action are checked as
-    actions of their own.
+    actions of their own, so a job that installs Nix through a local action
+    stays under the rule through the installer step of that action.
     """
     uses = step.get("uses")
     if not isinstance(uses, str) or uses.startswith(("./", "docker://")):
@@ -155,13 +165,20 @@ def _check_install_url(
     step: dict[object, object],
     expected_url: str | None,
 ) -> Finding | None:
-    """Return a finding when the `install_url` of an installer step differs."""
+    """Return a finding when the `install_url` of an installer step differs.
+
+    The exact address always passes. The hub's setup action,
+    `.github/actions/setup-nix/action.yml`, may use one expression instead,
+    when its earlier step reads `versions.json` (`versions.action_output`).
+    """
     if expected_url is None:
         return None
     options = step.get("with")
     actual = options.get("install_url") if isinstance(options, dict) else None
     if actual == expected_url:
         return None
+    if is_expression_form(source, actual):
+        return check_producer(source, location)
     if actual is None:
         return source.finding(
             [*location, "uses"],
@@ -169,5 +186,6 @@ def _check_install_url(
         )
     return source.finding(
         [*location, "with", "install_url"],
-        f"install_url is {actual}; set it to {expected_url}",
+        f"install_url is {actual}; set it to {expected_url}"
+        + (_EXPRESSION_HINT if actual == EXPRESSION_URL else ""),
     )
