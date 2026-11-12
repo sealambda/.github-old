@@ -92,9 +92,6 @@ Rules for the entries:
   the entries that name it name its successor.
 - Only the ledger and the successor of a deleted record cite its number.
 
-A ledger entry keeps its fields when it moves between repositories that use
-this format.
-
 ## Citations
 
 A citation names a record, a spec or a page. A reader or a tool resolves it in
