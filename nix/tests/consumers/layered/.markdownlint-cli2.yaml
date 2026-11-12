@@ -1,0 +1,4 @@
+# The repository's own layer over the hub's base configuration. It switches off
+# the rule for heading levels and keeps every other rule of the hub.
+config:
+  MD001: false

@@ -67,7 +67,8 @@ first release gives `yes` without a comparison, because it has no previous
 release. A merge that changes no path gives `no`.
 
 A consumer reads the hub in four ways: through its flake (the `lib` functions,
-the apps, the files that `sync-config` copies and the Vale style), through the
+the apps, the files that `sync-config` copies, the base of the wrapped
+documentation tools and the Vale style), through the
 reusable workflow `secrets.yml`, through the Renovate preset `default.json`,
 and through the default community files that GitHub applies to every
 repository of the organization. A path is on the list only when none of the
@@ -94,7 +95,7 @@ that makes them rules:
 | `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`, `.github/pull_request_template.md`, `.github/ISSUE_TEMPLATE/**` | GitHub applies them to every repository of the organization that has no file of its own. A change reaches every repository. |
 | Every other path below `docs/`, such as `docs/PULL_REQUEST_TEMPLATE/**`, `docs/ISSUE_TEMPLATE/**` and a file directly in `docs/` | GitHub reads default community files from `docs/` as well as from the root and `.github/`. Its documentation names the pull request template and the folder `docs/PULL_REQUEST_TEMPLATE/` there. It places issue templates and discussion category forms in `.github/` only, and the hub still treats every unnamed folder as a rule, so it never has to decide which ones GitHub reads. |
 | `flake.nix`, `nix/lib/**`, `flake.lock`, `treefmt.nix` | The flake of every consumer. `nix/lib/` holds the functions that the flake exports as `lib` and the tools that its apps and checks run. |
-| `config/**` | `sync-config` copies them into every consumer. |
+| `config/**` | `sync-config` copies them into every consumer, and the wrappers of the `docs` check and shell read them from the Nix store as the base of Vale, markdownlint-cli2 and lychee ([Wrapped documentation tools](wrapped-tools.md)). |
 | `vale/Sealambda/*.yml` (the rules) | The Vale style of `mkDocsCheck`. |
 | `nix/scripts/**` | The tools that the flake runs. The `decisions` and `workflows` tools and `check-docs.sh` run in the checks of a consumer, and the `gitpolicy` tool runs in its CI and in a hook that it adds. |
 | `schemas/**` | The `decisions` tool validates records against them. |

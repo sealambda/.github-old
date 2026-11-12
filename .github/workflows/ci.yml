@@ -44,10 +44,10 @@ jobs:
           install_url: https://releases.nixos.org/nix/nix-2.35.4/install
       - run: nix flake check
 
-  # Builds the checks of the synthetic consumer
-  # `nix/tests/consumers/legacy` against this revision of the hub: a change
-  # that turns a consumer red turns this job red. The job uses no secret and
-  # holds a read-only token, so a pull request from a fork can run it.
+  # Builds the checks of the synthetic consumers `nix/tests/consumers/legacy`
+  # and `nix/tests/consumers/layered` against this revision of the hub: a
+  # change that turns a consumer red turns this job red. The job uses no secret
+  # and holds a read-only token, so a pull request from a fork can run it.
   consumer:
     name: synthetic consumer
     runs-on: ubuntu-latest
@@ -72,8 +72,14 @@ jobs:
           nix flake check --all-systems --no-write-lock-file
           --override-input hub "path:$PWD"
           "path:$PWD/nix/tests/consumers/legacy"
+      # The layered consumer holds no copy of the tool configuration, so it
+      # has no `sync-config` step.
+      - run: >-
+          nix flake check --all-systems --no-write-lock-file
+          --override-input hub "path:$PWD"
+          "path:$PWD/nix/tests/consumers/layered"
       # The `sync-config` app of this checkout writes the synced files into the
-      # fixture. A tracked file that changes, or a file that the app adds,
+      # legacy fixture. A tracked file that changes, or a file that the app adds,
       # means that the copies in the fixture and the app disagree. `git diff`
       # doesn't show an untracked file, so the step reads `git status`. The step
       # overlaps the check `config-in-sync` above: it also runs the app as a

@@ -9,7 +9,8 @@ Microsoft's style guides give the same advice: write in the present tense.
 The rules are the Vale style `Sealambda`. Its source is the folder
 `vale/Sealambda` in the hub. The `docs` check runs it with the styles Microsoft
 and Readability, as [Adopt the hub](../how-to/adopt-the-hub.md#gate-the-documentation)
-shows.
+shows. A repository can switch a rule off in its own `.vale.ini`, as
+[Wrapped documentation tools](wrapped-tools.md#vale) states.
 
 ## Rules
 
@@ -46,7 +47,8 @@ list can't tell from a plan.
 
 ### Where the rule is off
 
-`config/vale.ini` turns `Sealambda.CurrentState` off in two folders:
+The hub's Vale base, `config/vale.ini`, turns `Sealambda.CurrentState` off in
+two folders:
 
 - `docs/decisions/`, because a decision record states what a decision changes.
 - `docs/specs/`, because a design spec describes work that isn't built yet.

@@ -200,17 +200,17 @@
         docs = mkDocsCheck pkgs self;
         formatting = treefmtFor.${pkgs.stdenv.hostPlatform.system}.config.build.check self;
 
-        # Runs the tests of `nix/scripts/check-docs.sh`. The tests need a
-        # writable HOME and the commands `check-docs`, `sync-config` and `vale`
-        # on PATH. `vale` is the Vale with the hub's styles.
+        # Runs the tests of `nix/tests/check-docs.sh`. The tests need a
+        # writable HOME and the commands `check-docs`, `sync-config` and the
+        # three wrapped tools on PATH, the same commands as the `docs` shell.
         check-docs-tests =
           pkgs.runCommand "check-docs-tests"
             {
               nativeBuildInputs = [
                 docsToolsFor.${pkgs.stdenv.hostPlatform.system}.checkDocs
-                docsToolsFor.${pkgs.stdenv.hostPlatform.system}.valeWithStyles
                 (mkSyncConfig pkgs)
-              ];
+              ]
+              ++ docsToolsFor.${pkgs.stdenv.hostPlatform.system}.tools;
             }
             ''
               HOME="$TMPDIR" bash ${./nix/tests/check-docs.sh}

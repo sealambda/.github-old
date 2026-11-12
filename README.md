@@ -41,10 +41,13 @@ and keeps its own facts.
 - **Tool configuration.** Settings for the tools that read only a file in the
   repository: EditorConfig, markdownlint-cli2, Vale and lychee. The
   `sync-config` app copies the files, and the `config-in-sync` check fails
-  when a copy differs.
+  when a copy differs. The `docs` check and the `docs` dev shell take the
+  rules of the last three from the hub without a copy, and a repository's own
+  file adds to them ([Wrapped documentation tools](docs/reference/wrapped-tools.md)).
 - **CI building blocks.** The reusable workflow `secrets.yml` (gitleaks), the
-  flake check `lib.mkDocsCheck` (markdownlint-cli2, lychee and Vale with the
-  hub's own style, which keeps pages in the present tense), and the
+  flake check `lib.mkDocsCheck` (markdownlint-cli2, lychee and Vale, each
+  wrapped with the hub's base configuration, and the hub's own Vale style,
+  which keeps pages in the present tense), and the
   flake check `lib.mkDecisionsCheck`, which validates the decision records and
   every citation of a record, a spec or a page. The JSON Schemas of the records
   and the ledger are in `schemas/`. The `decisions` app retires a record into
@@ -77,6 +80,7 @@ The pages follow [Diátaxis](https://diataxis.fr/).
   [leak check](docs/reference/leak-check.md),
   [workflow checks](docs/reference/workflow-checks.md), the
   [Git policy](docs/reference/git-policy.md),
+  [wrapped documentation tools](docs/reference/wrapped-tools.md),
   [licensing](docs/reference/licensing.md),
   [CI of the hub](docs/reference/hub-ci.md) and
   [hub releases](docs/reference/hub-releases.md).
@@ -85,6 +89,8 @@ The pages follow [Diátaxis](https://diataxis.fr/).
   explains the decision records check, and
   [ADR 0006](docs/decisions/0006-check-commits-and-branches-with-a-hub-tool.md)
   explains why the Git policy is a hub tool.
+  [ADR 0007](docs/decisions/0007-layer-the-repository-configuration-over-a-hub-base.md)
+  explains how a repository's configuration layers over the hub's base.
 - **Templates.** [Templates](templates/README.md) for decision records and
   pages.
 

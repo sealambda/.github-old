@@ -110,10 +110,65 @@ the hub.
    [preset](../reference/renovate-preset.md) already sets. To change one, such
    as the `schedule`, set it in the repository.
 
-## Sync the tool configuration
+## Set up the tool configuration
 
-Some tools read only a file in the repository. The `sync-config` app copies
-the hub's version of each file into the repository.
+The documentation tools take the hub's rules from the hub, with no copy in the
+repository, as [Gate the documentation](#gate-the-documentation) says. A
+repository sets up its own configuration files in one of two shapes. The
+shapes differ in whether the repository holds copies of the hub's files, and
+that decides whether the check `config-in-sync` applies.
+
+The check `config-in-sync` (`lib.mkConfigCheck`) compares five files with the
+hub's: `.editorconfig`, `.markdownlint-cli2.yaml`, `.vale.ini`, the Vale
+vocabulary `Sealambda` and `lychee.toml`. It fails when one is missing or
+differs, so a local addition to a copy fails it. A repository keeps the check
+only while it keeps every copy unchanged.
+
+### Layer your own configuration
+
+This shape is the recommended one. The repository holds no copy of the hub's
+files. It holds only what it adds to the hub's rules, and it has no
+`config-in-sync` check. The synthetic consumer `nix/tests/consumers/layered`
+has this shape.
+
+1. Add the `docs` check next to `formatting` in the set that `checks` defines
+   through `forAllSystems` ([Add the toolchain](#add-the-toolchain)), and no
+   `config-in-sync`:
+
+   ```nix
+   checks = forAllSystems (pkgs: {
+     formatting = treefmtFor.${pkgs.stdenv.hostPlatform.system}.config.build.check self;
+     docs = hub.lib.mkDocsCheck pkgs self;
+   });
+   ```
+
+2. Add the files that the repository needs: a `.vale.ini`, a
+   `.markdownlint-cli2.yaml`, a `lychee.toml` or a `.lycheeignore`.
+   [Wrapped documentation tools](../reference/wrapped-tools.md) says what each
+   file can add. A `.vale.ini` that lists a vocabulary starts with
+   `StylesPath = .vale/styles` and `Vocab = Repository`. The vocabulary is the
+   file `.vale/styles/config/vocabularies/Repository/accept.txt`, with one term
+   per line. Vale stops with an error when a listed vocabulary is missing.
+3. Don't run `sync-config` in this repository. The app overwrites `.vale.ini`,
+   `.markdownlint-cli2.yaml` and `lychee.toml` with the hub's copies and drops
+   the repository's additions.
+
+Editors and the shell formatter read `.editorconfig` from the repository. The
+hub's file is `config/editorconfig`. No check keeps a repository's
+`.editorconfig` equal to it when the repository has no `config-in-sync` check,
+so the repository copies the file again when it takes a hub revision that
+changes it.
+
+To relax a markdownlint rule for one directory, add a `.markdownlint-cli2.yaml`
+to it. markdownlint-cli2 merges that file with the hub's base, as the hub does
+in `.github`.
+
+### Keep the synced copies
+
+This shape is for a repository that keeps every copy exactly as the hub writes
+it. The `sync-config` app copies the hub's version of each file into the
+repository, and the check `config-in-sync` keeps the copies equal to it. A
+repository that holds the copies gets the same findings as one that doesn't.
 
 1. Run `nix run --inputs-from . hub#sync-config` in the repository root, as
    [Run a hub app](#run-a-hub-app) explains. Commit the files that it writes.
@@ -121,44 +176,7 @@ the hub's version of each file into the repository.
    `.vale/styles/config/vocabularies/Repository/accept.txt`, with one term per
    line. An empty file is valid. The synced `.vale.ini` lists this vocabulary,
    and Vale stops with an error when a listed vocabulary is missing.
-3. Run Vale in the hub's `docs` dev shell. Its Vale comes from the hub's
-   `vale.withStyles` package, which sets `VALE_STYLES_PATH`, so Vale finds the
-   Microsoft, Readability and Sealambda styles in the Nix store. The project
-   `StylesPath`, `.vale/styles`, holds only the tracked vocabularies. Don't run
-   `vale sync`: the synced `.vale.ini` lists no packages. Don't pass
-   `--no-global`: that flag makes Vale ignore `VALE_STYLES_PATH`, and Vale
-   then stops with the error "Style isn't on StylesPath."
-
-   To reproduce the gate, run `nix build .#checks.<system>.docs -L`, as
-   [Gate the documentation](#gate-the-documentation) describes. For an
-   interactive run, enter the dev shell and run Vale on a file, with no flags:
-
-   ```sh
-   nix develop .#docs
-   vale <file>
-   ```
-
-   Define the repository's own `docs` shell with `inputsFrom =
-   [ hub.devShells.<system>.docs ]`, or add the same Vale package to it.
-
-   If an earlier `vale sync` left a style directory such as
-   `.vale/styles/Microsoft`, delete each style directory but keep `config`:
-   `rm -rf -- .vale/styles/Microsoft .vale/styles/Readability`. Vale takes a
-   rule from the Nix style when both paths hold a rule of the same name, but a
-   stale rule that only the old directory has still runs. Keep, or add, these
-   two rules in the repository's `.gitignore`, so that nobody commits a
-   leftover style directory:
-
-   ```gitignore
-   .vale/styles/*
-   !.vale/styles/config/
-   ```
-
-   Outside `nix develop` or direnv, for example in an editor extension, Vale
-   finds no styles and reports the same error. Start the editor from the dev
-   shell, or use direnv with the flake.
-
-4. To fail CI when a copy differs from the hub, add this attribute next to
+3. To fail CI when a copy differs from the hub, add this attribute next to
    `formatting` in the set that `checks` defines through `forAllSystems`
    ([Add the toolchain](#add-the-toolchain)):
 
@@ -169,18 +187,64 @@ the hub's version of each file into the repository.
 The check compares the copies with the hub revision that `flake.lock` pins. To
 take a newer revision, run `nix flake update hub`, then `sync-config`.
 
-To relax a markdownlint rule for one directory, add a `.markdownlint-cli2.yaml`
-to it. markdownlint-cli2 merges that file with the synced one at the root, as
-the hub does in `.github`.
+A repository that adds a term to a copy of `.vale.ini`, changes another copy,
+or removes one, fails `config-in-sync`. It removes the attribute, as the
+layered shape does, and keeps its additions in its own files.
+
+### Run Vale in the dev shell
+
+Both shapes use the same wrapper. The `vale` of the hub's `docs` dev shell
+starts a Vale that has the Microsoft, Readability and Sealambda styles in the
+Nix store and the hub's base configuration. The project `StylesPath`,
+`.vale/styles`, holds only the tracked vocabularies and the styles of the
+repository. Don't run `vale sync`: the configuration lists no packages. Don't
+pass `--no-global`: that flag makes Vale ignore the base and the styles, and
+Vale then stops with an error.
+
+To reproduce the gate, run `nix build .#checks.<system>.docs -L`, as
+[Gate the documentation](#gate-the-documentation) describes. For an interactive
+run, enter the dev shell and run Vale on a file, with no flags:
+
+```sh
+nix develop .#docs
+vale <file>
+```
+
+Define the repository's own `docs` shell with `inputsFrom =
+[ hub.devShells.<system>.docs ]`, or add the three wrapped tools to it.
+
+If an earlier `vale sync` left a style directory such as
+`.vale/styles/Microsoft`, delete each style directory but keep `config`:
+`rm -rf -- .vale/styles/Microsoft .vale/styles/Readability`. Vale takes a rule
+from the Nix style when both paths hold a rule of the same name, but a stale
+rule that only the old directory has still runs. Keep, or add, these two rules
+in the repository's `.gitignore`, so that nobody commits a leftover style
+directory:
+
+```gitignore
+.vale/styles/*
+!.vale/styles/config/
+```
+
+Outside `nix develop` or direnv, for example in an editor extension, Vale finds
+no styles and reports the same error. Start the editor from the dev shell, or
+use direnv with the flake.
 
 ## Gate the documentation
 
 The `docs` check lints every Markdown file with markdownlint-cli2, lychee and
 Vale. Where the Nix sandbox is enabled, which it always is on Linux CI, the
-check reads no personal configuration and needs no network. Every tool reads
-its configuration from the repository, so the repository needs the files that
-`sync-config` writes and the `Repository` Vale vocabulary
-([Sync the tool configuration](#sync-the-tool-configuration)).
+check reads no personal configuration and needs no network. Each tool starts
+with the hub's base configuration from the Nix store, so a repository needs no
+configuration file to pass the hub's rules, and the check needs no synced copy
+and no `config-in-sync` check. To add to the rules, put a file in the
+repository: a `.vale.ini` with the repository's vocabulary or a section for a
+folder, a `.markdownlint-cli2.yaml`, a `lychee.toml` or a `.lycheeignore`.
+[Set up the tool configuration](#set-up-the-tool-configuration) shows the two
+shapes of these files.
+[Wrapped documentation tools](../reference/wrapped-tools.md) states what each
+file can add and what it can't change, and that the hub doesn't prevent a file
+from switching a rule off, so the review of the file is the control.
 
 1. Add the check to the set that `checks` defines through `forAllSystems` in the
    repository's `flake.nix`. Pass `self`, not a list of Markdown files, because
@@ -208,9 +272,9 @@ the same version of each tool and of each Vale style, and `nix flake update hub`
 updates them. The repository needs no `nixpkgs.follows = "hub/nixpkgs"` for this
 check, and no hub package set that it passes by hand.
 
-For an interactive run or an editor, use the `docs` dev shell. A personal
-global Vale configuration can change the result there. The check is the
-reference result.
+For an interactive run or an editor, use the `docs` dev shell. It has the same
+three wrapped tools as the check, so a command in the shell gives the result of
+the check, and no personal Vale configuration changes it.
 
 ### Write the current state
 
@@ -222,21 +286,23 @@ The Vale style `Sealambda` keeps a page in the present tense.
 - `Sealambda.History` has the level suggestion. The check doesn't report it. It
   shows in an editor that runs Vale.
 
-The synced `.vale.ini` turns `Sealambda.CurrentState` off for `docs/decisions/`
-and `docs/specs/`. To keep a listed word that's true in one passage, turn the
-rule off for that passage with a Vale comment, as the reference shows.
+The hub's Vale configuration turns `Sealambda.CurrentState` off for
+`docs/decisions/` and `docs/specs/`. To keep a listed word that's true in one
+passage, turn the rule off for that passage with a Vale comment, as the
+reference shows.
 
-The synced `lychee.toml` also checks the anchors of local links. A link such as
-`page.md#heading`, or `#heading` in the same file, fails when the page has no
-such heading.
+The hub's lychee configuration also checks the anchors of local links. A link
+such as `page.md#heading`, or `#heading` in the same file, fails when the page
+has no such heading.
 
 ### Take the hub revision with the style
 
 A hub revision that adds the style `Sealambda` and the anchor check breaks a
 repository whose pages break them.
 
-1. Run `nix flake update hub`, then
-   `nix run --inputs-from . hub#sync-config`. Commit the files that it writes.
+1. Run `nix flake update hub`. If the repository keeps the synced copies, run
+   `nix run --inputs-from . hub#sync-config` and commit the files that it
+   writes.
 2. Run `nix build .#checks.<system>.docs -L`. Change each page that
    `Sealambda.CurrentState` flags to state what's true now. Move a plan or an
    open question into an issue. Fix each link that the anchor check reports.

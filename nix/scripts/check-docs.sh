@@ -6,28 +6,25 @@
 #
 # SRC is a directory, normally the `self` source of a flake: a read-only path
 # in the Nix store with no Git history. The script changes into SRC and runs
-# each tool there, so every tool reads its configuration from SRC and never
-# from the hub: the synced `.markdownlint-cli2.yaml`, `lychee.toml` and
-# `.vale.ini`, the repository's own `Repository` Vale vocabulary, and the
-# nested `.markdownlint-cli2.yaml` files. The flake check `config-in-sync`
-# guarantees that the synced files match the hub. This script is the only
-# place that holds the flags of the three tools. `nix/lib/docs.nix` wraps it
-# with `writeShellApplication`, which also runs shellcheck on it, and builds
-# the flake check `docs` and the function `lib.mkDocsCheck` on it. The flake
-# check `check-docs-tests` runs `nix/tests/check-docs.sh` against it.
+# each tool there. The tools on `PATH` are the hub's wrappers from
+# `nix/lib/docs.nix`: each one adds the hub's base configuration from the Nix
+# store to the configuration files of SRC, which are the repository's own
+# `.vale.ini` and `Repository` Vale vocabulary, its `.markdownlint-cli2.yaml`
+# files, its `lychee.toml` and its `.lycheeignore`. A repository with no such
+# file gets the hub's rules alone. This script is the only place that holds
+# the flags of the three tools. `nix/lib/docs.nix` wraps it with
+# `writeShellApplication`, which also runs shellcheck on it, and builds the
+# flake check `docs` and the function `lib.mkDocsCheck` on it. The flake check
+# `check-docs-tests` runs `nix/tests/check-docs.sh` against it.
 #
 # The script runs all three tools even when an earlier one fails, so that one
 # run reports every problem. Vale finds its styles through `VALE_STYLES_PATH`,
 # which the hub's `vale.withStyles` package sets. The script must not pass
-# `--no-global` to Vale, because that flag makes Vale ignore the variable.
+# `--no-global` to Vale, because that flag makes Vale ignore the variable and
+# the hub's base configuration.
 #
 # No tool writes into SRC: lychee runs offline without its cache, and the
 # other two tools only read. This matters because SRC can be read-only.
-#
-# lychee builds its HTTP client at startup, even when it runs offline, and the
-# client needs a trust store. The Nix sandbox has none, so `nix/lib/docs.nix`
-# sets `SSL_CERT_FILE` to the pinned `cacert` bundle when it wraps this
-# script. No request ever uses that bundle.
 #
 # Exit status: 0 when every tool passes, 1 when at least one tool fails, 2
 # when the arguments are wrong or SRC is not a directory.

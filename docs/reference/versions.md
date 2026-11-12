@@ -29,6 +29,10 @@ shell is `base`.
 | `docs` | Vale style Readability | `valeStyles.readability` |
 | `docs` | Vale style Sealambda | The hub's `vale/Sealambda` folder |
 
+The `docs` shell holds the hub's wrappers of lychee, markdownlint-cli2 and Vale,
+not the bare tools. Each wrapper starts the package of the table with the hub's
+base configuration, as [Wrapped documentation tools](wrapped-tools.md) states.
+
 ## Nix
 
 The dev shells hold no Nix. The CI installs it, so its version isn't a nixpkgs
