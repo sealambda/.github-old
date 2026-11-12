@@ -232,3 +232,6 @@ The flake check `lib-functions` runs
 the same layers through `lib.mkDocsCheck`. The synthetic consumers `legacy` and
 `layered` build the checks for the two shapes of
 [Adopt the hub in a repository](../how-to/adopt-the-hub.md#set-up-the-tool-configuration).
+The check `docs` of `layered` passes without the base too, so its check
+`docs-hub-base` lints one page that breaks a rule of each tool's base and
+passes only when the docs check fails on all three findings.
