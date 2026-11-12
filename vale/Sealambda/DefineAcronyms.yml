@@ -1,0 +1,61 @@
+# A reader must find the meaning of an acronym on the page where it first
+# appears (docs/reference/writing-style.md#define-acronyms).
+#
+# `first` finds an acronym: two to six capital letters as a whole word. The
+# same shape is the acronym exception of HeadingCase.yml.
+# `second` finds a definition: the words of the full name, then the acronym in
+# parentheses, as in "continuous integration (CI)". A definition earlier on the
+# page, in reading order, covers the later uses. An acronym that the list of
+# `exceptions` names, or that the `Sealambda` vocabulary accepts, needs no
+# definition. The match is case-sensitive, so a plural such as "ADRs" and a
+# name in mixed case such as "NixOS" aren't acronyms. Code spans and code
+# blocks aren't checked.
+# The pattern of `second` has no nested quantifier: each of at most six words
+# ends at a required space, so the matcher can't backtrack without limit.
+# Microsoft.Acronyms is a suggestion with a shorter list and needs a
+# definition that starts with capital letters. This rule is the house rule and
+# has its own level.
+# Level: warning. Tests: DefineAcronyms.test.yml.
+extends: conditional
+message: "'%s' has no definition. Write the full name first, then the acronym in parentheses."
+link: https://github.com/sealambda/.github/blob/main/docs/reference/writing-style.md#define-acronyms
+level: warning
+ignorecase: false
+first: '\b([A-Z]{2,6})\b'
+second: '\b(?:[A-Za-z][A-Za-z-]*\s+){1,6}\(([A-Z]{2,6})\)'
+exceptions:
+  - API
+  - CD
+  - CI
+  - CLI
+  - CPU
+  - CSS
+  - CSV
+  - DNS
+  - FAQ
+  - FIXME
+  - GPU
+  - HTML
+  - HTTP
+  - HTTPS
+  - ID
+  - IDE
+  - JSON
+  - NOTE
+  - OK
+  - OS
+  - PDF
+  - PR
+  - README
+  - SQL
+  - SSH
+  - SSL
+  - TLS
+  - TODO
+  - TOML
+  - URI
+  - URL
+  - UTC
+  - UTF
+  - XML
+  - YAML

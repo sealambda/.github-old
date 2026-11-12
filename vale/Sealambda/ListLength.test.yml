@@ -1,0 +1,113 @@
+# Cases for ListLength.yml: a list has 2 to 7 items. A nested list counts on its
+# own, and the items of a nested list don't count for the outer list. The cases
+# use `contains` because the flake check loads the style under a name that has
+# a store hash.
+- name: list-of-8-items-is-flagged
+  rule: ListLength.yml
+  input: |
+    - One
+    - Two
+    - Three
+    - Four
+    - Five
+    - Six
+    - Seven
+    - Eight
+  contains: "Sealambda.ListLength:Keep a list to 2 to 7 items."
+
+- name: list-of-7-items-is-clean
+  rule: ListLength.yml
+  input: |
+    - One
+    - Two
+    - Three
+    - Four
+    - Five
+    - Six
+    - Seven
+  want: ""
+
+- name: list-of-2-items-is-clean
+  rule: ListLength.yml
+  input: |
+    - One
+    - Two
+  want: ""
+
+- name: list-of-1-item-is-flagged
+  rule: ListLength.yml
+  input: |
+    - One
+  contains: "Sealambda.ListLength:Keep a list to 2 to 7 items."
+
+- name: ordered-list-of-8-items-is-flagged
+  rule: ListLength.yml
+  input: |
+    1. One
+    2. Two
+    3. Three
+    4. Four
+    5. Five
+    6. Six
+    7. Seven
+    8. Eight
+  contains: "Sealambda.ListLength:Keep a list to 2 to 7 items."
+
+- name: ordered-list-of-1-item-is-flagged
+  rule: ListLength.yml
+  input: |
+    1. One
+  contains: "Sealambda.ListLength:Keep a list to 2 to 7 items."
+
+- name: nested-items-don-t-count-for-the-outer-list
+  rule: ListLength.yml
+  input: |
+    - One
+      - One one
+      - One two
+      - One three
+      - One four
+    - Two
+      - Two one
+      - Two two
+      - Two three
+      - Two four
+    - Three
+  want: ""
+
+- name: long-nested-list-is-flagged
+  rule: ListLength.yml
+  input: |
+    - One
+      - One one
+      - One two
+      - One three
+      - One four
+      - One five
+      - One six
+      - One seven
+      - One eight
+    - Two
+  contains: "Sealambda.ListLength:Keep a list to 2 to 7 items."
+
+- name: single-item-nested-list-is-flagged
+  rule: ListLength.yml
+  input: |
+    - One
+      - One one
+    - Two
+  contains: "Sealambda.ListLength:Keep a list to 2 to 7 items."
+
+- name: paragraphs-are-clean
+  rule: ListLength.yml
+  input: |
+    One. Two. Three. Four. Five. Six. Seven. Eight.
+  want: ""
+
+- name: list-in-a-code-block-is-clean
+  rule: ListLength.yml
+  input: |
+    ```markdown
+    - One
+    ```
+  want: ""

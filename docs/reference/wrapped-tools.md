@@ -228,7 +228,8 @@ nested and root markdownlint files, with lychee exclusions and with the legacy
 copies, and it compares the findings of a project that holds the copies with
 those of a project that holds none. It also covers the vocabulary of the hub,
 the `MinAlertLevel` setting that doesn't lower the alert level, the unset
-`VALE_CONFIG_PATH`, the Vale files in the home folder and above the project, the
+`VALE_CONFIG_PATH`, a page that breaks only rules of the level warning and
+still passes, the Vale files in the home folder and above the project, the
 files above the project that markdownlint-cli2 and lychee ignore, and each
 setting of the section
 [What a repository can switch off](#what-a-repository-can-switch-off).

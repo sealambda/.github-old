@@ -365,18 +365,28 @@ the check, and no personal Vale configuration changes it.
 
 ### Write the current state
 
-The Vale style `Sealambda` keeps a page in the present tense.
-[Writing style](../reference/writing-style.md) defines its two rules:
+The Vale style `Sealambda` keeps a page in the present tense and in the house
+style. [Writing style](../reference/writing-style.md) defines its rules:
 
 - `Sealambda.CurrentState` has the level error. It fails the check on a word of
   a plan or a gap, such as `currently` or `will be`.
 - `Sealambda.History` has the level suggestion. The check doesn't report it. It
   shows in an editor that runs Vale.
+- The other rules of the style have the level warning. They don't fail the
+  check, and the check doesn't print them. They show in an editor that runs
+  Vale and in a run of Vale without `--minAlertLevel=error`, for example
+  `vale .` in the `docs` dev shell. A hub revision that adds a warning rule
+  leaves the result of the check unchanged. The table in
+  [Writing style](../reference/writing-style.md#rules) lists them.
+- The length rules need Vale 3.21 or later. The `docs` check and the `docs`
+  dev shell pin a newer version. An editor that runs its own Vale needs
+  version 3.21 or later.
 
 The hub's Vale configuration turns `Sealambda.CurrentState` off for
-`docs/decisions/` and `docs/specs/`. To keep a listed word that's true in one
-passage, turn the rule off for that passage with a Vale comment, as the
-reference shows.
+`docs/decisions/` and `docs/specs/`. It turns `Sealambda.HowToTitle` and
+`Sealambda.StepLength` on for `docs/how-to/` only. To keep a listed word that's
+true in one passage, turn the rule off for that passage with a Vale comment, as
+the reference shows.
 
 The hub's lychee configuration also checks the anchors of local links. A link
 such as `page.md#heading`, or `#heading` in the same file, fails when the page

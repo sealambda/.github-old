@@ -1,0 +1,84 @@
+# Cases for FillerWords.yml: a filler word is flagged as a whole word in any
+# letter case, and not in code. The cases use `contains` because the flake
+# check loads the style under a name that has a store hash.
+- name: just-is-flagged
+  rule: FillerWords.yml
+  input: |
+    Just run the command.
+  contains: "Sealambda.FillerWords:Delete 'Just'. It adds no fact."
+
+- name: simply-is-flagged
+  rule: FillerWords.yml
+  input: |
+    Simply open the file.
+  contains: "Sealambda.FillerWords:Delete 'Simply'. It adds no fact."
+
+- name: adverb-in-the-middle-of-a-sentence-is-flagged
+  rule: FillerWords.yml
+  input: |
+    The step is basically a copy.
+  contains: "Sealambda.FillerWords:Delete 'basically'. It adds no fact."
+
+- name: uppercase-filler-is-flagged
+  rule: FillerWords.yml
+  input: |
+    This is OBVIOUSLY a copy.
+  contains: "Sealambda.FillerWords:Delete 'OBVIOUSLY'. It adds no fact."
+
+- name: of-course-is-flagged
+  rule: FillerWords.yml
+  input: |
+    Of course the file exists.
+  contains: "Sealambda.FillerWords:Delete 'Of course'. It adds no fact."
+
+- name: please-note-that-is-flagged
+  rule: FillerWords.yml
+  input: |
+    Please note that the path is absolute.
+  contains: "Sealambda.FillerWords:Delete 'Please note that'. It adds no fact."
+
+- name: it-should-be-noted-that-is-flagged
+  rule: FillerWords.yml
+  input: |
+    It should be noted that the path is absolute.
+  contains: "Sealambda.FillerWords:Delete 'It should be noted that'. It adds no fact."
+
+- name: it-is-important-to-note-that-is-flagged
+  rule: FillerWords.yml
+  input: |
+    It is important to note that the path is absolute.
+  contains: "Sealambda.FillerWords:Delete 'It is important to note that'. It adds no fact."
+
+- name: single-word-fillers-are-flagged
+  rule: FillerWords.yml
+  input: |
+    The run is actually clearly literally merely essentially short.
+  contains: "Sealambda.FillerWords:Delete 'essentially'. It adds no fact."
+
+- name: needless-to-say-is-flagged
+  rule: FillerWords.yml
+  input: |
+    Needless to say, the path is absolute.
+  contains: "Sealambda.FillerWords:Delete 'Needless to say'. It adds no fact."
+
+- name: just-in-time-is-clean
+  rule: FillerWords.yml
+  input: |
+    A just-in-time build starts on demand.
+  want: ""
+
+- name: word-that-contains-a-filler-is-clean
+  rule: FillerWords.yml
+  input: |
+    The adjustment is a justification of the unactually.
+  want: ""
+
+- name: filler-in-code-is-clean
+  rule: FillerWords.yml
+  input: |
+    Run `just build` and read the output.
+
+    ```text
+    simply actually basically
+    ```
+  want: ""

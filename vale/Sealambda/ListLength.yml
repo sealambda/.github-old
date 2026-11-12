@@ -1,0 +1,20 @@
+# A list has 2 to 7 items: a single item is a sentence, and a reader can't scan
+# a list of more than seven (docs/reference/writing-style.md#list-length).
+#
+# `metric` with the formula `list` counts the items of a list, and it counts
+# the items of a nested list too, so the count of an outer list can't be
+# trusted. The two scopes select the lists with a CSS selector instead: a list
+# whose own children include an eighth item, and a list whose only child is one
+# item. The counts of the formula then only need to be above zero. Each list is
+# reported at its first item. The message has no count, because Vale prints a
+# metric value with two decimals.
+# Level: warning. Tests: ListLength.test.yml.
+extends: metric
+message: "Keep a list to 2 to 7 items. Merge a single item into the text, or split a long list."
+link: https://github.com/sealambda/.github/blob/main/docs/reference/writing-style.md#list-length
+level: warning
+scope:
+  - 'doc(ul:has(> li:nth-child(8)), ol:has(> li:nth-child(8)))'
+  - 'doc(ul:has(> li:only-child), ol:has(> li:only-child))'
+formula: list
+condition: "> 0"

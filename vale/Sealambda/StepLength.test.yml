@@ -1,0 +1,71 @@
+# Cases for StepLength.yml: a step of a numbered list has at most 20 words. The
+# rule checks no bulleted list and no paragraph. The cases use `contains`
+# because the flake check loads the style under a name that has a store hash.
+- name: step-of-21-words-is-flagged
+  rule: StepLength.yml
+  input: |
+    1. Open one two three four five six seven eight nine ten eleven twelve
+       thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty.
+    2. Short.
+  contains: "Sealambda.StepLength:This step has more than 20 words. Split it into two steps."
+
+- name: step-of-20-words-is-clean
+  rule: StepLength.yml
+  input: |
+    1. Open one two three four five six seven eight nine ten eleven twelve
+       thirteen fourteen fifteen sixteen seventeen eighteen nineteen.
+    2. Short.
+  want: ""
+
+- name: long-step-between-short-steps-is-flagged
+  rule: StepLength.yml
+  input: |
+    1. Short.
+    2. Open one two three four five six seven eight nine ten eleven twelve
+       thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty.
+    3. Short.
+  contains: "Sealambda.StepLength:This step has more than 20 words. Split it into two steps."
+
+- name: code-span-is-not-counted-in-a-step
+  rule: StepLength.yml
+  input: |
+    1. Run `one two three four five six seven eight nine ten eleven twelve
+       thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty`.
+    2. Short.
+  want: ""
+
+- name: nested-list-is-not-part-of-the-step
+  rule: StepLength.yml
+  input: |
+    1. Open the file.
+       - One two three four five six seven eight nine ten.
+       - Eleven twelve thirteen fourteen fifteen sixteen seventeen.
+    2. Short.
+  want: ""
+
+- name: second-paragraph-of-a-step-is-not-counted
+  rule: StepLength.yml
+  input: |
+    1. Open the file.
+
+       One two three four five six seven eight nine ten eleven twelve
+       thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty
+       twentyone.
+
+    2. Short.
+  want: ""
+
+- name: long-bullet-is-clean
+  rule: StepLength.yml
+  input: |
+    - Open one two three four five six seven eight nine ten eleven twelve
+      thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty.
+    - Short.
+  want: ""
+
+- name: long-paragraph-is-clean
+  rule: StepLength.yml
+  input: |
+    Open one two three four five six seven eight nine ten eleven twelve
+    thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty.
+  want: ""

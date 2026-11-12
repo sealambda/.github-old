@@ -1,0 +1,87 @@
+# Cases for HowToTitle.yml: the title (the heading of level 1) starts with an
+# imperative verb, so a question, a label or a gerund at the start is flagged.
+# The rule checks no other heading. The cases use `contains` because the flake
+# check loads the style under a name that has a store hash.
+- name: how-to-title-is-flagged
+  rule: HowToTitle.yml
+  input: |
+    # How to adopt the hub
+  contains: "Sealambda.HowToTitle:Start the title with an imperative verb, not 'How to'."
+
+- name: question-title-is-flagged
+  rule: HowToTitle.yml
+  input: |
+    # How do I adopt the hub
+  contains: "Sealambda.HowToTitle:Start the title with an imperative verb, not 'How do'."
+
+- name: guide-title-is-flagged
+  rule: HowToTitle.yml
+  input: |
+    # Guide to the hub
+  contains: "Sealambda.HowToTitle:Start the title with an imperative verb, not 'Guide to'."
+
+- name: tutorial-title-is-flagged
+  rule: HowToTitle.yml
+  input: |
+    # Tutorial for the hub
+  contains: "Sealambda.HowToTitle:Start the title with an imperative verb, not 'Tutorial'."
+
+- name: gerund-title-is-flagged
+  rule: HowToTitle.yml
+  input: |
+    # Setting up the hub
+  contains: "Sealambda.HowToTitle:Start the title with an imperative verb, not 'Setting up'."
+
+- name: gerund-in-any-letter-case-is-flagged
+  rule: HowToTitle.yml
+  input: |
+    # USING the hub
+  contains: "Sealambda.HowToTitle:Start the title with an imperative verb, not 'USING'."
+
+- name: imperative-title-is-clean
+  rule: HowToTitle.yml
+  input: |
+    # Adopt the hub
+  want: ""
+
+- name: noun-title-is-clean
+  rule: HowToTitle.yml
+  input: |
+    # Wrapped documentation tools
+  want: ""
+
+- name: gerund-that-is-also-a-noun-is-clean
+  rule: HowToTitle.yml
+  input: |
+    # Writing style
+  want: ""
+
+- name: word-that-starts-like-a-gerund-is-clean
+  rule: HowToTitle.yml
+  input: |
+    # Usingness and runningly
+  want: ""
+
+- name: opener-in-a-lower-heading-is-clean
+  rule: HowToTitle.yml
+  input: |
+    # Adopt the hub
+
+    ## Using the preset
+
+    ## How to read the log
+  want: ""
+
+- name: opener-in-the-middle-of-a-title-is-clean
+  rule: HowToTitle.yml
+  input: |
+    # Learn how to adopt the hub
+  want: ""
+
+- name: opener-in-a-paragraph-is-clean
+  rule: HowToTitle.yml
+  input: |
+    # Adopt the hub
+
+    How to adopt the hub is on this page.
+  want: ""

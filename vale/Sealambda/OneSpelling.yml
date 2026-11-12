@@ -1,0 +1,27 @@
+# A page uses one spelling for a word, so a reader and a search find every use
+# (docs/reference/writing-style.md#one-spelling).
+#
+# Each key is the spelling to avoid, and each value is the spelling to use.
+# The match is case-sensitive, so a character class such as `[Ee]` accepts a
+# capital at the start of a sentence. `matchcase` gives the replacement the
+# case of the match, which is why a brand name such as "GitHub" can't be a
+# key: its replacement would take the wrong case. Pairs that split by part of
+# speech, such as "set up" and "setup", aren't on the list either. Code spans
+# and code blocks aren't checked.
+# Level: warning. Tests: OneSpelling.test.yml.
+extends: substitution
+message: "Use '%s' instead of '%s'."
+link: https://github.com/sealambda/.github/blob/main/docs/reference/writing-style.md#one-spelling
+level: warning
+ignorecase: false
+matchcase: true
+action:
+  name: replace
+swap:
+  '[Ee]-mail': email
+  '[Ww]eb[ -]site': website
+  '[Dd]ata[ -]base': database
+  '[Mm]eta[ -]data': metadata
+  '[Tt]ime-out': timeout
+  '[Tt]ool[ -]chain': toolchain
+  '[Ww]ork[ -]flow': workflow

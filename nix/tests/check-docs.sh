@@ -166,6 +166,61 @@ add_every_hub_finding() {
   write_page guide.md "The server currently runs NixOS."
 }
 
+# The rules of the style `Sealambda` that have the level warning. Each one has
+# a finding in the page that `add_every_warning` writes. The list is kept by
+# hand: a new rule of the level warning goes into this list and into the page.
+readonly WARNING_RULES=(
+  DefineAcronyms
+  OneSpelling
+  FillerWords
+  HeadingCase
+  HowToTitle
+  SentenceLength
+  ParagraphLength
+  ListLength
+  StepLength
+)
+
+# The page of `add_every_warning`, a path relative to the project. It is in
+# `docs/how-to/`, because the hub's base turns HowToTitle and StepLength on only
+# there.
+readonly WARNINGS_PAGE=docs/how-to/warnings.md
+
+# Writes the page WARNINGS_PAGE into the project. It has one finding for each
+# rule in WARNING_RULES and no finding of the level error:
+# - the title `Using the hub` starts with a gerund (HowToTitle);
+# - the heading `Title Case Heading` is not in sentence case (HeadingCase);
+# - `SBOM` has no definition (DefineAcronyms), `e-mail` is the unused spelling
+#   (OneSpelling) and `Just` is a filler word (FillerWords);
+# - the first paragraph has 7 sentences (ParagraphLength) and the second one is
+#   a sentence of 30 words (SentenceLength);
+# - the bulleted list has 1 item (ListLength);
+# - the first numbered step has 27 words (StepLength).
+# The word `previously` has a finding of the level suggestion (History), which
+# `assert_warnings_leave_the_gate_unchanged` uses to tell the two levels apart.
+add_every_warning() {
+  mkdir -p "$PROJECT/$(dirname -- "$WARNINGS_PAGE")"
+  cat >"$PROJECT/$WARNINGS_PAGE" <<'EOF'
+# Using the hub
+
+## Title Case Heading
+
+The SBOM lists every part. Just send an e-mail. Read the page. Read the page.
+Read the page. Read the page. Read the page.
+
+This sentence has many words in it so that a reader must keep the whole thing
+in mind before the full stop arrives at the end of the line here.
+
+The page was previously longer.
+
+- One item
+
+1. Open the file and read each line of the long text that follows, then write
+   down every word that you find in it before you go on.
+2. Stop.
+EOF
+}
+
 # Writes the output of the last run into the file $1, with the parts that
 # differ between two projects replaced: the path of the project, the time that
 # lychee prints, and the order of the lines.
@@ -336,6 +391,174 @@ case_history_term_does_not_fail() {
 
   assert_status 0
   assert_output_contains "Sealambda.History:'previously' may describe history"
+}
+
+# Runs `vale` without the level flag, as an editor does, on the files $1 and
+# later, paths relative to the project. Sets STATUS to its exit status and
+# writes its output to OUT, one finding per line.
+run_vale_plain() {
+  STATUS=0
+  (cd "$PROJECT" && vale --output=line "$@") >"$OUT" 2>&1 || STATUS=$?
+}
+
+# Runs `vale` like `run_vale_plain`, with `--minAlertLevel` set to the level $1
+# (`suggestion`, `warning` or `error`). The files are $2 and later.
+run_vale_at_level() {
+  local level=$1
+  shift
+  STATUS=0
+  (cd "$PROJECT" && vale --output=line --minAlertLevel="$level" "$@") >"$OUT" 2>&1 || STATUS=$?
+}
+
+# Asserts, in the project that holds the page of `add_every_warning`, that the
+# findings of level warning don't change the gate, and that the rules have that
+# level and not another. The check passes and prints no finding of the style
+# `Sealambda`. A Vale run without the level flag, which is what an editor runs,
+# passes too and reports each rule of WARNING_RULES and the suggestion
+# `Sealambda.History`: the check passes because of the level, and not because a
+# rule is missing. A run at the level warning reports each rule of
+# WARNING_RULES and not `Sealambda.History`: a rule that dropped to the level
+# suggestion would be missing, and the first run could not tell.
+assert_warnings_leave_the_gate_unchanged() {
+  local rule
+
+  run_check "$PROJECT"
+
+  assert_status 0
+  assert_output_lacks "Sealambda."
+
+  run_vale_plain "$WARNINGS_PAGE"
+
+  assert_status 0
+  assert_output_contains "Sealambda.History"
+  for rule in "${WARNING_RULES[@]}"; do
+    assert_output_contains "Sealambda.$rule"
+  done
+
+  run_vale_at_level warning "$WARNINGS_PAGE"
+
+  assert_status 0
+  assert_output_lacks "Sealambda.History"
+  for rule in "${WARNING_RULES[@]}"; do
+    assert_output_contains "Sealambda.$rule"
+  done
+}
+
+# A page that breaks only rules of the level warning passes the check in a
+# legacy project, and a plain Vale run reports every one of those rules. The
+# hub's base file gives the rules their level, so a consumer that syncs the file
+# sees no change of the gate when the hub adds a warning rule. Mutation: setting
+# one of the rules to `error` in `vale/Sealambda` makes this case fail.
+case_warning_rules_do_not_fail_a_legacy_project() {
+  new_project warnings-legacy
+  add_every_warning
+
+  assert_warnings_leave_the_gate_unchanged
+}
+
+# The same page passes in a bare project, which has no configuration file: the
+# wrapped tools carry the hub's base configuration and the style.
+case_warning_rules_do_not_fail_a_bare_project() {
+  new_bare_project warnings-bare
+  add_every_warning
+
+  assert_warnings_leave_the_gate_unchanged
+}
+
+# Writes the page $1, a path relative to the project, that has a finding of
+# HowToTitle (the title `Using the hub`) and one of StepLength (a first step of
+# 27 words) wherever the two rules are on. The list has two items, so
+# ListLength has no finding. The long step is also a sentence of more than 25
+# words, so SentenceLength has a finding on every page: it shows that Vale ran
+# the style, and not only that two rules stayed silent.
+write_how_to_findings_page() {
+  mkdir -p "$(dirname -- "$PROJECT/$1")"
+  cat >"$PROJECT/$1" <<'EOF'
+# Using the hub
+
+1. Open the file and read each line of the long text that follows, then write
+   down every word that you find in it before you go on.
+2. Stop.
+EOF
+}
+
+# Asserts, in the project of the running case, that HowToTitle and StepLength
+# are on for the pages of a `how-to` folder, also under another folder, and off
+# for any other page. Each page runs alone, so a finding names its page.
+assert_how_to_rules_follow_the_folder() {
+  local page
+
+  for page in docs/how-to/page.md services/api/docs/how-to/page.md; do
+    write_how_to_findings_page "$page"
+    run_vale_plain "$page"
+    assert_status 0
+    assert_output_contains "Sealambda.HowToTitle"
+    assert_output_contains "Sealambda.StepLength"
+  done
+
+  for page in docs/reference/page.md docs/explanation/page.md page.md; do
+    write_how_to_findings_page "$page"
+    run_vale_plain "$page"
+    assert_status 0
+    assert_output_contains "Sealambda.SentenceLength"
+    assert_output_lacks "Sealambda.HowToTitle"
+    assert_output_lacks "Sealambda.StepLength"
+  done
+}
+
+# The two rules that check how-to pages are on for a page in `docs/how-to/` and
+# off for any other page, in a legacy project. The hub's base file has a
+# section for the folder, so the two rules don't flag a reference page or an
+# explanation page. Mutation: deleting the section `docs/how-to` from
+# `config/vale.ini` makes this case fail.
+case_how_to_rules_apply_only_in_how_to_pages_of_a_legacy_project() {
+  new_project how-to-legacy
+
+  assert_how_to_rules_follow_the_folder
+}
+
+# The same holds in a bare project, whose base comes from the wrapper.
+case_how_to_rules_apply_only_in_how_to_pages_of_a_bare_project() {
+  new_bare_project how-to-bare
+
+  assert_how_to_rules_follow_the_folder
+}
+
+# The rules `Sealambda.HeadingCase` and `Sealambda.DefineAcronyms` read the
+# vocabularies, and the heading `Third-party content` stays clean in a run that
+# has a vocabulary. The rule test run of `vale-style-tests` has no vocabulary,
+# so it can't show either. The first run has a `Repository` vocabulary with the
+# name `Zorblax` and the acronym `ZZZ`, and it has no finding of the two rules.
+# The second run empties the vocabulary, and both rules flag the same page: the
+# vocabulary, and not a missing rule, made the first run clean. The second run
+# has the Vale errors of the spelling rule, so its exit status isn't asserted.
+# Mutation: removing `(?-i)` from the acronym exception of `HeadingCase.yml`
+# makes the first run flag `Third-party content`.
+case_heading_and_acronym_rules_read_the_vocabularies() {
+  new_project rule-vocabularies
+  write_file .vale/styles/config/vocabularies/Repository/accept.txt "Zorblax
+ZZZ"
+  write_file guide.md "# Guide
+
+## Third-party content
+
+## Install the Zorblax
+
+The ZZZ runs fast."
+
+  run_vale_plain guide.md
+
+  assert_status 0
+  assert_output_lacks "Sealambda.HeadingCase"
+  assert_output_lacks "Sealambda.DefineAcronyms"
+
+  : >"$PROJECT/.vale/styles/config/vocabularies/Repository/accept.txt"
+
+  run_vale_plain guide.md
+
+  assert_output_contains "Sealambda.HeadingCase:Write 'Install the Zorblax' in sentence case."
+  assert_output_contains "Sealambda.DefineAcronyms:'ZZZ' has no definition."
+  assert_output_lacks "Third-party content"
 }
 
 # The rule `Sealambda.CurrentState` is off for the decision records and the
@@ -994,6 +1217,11 @@ main() {
     case_current_state_term_fails
     case_current_state_non_hits_pass
     case_history_term_does_not_fail
+    case_warning_rules_do_not_fail_a_legacy_project
+    case_warning_rules_do_not_fail_a_bare_project
+    case_how_to_rules_apply_only_in_how_to_pages_of_a_legacy_project
+    case_how_to_rules_apply_only_in_how_to_pages_of_a_bare_project
+    case_heading_and_acronym_rules_read_the_vocabularies
     case_current_state_is_off_for_decisions_and_specs
     case_local_anchors_are_checked
     case_no_local_file_applies_the_hub_rules

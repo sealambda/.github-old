@@ -1,0 +1,61 @@
+# A heading is in sentence case: the first word and the proper names start with
+# a capital letter, and the other words don't
+# (docs/reference/writing-style.md#heading-case).
+#
+# `$sentence` compares each word of a heading with its sentence-case form and
+# flags the heading when fewer than 80 percent of the words match. The
+# `exceptions` keep the words that are right with a capital letter or without
+# one:
+# - an acronym of two to six capital letters, such as "CI" (the shape that
+#   DefineAcronyms.yml finds);
+# - the public names of tools and products that the hub's pages mention,
+#   including the names that start with a lowercase letter;
+# - the six section headings of the MADR template, which fixes their case.
+# The names in the list are the ones that the hub's pages use in a heading.
+# They stay in this file and not in the `Sealambda` vocabulary, because the
+# rule's own test run has no vocabulary and can't test a name that only the
+# vocabulary holds. A repository adds its own names to its `Repository`
+# vocabulary, which the rule reads because `vocab` is on. Code spans in a
+# heading aren't checked.
+# `Microsoft.Headings` is a suggestion with the same mechanism and its own list
+# of names (docs/reference/writing-style.md#heading-case).
+# The colon in `indicators` makes the word after a colon start a sentence, as
+# in `Microsoft.Headings`.
+# The acronym pattern starts with `(?-i)`. Without it, Vale 3.25 flags correct
+# headings such as "Third-party content" in a run that has a vocabulary. The
+# rule's own test run has none, so the case
+# `case_heading_and_acronym_rules_read_the_vocabularies` in
+# `nix/tests/check-docs.sh` holds that behavior.
+# Each exception is a fixed string or a bounded character class, so the
+# matcher can't backtrack without limit.
+# Level: warning. Tests: HeadingCase.test.yml.
+extends: capitalization
+message: "Write '%s' in sentence case."
+link: https://github.com/sealambda/.github/blob/main/docs/reference/writing-style.md#heading-case
+level: warning
+scope: heading
+match: $sentence
+indicators:
+  - ':'
+exceptions:
+  - '(?-i)[A-Z]{2,6}'
+  - GitHub
+  - GitHub Apps
+  - Git
+  - Nix
+  - NixOS
+  - Renovate
+  - Vale
+  - Markdown
+  - Python
+  - Sealambda
+  - lychee
+  - markdownlint-cli2
+  - git-hooks.nix
+  - pre-commit
+  - Context and Problem Statement
+  - Decision Drivers
+  - Considered Options
+  - Decision Outcome
+  - Pros and Cons of the Options
+  - More Information
