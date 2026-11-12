@@ -5,9 +5,7 @@ gitignore: true
 noInlineConfig: true
 
 config:
-  # Tables and code blocks keep long lines.
-  MD013:
-    tables: false
-    code_blocks: false
+  # Prettier owns the layout, so markdownlint keeps the structure rules.
+  extends: markdownlint/style/prettier
   # Tables stay compact.
   MD060: false

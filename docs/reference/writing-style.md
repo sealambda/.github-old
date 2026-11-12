@@ -74,6 +74,12 @@ the full form: `is not`, `it is`. The rule applies to Markdown and to the
 comments of code files (Python, Elixir, TypeScript, JavaScript, Go and Rust).
 `Google.Contractions` is off, because it asks for the opposite.
 
+## Line length
+
+Prettier wraps the prose of a Markdown file at 80 columns. Run `nix fmt` to wrap
+it. The `formatting` check fails on a file that Prettier would change.
+markdownlint checks the structure of a page and not the length of a line.
+
 ## History
 
 `Sealambda.History` flags these words:

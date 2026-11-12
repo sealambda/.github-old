@@ -29,7 +29,7 @@ keeps its own facts.
   a copy differs.
 - **CI building blocks.** The reusable workflow `secrets.yml` (gitleaks) and the
   flake check `lib.mkDocsCheck` (markdownlint-cli2, lychee and Vale with the
-  hub's own style, which keeps pages in the present tense).
+  Google style and the hub's own style, which keeps pages in the present tense).
 
 ## Documentation
 

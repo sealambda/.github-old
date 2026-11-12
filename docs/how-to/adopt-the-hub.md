@@ -240,6 +240,21 @@ repository whose pages break them.
    hand, if there is one. The old call `hub.lib.mkDocsCheck pkgs self` still
    works.
 
+### Take the hub revision with the prose standard
+
+A hub revision that refuses contractions and formats Markdown with Prettier
+changes the result of the `docs` and `formatting` checks of a repository.
+
+1. Run `nix flake update hub`, then `nix run --inputs-from . hub#sync-config`.
+   Commit the files that it writes.
+2. Remove the repository's own Prettier setup for Markdown. The hub's `*.md`
+   override wins: treefmt passes `--config`, so Prettier ignores a `.prettierrc`
+   of the repository.
+3. Replace each contraction with its full form in Markdown and in the comments
+   of `.py`, `.ex`, `.exs`, `.ts`, `.tsx`, `.js`, `.mjs`, `.go` and `.rs` files.
+   Run `nix build .#checks.<system>.docs -L` to list them.
+4. Run `nix fmt` once. Commit the result.
+
 ## Call the reusable workflow
 
 The hub offers the reusable workflow `secrets.yml`. It runs its tool from the
