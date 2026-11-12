@@ -1,0 +1,29 @@
+# A page writes full forms: "does not", not the contraction of the two words
+# (docs/reference/writing-style.md#full-forms). A contraction is harder to
+# read for a person who learns English as a second language, and a machine
+# translation can miss it.
+#
+# The rule has three tokens:
+#
+# - a word that ends in "n't", such as "isn't" and "can't";
+# - the words "it", "that", "what", "there", "here", "who", "let", "he", "she",
+#   "where", "how" and "when" with "'s", such as "it's";
+# - a word with "'re", "'ve", "'ll", "'d" or "'m", such as "they're".
+#
+# The match is whole-word in any letter case, and it takes the straight and the
+# curly apostrophe. A possessive such as "the hub's base" does not match,
+# because the second token lists the words that take "'s" as a contraction.
+# Code spans and code blocks are not checked, so a quoted message of a tool
+# stays as written when it is in code. The rule replaces Google.Contractions,
+# which asks for the opposite and which config/vale.ini turns off. Every token
+# is a fixed pattern of letters, so the matcher cannot backtrack without limit.
+# Level: error.
+extends: existence
+message: "Write the full form instead of the contraction '%s'."
+link: https://github.com/sealambda/.github/blob/main/docs/reference/writing-style.md#full-forms
+level: error
+ignorecase: true
+tokens:
+  - "[a-z]+n['’]t"
+  - "(?:it|that|what|there|here|who|let|he|she|where|how|when)['’]s"
+  - "[a-z]+['’](?:re|ve|ll|d|m)"

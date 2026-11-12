@@ -1,0 +1,17 @@
+# A sentence has at most 25 words (docs/reference/writing-style.md#sentence-length).
+# A short sentence is easier to read for a person who learns English as a
+# second language, and a machine translation keeps its meaning better.
+#
+# A word is a run of letters, digits, hyphens and apostrophes. The scope skips
+# the cells of a table, where a cell holds a phrase and not a sentence. Vale
+# also skips code spans and code blocks. A bare file name that ends in ".md" and
+# ends a sentence, such as "see page.md.", can make Vale join two sentences, so
+# a flagged sentence can be a false positive. A link or a code span does not.
+# Level: error.
+extends: occurrence
+message: "Split this sentence: it has more than 25 words."
+link: https://github.com/sealambda/.github/blob/main/docs/reference/writing-style.md#sentence-length
+level: error
+scope: sentence & ~table.cell
+max: 25
+token: '\b[\w''’-]+\b'

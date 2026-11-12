@@ -12,13 +12,13 @@ decision-makers: Sealambda maintainers
 as the way to share CI steps. The hub's `docs.yml` workflow runs
 markdownlint-cli2, lychee and Vale in `nix develop .#docs`. That design has two
 costs. Vale reads the personal global configuration of each developer, so the
-same command can give different results on two machines. The flag
-`--no-global` stops that, but it also makes Vale ignore `VALE_STYLES_PATH`,
-which the Nix package of the styles sets. With the workflow, a repeatable
-result would need a step that links the styles into the project `StylesPath`,
-and a garbage-collector root that keeps the linked styles alive. The workflow
-has neither. How can one command give the same result locally and in CI,
-without that glue?
+same command can give different results on two machines. The flag `--no-global`
+stops that, but it also makes Vale ignore `VALE_STYLES_PATH`, which the Nix
+package of the styles sets. With the workflow, a repeatable result would need a
+step that links the styles into the project `StylesPath`. It would also need a
+garbage-collector root that keeps the linked styles alive. The workflow has
+neither. How can one command give the same result locally and in CI, without
+that glue?
 
 ## Decision Drivers
 
@@ -46,7 +46,7 @@ markdownlint-cli2, lychee and Vale on `src`. A repository adds
 does the same, and removes the `docs.yml` workflow and the `docs` job of its
 `ci` workflow. This amends ADR 0001 for documentation only: `secrets.yml` stays
 a reusable workflow, because gitleaks needs the Git history, which a flake
-source doesn't contain.
+source does not contain.
 
 The `docs` dev shell stays for interactive runs and editors.
 
@@ -55,15 +55,15 @@ The `docs` dev shell stays for interactive runs and editors.
 - Good, because `nix flake check`, or `nix build .#checks.<system>.docs -L`, is
   the one command, in CI and locally.
 - Good, because Nix caches the result by the hash of the source, so a local
-  re-run on an unchanged tree doesn't check it again. CI gains this caching
+  re-run on an unchanged tree does not check it again. CI gains this caching
   only with a binary cache.
 - Good, because the check reads no personal configuration and, on Linux, has no
   network. lychee runs offline, and the Vale styles are in the Nix store.
 - Good, because the gate needs no `--no-global` flag, link script or
   garbage-collector root.
-- Bad, because this is a breaking change for each consumer: it must replace its
-  `docs` job with the check and update any required-check rule that names the
-  job.
+- Bad, because this is a breaking change for each consumer. It must replace its
+  `docs` job with the check. It must also update any required-check rule that
+  names the job.
 - Bad, because a failure shows in the log of the `nix flake check` step, not in
   a separate job.
 - Bad, because the Vale in the dev shell differs from the gate when a developer
@@ -82,9 +82,9 @@ The `docs` dev shell stays for interactive runs and editors.
 
 ### A flake check
 
-- Good, because it's the usual Nix form of a lint gate, as in treefmt-nix.
+- Good, because it is the usual Nix form of a lint gate, as in treefmt-nix.
 - Good, because the sandbox gives a repeatable result without a flag.
-- Good, because it's cached and runs the same way everywhere.
+- Good, because it is cached and runs the same way everywhere.
 - Bad, because a consumer must change its flake and its CI.
 
 ### git-hooks.nix
@@ -92,7 +92,7 @@ The `docs` dev shell stays for interactive runs and editors.
 - Good, because it runs the same tools on a commit and in a flake check.
 - Bad, because it adds an input and a layer to maintain for three commands.
 - Bad, because a hook that runs Vale from a flake check meets the same Vale
-  lookup problem, so it solves nothing that the flake check doesn't.
+  lookup problem. So it solves nothing that the flake check does not.
 
 ## More Information
 

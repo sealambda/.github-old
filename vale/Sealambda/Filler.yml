@@ -1,0 +1,20 @@
+# A page does not use a filler word (docs/reference/writing-style.md#filler-words).
+# The words "simply", "actually", "really" and "just" add no fact, and "simply"
+# can read as condescending.
+#
+# The match is whole-word in any letter case. The word "just" is allowed in
+# "just-in-time", "just before" and "just now", where it has a true meaning.
+# The scope skips table cells and headings. Code spans and code blocks are not
+# checked.
+# Level: error.
+extends: existence
+message: "Remove the filler word '%s'."
+link: https://github.com/sealambda/.github/blob/main/docs/reference/writing-style.md#filler-words
+level: error
+ignorecase: true
+scope: ~table.cell & ~heading
+tokens:
+  - simply
+  - actually
+  - really
+  - 'just(?!-in-time| before| now)'

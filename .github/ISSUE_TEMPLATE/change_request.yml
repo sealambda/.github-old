@@ -19,4 +19,4 @@ body:
     id: alternatives
     attributes:
       label: Alternatives
-      description: List other ways to solve the problem, and why you didn't choose them.
+      description: List other ways to solve the problem, and why you did not choose them.
