@@ -77,7 +77,7 @@ four reads it.
 | ------- | ------------------------ |
 | `docs/how-to/**`, `docs/reference/**`, `docs/decisions/**`, `docs/specs/**` | The pages, decision records and design specs of the hub. The `docs` and `decisions` checks of a consumer read the consumer's own pages. A consumer can still follow a link into these folders, so a moved or deleted page needs its links updated in the same pull request ([Limits](#limits)). Only these four folders are listed, because they're the folders of the hub's layout. GitHub reads default community files from the `docs/` folder, so every other path below `docs/` stays `yes` ([source][community-files]). |
 | `README.md` | The root file only. GitHub shows it for this repository and doesn't apply it to others. A README in a subfolder isn't listed. |
-| `nix/tests/**` | The tests of the hub's own tools. Only the hub's checks that end in `-tests` run them. |
+| `nix/tests/**` | The tests of the hub's own tools and functions. Only the hub's own checks run them: the checks that end in `-tests` run the tests of the tools, and the check `lib-functions` runs `nix/tests/lib`. |
 | `vale/Sealambda/*.test.yml` | The test cases of the Vale style. The flake builds the style from the rule files and leaves the test cases out. |
 | `LICENSE` | The license of this repository. GitHub has no default license file for other repositories. |
 | `LICENSES/**` | The license texts of the REUSE layout. Only the hub's `licenses` check reads them. |

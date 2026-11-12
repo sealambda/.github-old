@@ -200,6 +200,16 @@
               touch "$out"
             '';
 
+        # Runs each function that the hub exports as `lib` against fixtures that
+        # `nix/tests/lib` generates: a fixture that the function accepts, and
+        # fixtures that it must reject with a message that names the problem.
+        # The cases call the functions through `self.lib`, as a consumer does.
+        lib-functions = import ./nix/tests/lib {
+          inherit pkgs;
+          hub = self.lib;
+          syncConfig = mkSyncConfig pkgs;
+        };
+
         # The hub checks its own records and citations. The fixtures of the
         # decisions tests cite records on purpose, and `check-docs.sh` names a
         # page that its test creates at run time.
