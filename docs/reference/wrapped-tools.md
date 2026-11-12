@@ -19,19 +19,52 @@ The base of each tool is a file of the hub's `config/` folder:
 | markdownlint-cli2 | `config/markdownlint-cli2.yaml` | `--config <file>` |
 | lychee | `config/lychee.toml` | `--config <file>`, after the repository's `lychee.toml` |
 
-`sync-config` copies the same files into a repository, so the hub keeps one
-copy of each rule. A repository that holds those copies gets the findings of a
-repository without them, because each copy equals the base. The flake check
-`config-in-sync` keeps the copies equal to the hub.
+`sync-config` copies the same files, and the file `.editorconfig`, into a
+repository, so the hub keeps one copy of each rule. A repository that holds
+those copies gets the findings of a repository without them, because each copy
+equals the base. The docs check needs no copy: it reads the base from the Nix
+store.
+
+The flake check `config-in-sync` compares five synced files with the hub's:
+`.editorconfig`, `.markdownlint-cli2.yaml`, `.vale.ini`, the Vale vocabulary
+`Sealambda` and `lychee.toml`. It fails when one is missing or differs, so a
+local addition to a copy fails it. A repository keeps the check only while it
+keeps every copy unchanged. A repository that layers its own configuration, or
+removes the copies, removes the check. No check then keeps its `.editorconfig`
+equal to the hub's: the docs tools don't read that file, and editors and the
+shell formatter do. [Adopt the hub in a repository](../how-to/adopt-the-hub.md#set-up-the-tool-configuration)
+shows both shapes.
 
 A repository needs no configuration file of its own. With none, the hub's rules
 apply alone. A repository adds a file to extend a tool, as the sections below
-say. No wrapper reads a configuration file from the home folder of the user.
+say.
 
-The hub doesn't prevent a repository from switching off a rule of the hub where
-the tool allows it. Each tool section names the setting. The review of the
-repository's configuration file is the control, so a pull request that adds one
-of these settings needs a reviewer's attention.
+## Configuration that the wrappers leave open
+
+markdownlint-cli2 and lychee read no configuration file from the home folder
+or from a folder above the repository. The test cases put a
+`.markdownlint-cli2.yaml`, a `lychee.toml` and a `.lycheeignore` in both
+places, and the findings stay the same.
+
+Vale looks for the nearest `.vale.ini` from the working directory upward and
+then in the home folder. The wrapper removes `VALE_CONFIG_PATH` from the
+environment, because Vale reads the file that the variable names instead of the
+repository's `.vale.ini`. Two sources remain that the wrapper can't remove:
+
+- A `.vale.ini` in the home folder, `~/.vale.ini`.
+- A `.vale.ini` in a folder above the repository.
+
+Each of the two applies only when the repository has no `.vale.ini` of its own,
+because Vale then takes the nearest file. A repository with its own `.vale.ini`
+ignores both. Vale accepts other names for the file, such as `_vale.ini`
+([Vale: the `.vale.ini` file](https://docs.vale.sh/topics/.vale.ini)).
+
+The flake check `docs` runs in the Nix sandbox, where the home folder is the
+empty build folder and the source sits in the Nix store with no `.vale.ini`
+above it, so neither source affects the gate of record. A run outside the
+sandbox, such as the dev shell in a checkout below a folder that holds a
+`.vale.ini`, can differ from the check for a repository with no `.vale.ini` of
+its own. A repository with a `.vale.ini` gets the same result in both.
 
 ## Vale
 
@@ -135,6 +168,34 @@ hides a broken link in it. The review of the file covers that. lychee reads
 only the `lychee.toml` of the working directory, and no file of a
 subdirectory.
 
+## What a repository can switch off
+
+The hub doesn't prevent a repository from switching off a rule of the hub, or a
+whole gate, with its own configuration file. Each setting below makes the tool
+pass a page that breaks the hub's rules. The settings were run against the
+tools that the hub pins.
+
+| Tool | Setting in the repository's file | Effect |
+| ---- | -------------------------------- | ------ |
+| markdownlint-cli2 | `ignores: ["**"]` in `.markdownlint-cli2.yaml` | The tool lints no file. |
+| markdownlint-cli2 | `config: {default: false}` in `.markdownlint-cli2.yaml` | Every rule is off. |
+| markdownlint-cli2 | `default: false` in a `.markdownlint.yaml` | Every rule is off for its directory, and the base's `MD013` and `MD060` options don't apply there. |
+| markdownlint-cli2 | `noInlineConfig: false` | A page switches a rule off with a comment. |
+| Vale | `BlockIgnores = (?s).*` or `TokenIgnores = .+` in a `[*.md]` section | Vale checks no text. |
+| Vale | `Vale = NO`, `Microsoft = NO`, `Readability = NO` and `Sealambda = NO` in a `[*.md]` section | Each style is off, so Vale reports nothing. One of them switches off one style. |
+| Vale | `<Style>.<Rule> = NO` | One rule is off. |
+| lychee | `exclude = [".*"]` in `lychee.toml` | lychee checks no link. |
+| lychee | `exclude_path` with a folder | lychee skips the folder. |
+
+The hub keeps what a file can't change: the versions of the tools, the Vale
+alert level of the check, `offline` and `include_fragments` of lychee, and the
+rule files of the styles.
+
+The control is the review of the repository's pull request. A repository's
+configuration file is a local exception, and the reviewer of the pull request
+that adds or changes one decides whether it's acceptable. No hub check blocks
+these settings.
+
 ## The dev shell
 
 The `docs` dev shell has the three wrappers. Run a tool from the root of the
@@ -149,7 +210,11 @@ lychee --no-progress "**/*.md"
 
 Vale finds the `.vale.ini` of the repository from any subfolder. lychee reads
 its `lychee.toml` from the folder where it runs. A personal global Vale
-configuration has no effect, because the wrapper replaces `XDG_CONFIG_HOME`.
+configuration in the user's config folder has no effect, because the wrapper
+replaces `XDG_CONFIG_HOME`, and `VALE_CONFIG_PATH` has no effect, because the
+wrapper removes it from the environment. [Configuration that the wrappers leave
+open](#configuration-that-the-wrappers-leave-open) lists the sources that still
+apply.
 
 ## Where the tests are
 
@@ -157,5 +222,13 @@ The flake check `check-docs-tests` runs `nix/tests/check-docs.sh`. It builds
 projects with no file, with a local vocabulary, with a Vale section, with
 nested and root markdownlint files, with lychee exclusions and with the legacy
 copies, and it compares the findings of a project that holds the copies with
-those of a project that holds none. The flake check `lib-functions` runs the
-same layers through `lib.mkDocsCheck`.
+those of a project that holds none. It also covers the vocabulary of the hub,
+the `MinAlertLevel` setting that doesn't lower the alert level, the unset
+`VALE_CONFIG_PATH`, the Vale files in the home folder and above the project, the
+files above the project that markdownlint-cli2 and lychee ignore, and each
+setting of the section
+[What a repository can switch off](#what-a-repository-can-switch-off).
+The flake check `lib-functions` runs
+the same layers through `lib.mkDocsCheck`. The synthetic consumers `legacy` and
+`layered` build the checks for the two shapes of
+[Adopt the hub in a repository](../how-to/adopt-the-hub.md#set-up-the-tool-configuration).

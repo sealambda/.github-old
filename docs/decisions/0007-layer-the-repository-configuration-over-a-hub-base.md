@@ -35,7 +35,7 @@ differ in how they take a second file:
 - A change of a rule reaches every repository with the update of the hub input.
 - A repository can add vocabulary, folder rules and exclusions.
 - The same result in the flake check, in the dev shell and in CI.
-- No dependency on a file in the home folder of the user.
+- No dependency on a file in the home folder of the user for the flake check.
 - A repository that keeps the synced copies gets the findings that it got
   before.
 
@@ -66,9 +66,14 @@ nixpkgs with the hub's base in the Nix store:
   options win.
 
 The base files are the files that `sync-config` copies, so the hub holds each
-rule once. `sync-config` and `config-in-sync` stay, so a repository that keeps
-the copies gets the same findings: each copy equals the base. A repository
-that removes the copies drops the check `config-in-sync` too.
+rule once. The docs gate needs no copy. `sync-config` and `config-in-sync` stay,
+so a repository that keeps the copies gets the same findings: each copy equals
+the base. The check `config-in-sync` compares five files, `.editorconfig` among
+them, and fails when one is missing or differs, so a repository keeps the check
+only while it keeps every copy unchanged. A repository that layers its own
+configuration, or removes the copies, removes the check. No check then keeps its
+`.editorconfig` equal to the hub's. The adoption page shows both shapes, and the
+synthetic consumers `legacy` and `layered` build them.
 [Wrapped documentation tools](../reference/wrapped-tools.md) states, for each
 tool, what a repository can add and what it can't change.
 
@@ -78,9 +83,16 @@ tool, what a repository can add and what it can't change.
   and a change of a rule needs no change in the repository.
 - Good, because the flake check and the dev shell run the same wrappers.
 - Good, because the hub writes no merge code.
-- Bad, because the hub doesn't prevent a repository from switching a rule off:
-  a Vale section, a markdownlint rule set to `false` and a lychee exclusion all
-  work. The review of the repository's file is the control.
+- Bad, because the hub doesn't prevent a repository from switching a rule or a
+  whole gate off: a Vale section, a markdownlint rule set to `false`, a
+  markdownlint file that ignores every file and a lychee exclusion of every link
+  all work. The review of the repository's file in its pull request is the
+  control. The reference lists the settings.
+- Bad, because Vale reads a `.vale.ini` in the home folder or in a folder above
+  the repository when the repository has none. The wrapper removes
+  `VALE_CONFIG_PATH` from the environment and can't remove those two sources.
+  The flake check runs in the Nix sandbox, where neither exists, so the gate of
+  record doesn't change.
 - Bad, because the hub's markdownlint option `noInlineConfig` holds only while
   no repository file sets it, and a file named `.markdownlint.*` replaces the
   hub's `config` map for its directory.
@@ -96,9 +108,12 @@ The flake check `check-docs-tests` runs a project with no configuration file, a
 local vocabulary, a local Vale section and style, root and nested markdownlint
 files, lychee exclusions and the legacy copies, in the Nix sandbox on Linux and
 on macOS. One case compares the findings of a project with the copies and of a
-project without them. The check `lib-functions` runs the layers through
-`lib.mkDocsCheck`. The job `consumer` of the hub's `ci` workflow builds the
-documentation check on the legacy fixture.
+project without them. Further cases cover the unset `VALE_CONFIG_PATH`, the Vale
+files in the home folder and above the project, and the settings that switch a
+gate off. The check `lib-functions` runs the layers through `lib.mkDocsCheck`.
+The job `consumer` of the hub's `ci` workflow builds the checks of the legacy
+fixture, which keeps the synced copies, and of the layered fixture, which holds
+its own configuration files and no copy.
 
 ## Pros and Cons of the Options
 
