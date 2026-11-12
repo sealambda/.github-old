@@ -47,7 +47,7 @@ and keeps its own facts.
 - **CI building blocks.** The reusable workflow `secrets.yml` (gitleaks), the
   flake check `lib.mkDocsCheck` (markdownlint-cli2, lychee and Vale, each
   wrapped with the hub's base configuration, and the hub's own Vale style,
-  which keeps pages in the present tense), and the
+  which keeps pages in the present tense and in the house style), and the
   flake check `lib.mkDecisionsCheck`, which validates the decision records and
   every citation of a record, a spec or a page. The JSON Schemas of the records
   and the ledger are in `schemas/`. The `decisions` app retires a record into

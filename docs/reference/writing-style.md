@@ -1,8 +1,8 @@
 # Writing style
 
-A page states what's true now. This page defines the Vale rules that check
-that, and the places where they don't apply. The rule that a document describes
-only the current state is in
+A page states what's true now, in the house style of the hub. This page
+defines the Vale rules that check both, and the places where they don't apply.
+The rule that a document describes only the current state is in
 [CONTRIBUTING.md](../../CONTRIBUTING.md#current-state-only). Google's and
 Microsoft's style guides give the same advice: write in the present tense.
 

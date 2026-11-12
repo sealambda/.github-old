@@ -95,8 +95,9 @@ and use one term for one concept.
   spec.
 - The Vale rule `Sealambda.CurrentState` fails the `docs` check. The rule
   `Sealambda.History` and the rules of the level warning, such as
-  `Sealambda.SentenceLength`, show only in an editor that runs Vale, because the
-  check runs Vale with `--minAlertLevel=error`.
+  `Sealambda.SentenceLength`, show in an editor that runs Vale and in a Vale
+  run without the level flag. The check doesn't print them, because it runs
+  Vale with `--minAlertLevel=error`.
   [Writing style](https://github.com/sealambda/.github/blob/main/docs/reference/writing-style.md)
   defines them all.
 
