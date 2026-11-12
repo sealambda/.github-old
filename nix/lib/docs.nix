@@ -4,6 +4,14 @@
 # `lib.mkDocsCheck`, which a consumer calls. The script that runs the tools is
 # `nix/scripts/check-docs.sh`, and the Vale style of the hub is
 # `vale/Sealambda`.
+#
+# The three tools are wrappers. Each wrapper starts the tool of the hub's
+# nixpkgs with the hub's base configuration from the Nix store and lets the
+# repository's own configuration file add to it. The files of `config/` are
+# the one source of the hub's rules: the wrappers read them from the store, and
+# `config.nix` copies the same files into a repository that still syncs them.
+# `docs/reference/wrapped-tools.md` states what a repository can add to each
+# tool and what it can't change.
 { lib, hubPackagesFor }:
 let
   # The rule files of the Sealambda Vale style, without their test cases.
@@ -25,11 +33,41 @@ let
       install -D -m 644 -t "$out/share/vale/styles/Sealambda" ${valeStyleRules}/*.yml
     '';
 
+  # The base configuration of Vale, as a store path with two folders:
+  #
+  # - `config/vale/.vale.ini` is the hub's `config/vale.ini` with two changes.
+  #   `StylesPath` names the folder `styles` of this store path, because a
+  #   global configuration needs an absolute path. `Vocab` lists only the
+  #   vocabulary of the hub: the vocabulary `Repository` belongs to a
+  #   repository, and Vale stops with an error when a listed vocabulary is
+  #   missing. `--replace-fail` fails the build when the hub's file stops
+  #   holding one of the two lines.
+  # - `styles/config/vocabularies/Sealambda/accept.txt` is the vocabulary of
+  #   the hub.
+  #
+  # The folder `styles` holds only that vocabulary. It must not be the folder
+  # that `VALE_STYLES_PATH` names: Vale then gives the rule names a hash
+  # prefix, and a rule that a repository switches off no longer matches.
+  mkValeBase =
+    pkgs:
+    pkgs.runCommand "vale-base-config" { } ''
+      install -D -m 644 ${../../config/vale-vocabulary.txt} \
+        "$out/styles/config/vocabularies/Sealambda/accept.txt"
+      mkdir -p "$out/config/vale"
+      substitute ${../../config/vale.ini} "$out/config/vale/.vale.ini" \
+        --replace-fail 'StylesPath = .vale/styles' "StylesPath = $out/styles" \
+        --replace-fail 'Vocab = Sealambda, Repository' 'Vocab = Sealambda'
+    '';
+
   /**
-    Builds the documentation tools from one package set: the three tools of
-    the `docs` dev shell and of `mkDocsCheck`, and the `check-docs` command
-    that runs them. The Vale of these tools has the styles Microsoft and
-    Readability from nixpkgs and the hub's own style Sealambda.
+    Builds the documentation tools from one package set: the three wrapped
+    tools of the `docs` dev shell and of `mkDocsCheck`, and the `check-docs`
+    command that runs them. The wrappers are commands named `vale`,
+    `markdownlint-cli2` and `lychee`. Each one starts the tool of `pkgs` with
+    the hub's base configuration and the repository's own file on top, as
+    `docs/reference/wrapped-tools.md` states. The Vale of these tools has the
+    styles Microsoft and Readability from nixpkgs and the hub's own style
+    Sealambda.
 
     # Inputs
 
@@ -40,7 +78,7 @@ let
     # Type
 
     ```
-    mkDocsTools :: AttrSet -> { valeWithStyles :: Derivation; checkDocs :: Derivation; tools :: [Derivation]; }
+    mkDocsTools :: AttrSet -> { checkDocs :: Derivation; tools :: [Derivation]; }
     ```
   */
   mkDocsTools =
@@ -51,21 +89,79 @@ let
       # reports "Style isn't on StylesPath". The styles of nixpkgs are
       # pinned by `flake.lock`, the style Sealambda is in this repository,
       # and no run downloads a style. `withStyles` sets `VALE_STYLES_PATH` to
-      # its `share/vale/styles`, and Vale finds the styles there. The
-      # project `StylesPath` holds only the vocabularies. Vale ignores that
-      # variable when it runs with `--no-global`.
+      # its `share/vale/styles`, and Vale finds the styles there. Vale ignores
+      # that variable when it runs with `--no-global`.
       valeWithStyles = pkgs.vale.withStyles (styles: [
         styles.microsoft
         styles.readability
         (mkValeStyleSealambda pkgs)
       ]);
 
+      # Vale reads a global configuration from `$XDG_CONFIG_HOME/vale/.vale.ini`
+      # and merges the `.vale.ini` of the repository over it: `Vocab` and
+      # `BasedOnStyles` append, and each `[glob]` section applies. The
+      # wrapper sets the variable, so the hub's base is the global file.
+      # `--config` and `VALE_CONFIG_PATH` name one file and don't merge, so the
+      # wrapper uses neither. It also unsets `VALE_CONFIG_PATH`, because Vale
+      # reads that file instead of the repository's `.vale.ini`, which would
+      # drop the repository's layer. Two sources stay that the wrapper can't
+      # remove: Vale takes the nearest `.vale.ini` from the working directory
+      # upward, up to the home folder, so a `.vale.ini` above the repository or
+      # in the home folder applies when the repository has none of its own.
+      # `docs/reference/wrapped-tools.md` states both. The wrapper runs the
+      # Vale with the styles by its store path, so a `vale` of the same name on
+      # `PATH` never starts a loop.
+      vale = pkgs.writeShellApplication {
+        name = "vale";
+        runtimeEnv.XDG_CONFIG_HOME = "${mkValeBase pkgs}/config";
+        text = ''
+          unset VALE_CONFIG_PATH
+          exec ${valeWithStyles}/bin/vale "$@"
+        '';
+      };
+
+      # `--config` names the base file, and markdownlint-cli2 merges the
+      # `.markdownlint-cli2.yaml` of the working directory and of each
+      # directory of a Markdown file over it. A rule that a file lists
+      # replaces the options of the base for that rule: the merge goes one
+      # level deep. The base file is the hub's `config/markdownlint-cli2.yaml`
+      # as it is.
+      markdownlint-cli2 = pkgs.writeShellApplication {
+        name = "markdownlint-cli2";
+        text = ''
+          exec ${lib.getExe pkgs.markdownlint-cli2} --config ${../../config/markdownlint-cli2.yaml} "$@"
+        '';
+      };
+
+      # A `--config` option turns the automatic read of `lychee.toml` off, so
+      # the wrapper passes that file itself, when it exists. lychee reads each
+      # file in order: a list such as `exclude` or `exclude_path` grows with
+      # the entries of each file, and a later value of a single option wins. The
+      # hub's file comes last, so the hub's single options win over the
+      # repository's. The base file is the hub's `config/lychee.toml` as it
+      # is. lychee reads `.lycheeignore` from the working directory by itself.
+      # lychee builds its HTTP client at startup, even when it runs offline,
+      # and the client needs a trust store. The Nix sandbox has none, so the
+      # wrapper sets `SSL_CERT_FILE` to the pinned `cacert` bundle. The hub's
+      # file sets `offline`, so no request ever uses that bundle.
+      lychee = pkgs.writeShellApplication {
+        name = "lychee";
+        runtimeEnv.SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+        text = ''
+          local_config=()
+          if [ -f lychee.toml ]; then
+            local_config=(--config lychee.toml)
+          fi
+          exec ${lib.getExe pkgs.lychee} "''${local_config[@]}" --config ${../../config/lychee.toml} "$@"
+        '';
+      };
+
       # The three documentation tools, listed once for `checkDocs` and for
       # the `docs` dev shell.
       tools = [
-        pkgs.lychee
-        pkgs.markdownlint-cli2
-        valeWithStyles
+        lychee
+        markdownlint-cli2
+        vale
       ];
 
       # The `check-docs` command: the three tools with the flags in
@@ -74,14 +170,11 @@ let
       checkDocs = pkgs.writeShellApplication {
         name = "check-docs";
         runtimeInputs = tools;
-        # The trust store that lychee needs at startup. The reason is in the
-        # header of `nix/scripts/check-docs.sh`.
-        runtimeEnv.SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
         text = builtins.readFile ../scripts/check-docs.sh;
       };
     in
     {
-      inherit valeWithStyles checkDocs tools;
+      inherit checkDocs tools;
     };
 in
 {
@@ -97,18 +190,24 @@ in
     every repository, and a consumer needs no `nixpkgs.follows =
     "hub/nixpkgs"` for this check. A bump of the hub in `flake.lock` updates
     the tools. Where the Nix sandbox is enabled, which it always is on Linux
-    CI, the check reads each tool's configuration from `src` and no personal
-    configuration of the user, and it needs no network: lychee runs offline,
-    the Vale styles are in the Nix store, and the trust store that lychee
-    loads at startup comes from Nix too. The same command runs locally and
-    in CI: `nix flake check`, or `nix build .#checks.<system>.docs -L`. A
-    local re-run on an unchanged `src` reuses the result by the hash of
-    `src`.
+    CI, the check reads the hub's base configuration from the Nix store, the
+    configuration files that `src` holds, and no personal configuration of the
+    user, and it needs no network: lychee runs offline, the Vale styles are in
+    the Nix store, and the trust store that lychee loads at startup comes from
+    Nix too. The same command runs locally and in CI: `nix flake check`, or
+    `nix build .#checks.<system>.docs -L`. A local re-run on an unchanged
+    `src` reuses the result by the hash of `src`.
+
+    The hub's rules apply to a repository with no configuration file of its
+    own. A repository adds to them with its own `.vale.ini`,
+    `.markdownlint-cli2.yaml` and `lychee.toml`, and with the `.lycheeignore`
+    file, and it can't change what `docs/reference/wrapped-tools.md` lists as
+    fixed. A repository that still holds the copies that `sync-config` writes
+    gets the same findings as before, because each copy equals the base.
 
     Pass the whole `self` of the calling flake, not a set of Markdown
     files, because lychee also checks links to files that are not
-    Markdown. The calling repository needs the files that `sync-config`
-    writes, and the `Repository` Vale vocabulary.
+    Markdown.
 
     # Inputs
 

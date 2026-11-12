@@ -21,12 +21,81 @@ let
       // pages;
     };
 
+  # A project with no tool configuration of its own: the pages of `pages` and
+  # nothing else. The check then holds the hub's base configuration alone.
+  bareProject =
+    name: pages:
+    harness.mkTree {
+      name = "docs-bare-${name}";
+      files = pages;
+    };
+
   docsCheck = hub.mkDocsCheck pkgs;
 in
 {
+  # Requirement: a project with no configuration file of its own passes the
+  # check when its pages are clean. The hub's base configuration is the only
+  # configuration, and the project needs no `Repository` Vale vocabulary.
+  docs-no-local-file-passes = {
+    check = docsCheck (bareProject "clean" { "README.md" = "# Title\n\nThis page is short.\n"; });
+  };
+
+  # Requirement: a project with no configuration file of its own still gets
+  # the rules of the hub. The rule name in the log proves that Vale found the
+  # hub's style from the base configuration.
+  docs-no-local-file-applies-hub-rules = {
+    check = docsCheck (
+      bareProject "own-style-error" {
+        "README.md" = "# Title\n\nThe server currently runs NixOS.\n";
+      }
+    );
+    expectedLog = [
+      "Sealambda.CurrentState"
+      "check-docs: vale failed"
+    ];
+  };
+
+  # Requirement: a project with no configuration file of its own can use the
+  # terms of the hub's Vale vocabulary. Vale's dictionary doesn't know `treefmt`
+  # and `zizmor`, so the page passes only when the base loads the vocabulary.
+  docs-hub-vocabulary-is-loaded = {
+    check = docsCheck (
+      bareProject "hub-vocabulary" {
+        "README.md" = "# Title\n\nRun treefmt and zizmor for Sealambda.\n";
+      }
+    );
+  };
+
+  # Requirement: a term in the project's own Vale vocabulary passes when the
+  # project's `.vale.ini` lists the vocabulary, with no copy of the hub's
+  # configuration in the project.
+  docs-local-vocabulary-is-accepted = {
+    check = docsCheck (
+      bareProject "vocabulary" {
+        "README.md" = "# Title\n\nThe zorblax runs fast.\n";
+        ".vale.ini" = "StylesPath = .vale/styles\nVocab = Repository\n";
+        ".vale/styles/config/vocabularies/Repository/accept.txt" = "zorblax\n";
+      }
+    );
+  };
+
+  # Requirement: a markdownlint-cli2 file of the project adds to the hub's
+  # base. The page skips a heading level, which the project's file allows, and
+  # the page passes.
+  docs-local-markdownlint-file-is-layered = {
+    check = docsCheck (
+      bareProject "markdownlint-file" {
+        "README.md" = "# Title\n\n### Skipped level\n";
+        ".markdownlint-cli2.yaml" = "config:\n  MD001: false\n";
+      }
+    );
+  };
+
   # Requirement: a project whose pages pass markdownlint-cli2, lychee and Vale
   # passes the check. This case proves that the failing cases below fail for
-  # their page and not for the project.
+  # their page and not for the project. The project holds the files that
+  # `sync-config` writes, so the case also proves that the legacy layout still
+  # passes.
   docs-clean-passes = {
     check = docsCheck (project "clean" { "README.md" = "# Title\n\nThis page is short.\n"; });
   };
