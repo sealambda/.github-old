@@ -107,10 +107,11 @@ def check_concurrency(file: ActionsFile) -> list[Finding]:
     """Return a finding when a pull request workflow has no concurrency group.
 
     The rule covers a workflow that `pull_request` or `pull_request_target`
-    triggers. It is met by a `concurrency` key at the top of the workflow, or
-    by a `concurrency` key on every job, a job that calls a reusable workflow
-    included. A workflow that only `workflow_call` triggers is a reusable
-    workflow: its caller owns the group, so the rule doesn't cover it.
+    triggers. It is met by a `concurrency` group at the top of the workflow, or
+    by a `concurrency` group on every job, a job that calls a reusable workflow
+    included. `_sets_group` says what counts as a group. A workflow that only
+    `workflow_call` triggers is a reusable workflow: its caller owns the group,
+    so the rule doesn't cover it.
 
     Args:
         file: The parsed workflow.
@@ -122,7 +123,7 @@ def check_concurrency(file: ActionsFile) -> list[Finding]:
     triggers = [t for t in read_triggers(data) if t.name in PULL_REQUEST_EVENTS]
     if not triggers or not isinstance(data, dict):
         return []
-    if data.get("concurrency") is not None or _every_job_has_concurrency(data):
+    if _sets_group(data.get("concurrency")) or _every_job_has_concurrency(data):
         return []
     trigger = triggers[0]
     return [
@@ -134,12 +135,25 @@ def check_concurrency(file: ActionsFile) -> list[Finding]:
     ]
 
 
+def _sets_group(value: object) -> bool:
+    """Tell whether a `concurrency` value names a group.
+
+    The value is a string, which is the group, or a mapping with a `group` key
+    whose value is a string. A blank string is no group. A mapping that holds
+    only `cancel-in-progress` is no group either: GitHub requires `group` in the
+    mapping form. The check doesn't read the group expression.
+    """
+    if isinstance(value, dict):
+        value = value.get("group")
+    return isinstance(value, str) and bool(value.strip())
+
+
 def _every_job_has_concurrency(data: dict[object, object]) -> bool:
-    """Tell whether `jobs` holds at least one job and each one has `concurrency`."""
+    """Tell whether `jobs` holds at least one job and each one sets a group."""
     jobs = data.get("jobs")
     if not isinstance(jobs, dict) or not jobs:
         return False
     return all(
-        isinstance(job, dict) and job.get("concurrency") is not None
+        isinstance(job, dict) and _sets_group(job.get("concurrency"))
         for job in jobs.values()
     )

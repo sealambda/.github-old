@@ -9,7 +9,7 @@ It runs with `nix flake check`, locally and in CI, and it needs no network.
 | Rule | What it requires |
 | ---- | ---------------- |
 | Time limit | Every job that doesn't call a reusable workflow sets `timeout-minutes`. |
-| Concurrency | Every workflow that a `pull_request` or `pull_request_target` event triggers sets `concurrency`. |
+| Concurrency | Every workflow that a `pull_request` or `pull_request_target` event triggers sets a `concurrency` group. |
 
 ### Time limit
 
@@ -43,15 +43,19 @@ a design to review. The check doesn't judge a `timeout-minutes` on a step.
 
 ### Concurrency
 
-A workflow that a pull request event triggers has a `concurrency` key in one of
-two places:
+A workflow that a pull request event triggers sets a `concurrency` group in one
+of two places:
 
 - At the top of the workflow, which covers every job.
 - On every job of the workflow, a job that has `uses` included. GitHub allows
   `concurrency` on such a job ([supported keywords][call-keywords]).
 
-A key whose value is null, as in an empty `concurrency:`, sets no group. A
-workflow that has no job and no top-level `concurrency` is a finding.
+The value sets a group when it's a string that isn't blank, or a mapping whose
+`group` is a string that isn't blank. These values set no group and are
+findings: a null, as in an empty `concurrency:`, an empty mapping, a mapping
+that holds only `cancel-in-progress`, a blank string and a value of another
+shape, such as a list. A workflow that has no job and no top-level group is a
+finding.
 
 A workflow whose only event is `workflow_call` is a reusable workflow. The
 workflow of the caller owns the group, so the rule doesn't cover it. A workflow
@@ -59,7 +63,8 @@ that has `workflow_call` next to `pull_request` is covered, because the pull
 request event runs it directly.
 
 The check requires a group to exist. It doesn't read the group expression, and
-it doesn't judge `cancel-in-progress`. [Control the concurrency of
+it doesn't judge `cancel-in-progress`. The mapping form needs `group`, because
+GitHub requires it there. [Control the concurrency of
 workflows][concurrency] says what a group does.
 
 ## The `on` key

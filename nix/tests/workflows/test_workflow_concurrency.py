@@ -91,6 +91,30 @@ class ConcurrencyRuleTest(TreeTestCase):
         text = workflow("pull_request", TIMED_JOB, header=("concurrency:",))
         self.assertEqual(self.findings_of(text), [finding("pull_request", 2)])
 
+    def test_a_value_that_names_no_group_does_not_count(self) -> None:
+        """An empty mapping, a mapping without `group` and a blank string fail."""
+        headers = (
+            ("concurrency: {}",),
+            ("concurrency:", "  cancel-in-progress: true"),
+            ('concurrency: ""',),
+            ("concurrency: '  '",),
+            ("concurrency: {group: ''}",),
+            ("concurrency: [a]",),
+        )
+        for header in headers:
+            with self.subTest(header=header):
+                text = workflow("pull_request", TIMED_JOB, header=header)
+                self.assertEqual(self.findings_of(text), [finding("pull_request", 2)])
+
+    def test_a_job_value_that_names_no_group_does_not_count(self) -> None:
+        """The same values on a job leave the job without a group."""
+        text = workflow(
+            "pull_request",
+            job("a", "timeout-minutes: 5", "concurrency: a"),
+            job("b", "timeout-minutes: 5", "concurrency: {}"),
+        )
+        self.assertEqual(self.findings_of(text), [finding("pull_request", 2)])
+
     def test_other_events_are_exempt(self) -> None:
         """Only the two pull request events are covered."""
         for event in ("push", "[push, workflow_dispatch]", "schedule", "release"):
