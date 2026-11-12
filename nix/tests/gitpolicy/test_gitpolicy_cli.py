@@ -74,7 +74,7 @@ class CommitMsgCommandTest(RepoTestCase):
         the tool must not fail on it: it asks Git for two settings only.
         """
         with (self.root / ".git" / "config").open("ab") as config:
-            config.write(b"[alias]\n\tcafe = caf\xe9\n")
+            config.write(b"[alias]\n\tcafe = calf\xe9\n")
         result = self.run_cli("commit-msg", str(self.write("feat: add x\n")))
         self.assertEqual((0, "", ""), (result.code, result.stdout, result.stderr))
 
