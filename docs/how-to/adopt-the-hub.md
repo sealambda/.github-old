@@ -306,6 +306,11 @@ The check has no option and no exclusion. It builds its tool from the hub's own
 nixpkgs, whatever nixpkgs the repository follows, so every repository runs the
 same version.
 
+The bound of 360 minutes covers the numbers that a workflow file writes. It
+doesn't cover an expression, because the check doesn't read its value, and it
+doesn't cover the jobs of a called workflow. [Call the reusable
+workflow](#call-the-reusable-workflow) says what that means for `secrets.yml`.
+
 ## Call the reusable workflow
 
 The hub offers the reusable workflow `secrets.yml`. It runs its tool from the

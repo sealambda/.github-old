@@ -18,7 +18,8 @@ expression: a string that's exactly one balanced `${{ ... }}`, with optional
 whitespace around it. The text between the delimiters isn't blank and holds no
 other `${{`, and the first `}}` after the opening ends the string. The check
 can't read the value of an expression, so it accepts one, for example
-`${{ inputs.timeout-minutes }}`. These values are findings: a missing key,
+`${{ inputs.timeout-minutes }}`, and the bound of 360 doesn't apply to what the
+expression gives at run time. These values are findings: a missing key,
 zero, a negative number, a number above 360, a fractional number, a boolean, a
 null, a string that holds no expression, and a string that holds an unclosed,
 empty, repeated or padded expression, such as `${{ x`, `${{ }}`,
@@ -34,6 +35,13 @@ doesn't allow `timeout-minutes` on such a job: the called workflow sets the
 limits of its own jobs ([supported keywords][call-keywords]). The check neither
 requires nor judges a `timeout-minutes` on a `uses` job, so a `uses` job that
 carries one passes the check. actionlint reports it.
+
+The check doesn't read the called workflow. A called workflow that sets no limit
+on its jobs runs for 360 minutes, and the `uses` job that calls it passes the
+check. The hub's `secrets.yml` is such a workflow: its input `timeout-minutes`
+defaults to 360, so a caller that passes nothing gets six hours. The caller
+passes the input to bound the scan, as [Adopt the hub in a
+repository](../how-to/adopt-the-hub.md#call-the-reusable-workflow) shows.
 
 GitHub gives a job 360 minutes when the key is missing. A job on a
 GitHub-hosted runner may run for up to six hours, and a job on a self-hosted
