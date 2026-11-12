@@ -21,6 +21,14 @@ and keeps its own facts.
   repository overrides one.
 - **Toolchain.** A Nix flake with pinned development shells and the
   organization's treefmt configuration, `lib.mkTreefmt`.
+- **Nix version.** `versions.json` holds the version of Nix that the hub's CI
+  runs, with a JSON Schema in `schemas/`. A repository that calls the reusable
+  workflow `secrets.yml` runs the same version. The hub's workflows install it
+  with `cachix/install-nix-action`, and the flake check `versions` fails when a
+  step sets another `install_url` or uses an installer of Nix that it knows by
+  name or address. An unknown installer passes, and review covers it. The
+  check reads only the hub's own files, and the other workflows of a consumer
+  choose their own Nix.
 - **Dependency updates.** `default.json`, a shared
   [Renovate](https://docs.renovatebot.com/) preset for update timing,
   grouping and security fixes. A repository's `renovate.json` extends it and
@@ -51,8 +59,9 @@ The pages follow [Diátaxis](https://diataxis.fr/).
   [Renovate preset](docs/reference/renovate-preset.md),
   [decision records](docs/reference/decision-records.md),
   [writing style](docs/reference/writing-style.md), the
-  [leak check](docs/reference/leak-check.md) and
-  [licensing](docs/reference/licensing.md).
+  [leak check](docs/reference/leak-check.md),
+  [licensing](docs/reference/licensing.md) and the
+  [CI of the hub](docs/reference/hub-ci.md).
 - **Explanation.** The [decision records](docs/decisions/) say why the hub
   works as it does. [ADR 0005](docs/decisions/0005-check-decision-records-with-a-hermetic-flake-check.md)
   explains the decision records check.

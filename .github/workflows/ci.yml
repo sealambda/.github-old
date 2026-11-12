@@ -7,9 +7,17 @@ on:
 
 permissions: {}
 
+# A run of a pull request never cancels another run. A push that updates a pull
+# request and its base branch together can start two runs for one head commit.
+# The group names the head commit, so the two runs share a group, wait for each
+# other, and both finish. A run that a newer run cancelled would leave a failed
+# `ci` check on the head commit, because the job `ci` runs in a cancelled run
+# and fails there. A new head commit starts a group of its own, so the run of
+# the older commit finishes too. The group of a push has no head commit: it
+# holds one group for the branch, and a newer push cancels the run in progress.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: ${{ github.event_name != 'pull_request' }}
 
 jobs:
   flake-check:
@@ -21,7 +29,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # `install_url` pins the Nix version. `versions.json` holds it, and the
+      # flake check `versions` fails when the two differ.
       - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+        with:
+          install_url: https://releases.nixos.org/nix/nix-2.35.4/install
       - run: nix flake check
 
   # The hub runs its own reusable workflow, as a consumer does. The `./`

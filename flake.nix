@@ -269,8 +269,10 @@
         fileset = nixpkgs.lib.fileset.unions [
           ./nix/scripts/decisions
           ./nix/scripts/leaks
+          ./nix/scripts/versions
           ./nix/tests/decisions
           ./nix/tests/leaks
+          ./nix/tests/versions
           ./pyproject.toml
         ];
       };
@@ -335,6 +337,36 @@
           ps.pyyaml
           ps.jsonschema
         ]);
+
+      # The Python package `versions`, and the package `decisions` whose
+      # findings, schema loading and file listing it imports.
+      versionsSource = nixpkgs.lib.fileset.toSource {
+        root = ./nix/scripts;
+        fileset = nixpkgs.lib.fileset.unions [
+          ./nix/scripts/decisions
+          ./nix/scripts/versions
+        ];
+      };
+
+      # What `versions` finds at run time: itself, and the JSON Schemas, which
+      # `decisions.schemas` reads from `DECISIONS_SCHEMA_DIR`. Python cannot
+      # write byte code into the Nix store.
+      versionsEnv = {
+        PYTHONPATH = "${versionsSource}";
+        DECISIONS_SCHEMA_DIR = "${./schemas}";
+        PYTHONDONTWRITEBYTECODE = "1";
+      };
+
+      # The `versions` command: `python -m versions`, the code in
+      # `nix/scripts/versions`. It needs the two libraries of `decisions`.
+      mkVersionsTool =
+        pkgs:
+        pkgs.writeShellApplication {
+          name = "versions";
+          runtimeInputs = [ (decisionsPython pkgs) ];
+          runtimeEnv = versionsEnv;
+          text = ''exec python -m versions "$@"'';
+        };
 
       # The `decisions` command: `python -m decisions`, the code in
       # `nix/scripts/decisions`, with the schemas in `schemas`. `git` lists the
@@ -635,6 +667,37 @@
               touch "$out"
             '';
 
+        # Fails when `versions.json` is missing or invalid, or when a workflow
+        # or action of the hub installs Nix with another version than the one
+        # in `versions.json`, or with an installer whose version the check
+        # cannot read. The rules are in `nix/scripts/versions` and the
+        # reference is `docs/reference/versions.md`. The check needs no
+        # network: it reads files.
+        versions =
+          pkgs.runCommand "versions"
+            {
+              nativeBuildInputs = [ (mkVersionsTool pkgs) ];
+            }
+            ''
+              versions ${self}
+              touch "$out"
+            '';
+
+        # Runs the unit tests of `nix/scripts/versions`: the manifest with
+        # valid and invalid files, and the rules for the installer steps with
+        # trees that the tests write.
+        check-versions-tests =
+          pkgs.runCommand "check-versions-tests"
+            {
+              nativeBuildInputs = [ (decisionsPython pkgs) ];
+              env = versionsEnv;
+            }
+            ''
+              export HOME="$TMPDIR"
+              python -m unittest discover -v -s ${./nix/tests/versions}
+              touch "$out"
+            '';
+
         # Formats, lints and type-checks the hub's Python with ruff and mypy,
         # configured in `pyproject.toml`. Only the hub runs this check: it is
         # not part of `mkTreefmt`.
@@ -658,7 +721,8 @@
               ruff check --no-cache nix
               mypy --cache-dir "$TMPDIR/mypy" \
                 nix/scripts/decisions nix/tests/decisions \
-                nix/scripts/leaks nix/tests/leaks
+                nix/scripts/leaks nix/tests/leaks \
+                nix/scripts/versions nix/tests/versions
               touch "$out"
             '';
       });
