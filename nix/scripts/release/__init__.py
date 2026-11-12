@@ -1,4 +1,7 @@
-"""Release the hub: one tag and one GitHub release for each merge to `main`.
+"""Release the hub: a tag and a GitHub release for a merge to `main`, or a later one.
+
+A merge gets its own release. When a newer push replaced its run, a later
+release covers it.
 
 The tag series, the rule for the answer `rules changed: yes|no` and the limits
 are in `docs/reference/hub-releases.md`. The modules split the work in pure

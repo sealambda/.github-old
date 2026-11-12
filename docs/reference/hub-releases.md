@@ -75,7 +75,7 @@ four reads it.
 
 | Pattern | Why no consumer reads it |
 | ------- | ------------------------ |
-| `docs/how-to/**`, `docs/reference/**`, `docs/decisions/**`, `docs/specs/**` | The pages, decision records and design specs of the hub. The `docs` and `decisions` checks of a consumer read the consumer's own pages. Only these four folders are listed, because they're the folders of the hub's layout. GitHub reads default community files from the `docs/` folder, so every other path below `docs/` stays `yes` ([source][community-files]). |
+| `docs/how-to/**`, `docs/reference/**`, `docs/decisions/**`, `docs/specs/**` | The pages, decision records and design specs of the hub. The `docs` and `decisions` checks of a consumer read the consumer's own pages. A consumer can still follow a link into these folders, so a moved or deleted page needs its links updated in the same pull request ([Limits](#limits)). Only these four folders are listed, because they're the folders of the hub's layout. GitHub reads default community files from the `docs/` folder, so every other path below `docs/` stays `yes` ([source][community-files]). |
 | `README.md` | The root file only. GitHub shows it for this repository and doesn't apply it to others. A README in a subfolder isn't listed. |
 | `nix/tests/**` | The tests of the hub's own tools. Only the hub's checks that end in `-tests` run them. |
 | `vale/Sealambda/*.test.yml` | The test cases of the Vale style. The flake builds the style from the rule files and leaves the test cases out. |
@@ -295,6 +295,15 @@ The answer holds `enabled` and `enforced_by_owner`.
   such a page gives `rules changed: no`, although the link breaks in every
   repository that inherits the file. The `docs` check of the hub catches the
   broken link inside the hub only.
+- A consumer sees two more links into `docs/reference/`: the `link:` URLs of
+  the Vale rules `vale/Sealambda/CurrentState.yml` and
+  `vale/Sealambda/History.yml` name `docs/reference/writing-style.md`, and the
+  header that `nix/scripts/decisions/ledger_edit.py` writes into the ledger of
+  a consumer names `docs/reference/decision-records.md`. A rename or a
+  deletion of one of those pages gives `rules changed: no` and breaks the
+  link in every consumer. The tool has no way to force `yes`, so update the
+  link in the same pull request: the file that holds the link is a rule path, so
+  the answer is `yes`.
 - A covered commit gets no check of the release that covers it: `publish`
   trusts the tag and doesn't ask GitHub whether that release exists.
 - A run that fails after the checks of a merge leaves the merge without a
