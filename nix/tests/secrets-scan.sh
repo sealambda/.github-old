@@ -1211,10 +1211,32 @@ case_betterleaks_ignore_names_apply_to_betterleaks_only() {
   assert_status "$expected"
 }
 
+# Exits with status 1 and names the function when the file defines a function
+# `case_*` that the arguments $@ don't list. The list of `main` is explicit
+# because the minimal Bash of the Nix sandbox has no `compgen`, and `declare -F`
+# is a builtin that works there. Without this check, a case that someone forgot
+# to add to the list would never run, and the file would still report that all
+# cases passed.
+assert_every_case_is_listed() {
+  local declaration name listed
+  while read -r declaration; do
+    name=${declaration##* }
+    case $name in
+    case_*) ;;
+    *) continue ;;
+    esac
+    for listed in "$@"; do
+      [ "$listed" = "$name" ] && continue 2
+    done
+    echo "FAIL: $name is defined and missing from the list of cases in main" >&2
+    exit 1
+  done < <(declare -F)
+}
+
 # Runs each case in the list below, or only the cases that the arguments name.
-# The cases are independent: each one builds its own repository. The list is
-# explicit because the minimal Bash of the Nix sandbox has no `compgen`. Add each
-# new case here.
+# The cases are independent: each one builds its own repository. Add each new
+# case here: `assert_every_case_is_listed` fails the full run for a case that is
+# missing.
 main() {
   local -a cases=(
     case_clean_repository_passes
@@ -1266,6 +1288,8 @@ main() {
   # Names on the command line replace the list: run one case while you work.
   if [ "$#" -gt 0 ]; then
     cases=("$@")
+  else
+    assert_every_case_is_listed "${cases[@]}"
   fi
   local name
   for name in "${cases[@]}"; do
