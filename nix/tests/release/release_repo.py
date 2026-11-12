@@ -2,6 +2,7 @@
 
 import contextlib
 import io
+import json
 import os
 import subprocess
 import tempfile
@@ -18,14 +19,21 @@ from release.runner import CommandError, Runner, command_runner
 class FakeGh:
     """A stand-in for `gh` that records its calls and reaches no network.
 
-    It answers the two commands that the tool uses, as `gh` 2.103 does:
+    It answers the three commands that the tool uses, as `gh` 2.103 does:
     `release view <tag>` succeeds for a tag in `releases`, and otherwise it
     fails with the standard error `release not found`. `release create <tag>`
-    adds the tag to `releases`. Any other call is a bug of the test.
+    adds the tag to `releases`, and it creates the tag at `--target` when the
+    fake GitHub has no such tag. When the tag exists, GitHub ignores `--target`
+    and so does the fake. `api` reads a tag as the two REST endpoints
+    `git/ref/tags/<tag>` and `git/tags/<hash>` return it. Any other call is a
+    bug of the test.
 
     Attributes:
         calls: The arguments and the standard input of each call, in order.
         releases: The tags that have a release on the fake GitHub.
+        remote_tags: The commit of each tag that exists on the fake GitHub.
+        annotated_tags: The tags of `remote_tags` that are annotated, so the
+            ref of the tag names a tag object and not the commit.
         failure: A message. When set, every call raises `CommandError` with it,
             as a failing `gh` does.
         view_failure: A message. When set, `release view` fails with it as its
@@ -38,6 +46,8 @@ class FakeGh:
         """Create a fake that has no call, no release and no failure."""
         self.calls: list[tuple[list[str], str | None]] = []
         self.releases: set[str] = set()
+        self.remote_tags: dict[str, str] = {}
+        self.annotated_tags: set[str] = set()
         self.failure: str | None = None
         self.view_failure: str | None = None
         self.create_failure: str | None = None
@@ -50,9 +60,31 @@ class FakeGh:
         if list(args[:2]) == ["release", "view"]:
             return self._view(args[2])
         if list(args[:2]) == ["release", "create"]:
-            self._create(args[2])
+            self._create(args)
             return ""
+        if args[0] == "api":
+            return self._api(args[1])
         raise AssertionError(f"unexpected gh call: {list(args)}")
+
+    def _api(self, endpoint: str) -> str:
+        """Answer `api` for a tag ref or a tag object, as the REST API does."""
+        refs = "repos/{owner}/{repo}/git/ref/tags/"
+        objects = "repos/{owner}/{repo}/git/tags/"
+        if endpoint.startswith(refs):
+            tag = endpoint.removeprefix(refs)
+            if tag not in self.remote_tags:
+                raise CommandError("gh api failed: HTTP 404", "HTTP 404")
+            if tag in self.annotated_tags:
+                return json.dumps({"object": {"type": "tag", "sha": f"object-{tag}"}})
+            return json.dumps(
+                {"object": {"type": "commit", "sha": self.remote_tags[tag]}}
+            )
+        if endpoint.startswith(objects):
+            tag = endpoint.removeprefix(objects).removeprefix("object-")
+            return json.dumps(
+                {"object": {"type": "commit", "sha": self.remote_tags[tag]}}
+            )
+        raise AssertionError(f"unexpected gh api endpoint: {endpoint}")
 
     def _view(self, tag: str) -> str:
         """Answer `release view`: the JSON of a release, or a failure."""
@@ -63,12 +95,19 @@ class FakeGh:
             raise CommandError(f"gh release view {tag} failed: {stderr}", stderr)
         return f'{{"tagName":"{tag}"}}\n'
 
-    def _create(self, tag: str) -> None:
-        """Answer `release create`: add the release, or fail."""
+    def _create(self, args: Sequence[str]) -> None:
+        """Answer `release create <tag> ...`: add the release, or fail.
+
+        A new tag lands on the `--target` commit. A tag that exists stays where
+        it is.
+        """
+        tag = args[2]
         if self.create_failure is not None:
             message = self.create_failure
             raise CommandError(f"gh release create {tag} failed: {message}", message)
         self.releases.add(tag)
+        if "--target" in args:
+            self.remote_tags.setdefault(tag, args[args.index("--target") + 1])
 
 
 @dataclass(frozen=True)

@@ -19,8 +19,9 @@ carries a release tag is released: `plan` says so, and `publish` asks GitHub
 whether the release for the tag exists. It exits 0 when it does, and it
 creates the missing release for the existing tag when it does not.
 
-Exit status: 0 for success, 1 when the release cannot be made (a command failed
-or the new tag exists on a commit that does not contain this one), 2 for a
+Exit status: 0 for success, 1 when the release cannot be made (a command failed,
+the new tag exists on a commit that does not contain this one, or the tag on
+GitHub names another commit after `publish` created the release), 2 for a
 usage error, 3 for an internal error. The message goes to standard error for
 status 1 and above.
 

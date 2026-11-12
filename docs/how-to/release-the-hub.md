@@ -79,6 +79,11 @@ commit would get is taken by a release on a commit that doesn't contain this
 one, for example on another branch. Open the tags of the repository and decide
 how to continue the series. Don't move the tag.
 
+The message `the tag ... on GitHub names commit ...` means that someone created
+the tag after the checkout of the run, so GitHub attached the new release to
+that tag and not to the commit of the run. The tag stays: don't move it. Open
+the release and the tag, and decide how to continue the series.
+
 The message of `gh release view` in the log tells a failed check from a
 missing release. A failed check, such as a refused token, stops the job
 without creating anything. Fix the token or the permission and re-run the job.

@@ -1,6 +1,8 @@
 """Create the GitHub release for a plan."""
 
-from release.plan import AlreadyReleased, Plan, plan_for_existing_tag
+import json
+
+from release.plan import AlreadyReleased, Plan, ReleaseError, plan_for_existing_tag
 from release.runner import CommandError, Runner
 
 RELEASE_NOT_FOUND = "release not found"
@@ -12,6 +14,27 @@ source of `gh` (`pkg/cmd/release/shared/fetch.go`).
 """
 
 
+def remote_tag_commit(gh: Runner, tag: str) -> str:
+    """Return the full hash of the commit that `tag` names on GitHub.
+
+    The function reads the tag with the REST endpoints `git/ref/tags/<tag>` and,
+    for an annotated tag, `git/tags/<hash>`. `gh` fills `{owner}` and `{repo}`
+    from `GH_REPO`.
+
+    Args:
+        gh: The runner of `gh`.
+        tag: The tag name.
+
+    Raises:
+        CommandError: `gh` failed, for example because the tag does not exist.
+    """
+    endpoint = "repos/{owner}/{repo}/git"
+    target = json.loads(gh(["api", f"{endpoint}/ref/tags/{tag}"]))["object"]
+    if target["type"] == "tag":
+        target = json.loads(gh(["api", f"{endpoint}/tags/{target['sha']}"]))["object"]
+    return str(target["sha"])
+
+
 def publish_release(gh: Runner, plan: Plan, *, tag_exists: bool = False) -> None:
     """Create the release of `plan` with one `gh release create` call.
 
@@ -21,10 +44,16 @@ def publish_release(gh: Runner, plan: Plan, *, tag_exists: bool = False) -> None
     finds out, because a tag without a release goes through `ensure_release`.
 
     For a new tag, `--target` names the full hash of the commit, so the tag
-    lands on that commit and not on the head of the default branch. For a tag
-    that exists, `--verify-tag` makes the call fail when the tag is not in the
-    GitHub repository, and no `--target` is needed. The notes go through
-    standard input, which has no limit on the length of an argument.
+    lands on that commit and not on the head of the default branch. GitHub
+    ignores `--target` when the tag already exists on its side, which happens
+    when someone else pushed the tag after the checkout of this run. The call
+    then succeeds and attaches the release to the other commit. So after the
+    call for a new tag, this function reads the tag back from GitHub and
+    refuses to report success when it names another commit.
+
+    For a tag that exists, `--verify-tag` makes the call fail when the tag is
+    not in the GitHub repository, and no `--target` is needed. The notes go
+    through standard input, which has no limit on the length of an argument.
 
     Args:
         gh: The runner of `gh`. The repository and the token come from the
@@ -35,6 +64,9 @@ def publish_release(gh: Runner, plan: Plan, *, tag_exists: bool = False) -> None
 
     Raises:
         CommandError: `gh` failed.
+        ReleaseError: The tag on GitHub names a commit other than the one of
+            `plan`. The release exists and is attached to that tag, and the
+            tool changes nothing more: a person decides what to do with it.
     """
     placement = ["--verify-tag"] if tag_exists else ["--target", plan.commit]
     gh(
@@ -50,6 +82,15 @@ def publish_release(gh: Runner, plan: Plan, *, tag_exists: bool = False) -> None
         ],
         stdin=plan.notes,
     )
+    if tag_exists:
+        return
+    actual = remote_tag_commit(gh, plan.tag)
+    if actual != plan.commit:
+        raise ReleaseError(
+            f"the tag {plan.tag} on GitHub names commit {actual}, not "
+            f"{plan.commit}: someone created the tag after the checkout, and "
+            f"the release is attached to it"
+        )
 
 
 def release_exists(gh: Runner, tag: str) -> bool:

@@ -196,7 +196,13 @@ the hub's nixpkgs.
    one, for example on another branch. `publish` exits 1 and creates nothing.
 4. Otherwise `publish` makes one `gh release create <tag> --target <hash>`
    call without assets and the tag lands on that exact commit. The tool
-   doesn't create a tag in the local repository.
+   doesn't create a tag in the local repository. GitHub ignores `--target`
+   when the tag already exists on its side, for example when someone pushed
+   the tag after the checkout of the run. So `publish` then reads the tag back
+   with `gh api repos/{owner}/{repo}/git/ref/tags/<tag>`, and it follows an
+   annotated tag to its commit. When the tag names another commit, `publish`
+   exits 1 and doesn't print that it released the commit. The release exists
+   by then and is attached to that tag. The tool changes nothing more.
 
 The state of a failed call: GitHub doesn't document that `gh release create`
 makes the tag and the release in one step, or what a failed call leaves. The

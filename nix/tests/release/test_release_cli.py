@@ -132,7 +132,10 @@ class PublishCommandTest(RepoTestCase):
     """`release publish` creates the release that a commit lacks, or nothing."""
 
     def test_publish_creates_the_release_at_the_commit(self) -> None:
-        """The call names the tag, the full commit, the title and the notes."""
+        """The call names the tag, the full commit, the title and the notes.
+
+        A second call reads the tag back from GitHub.
+        """
         head = self.commit({"flake.nix": "{}\n"}, "feat: add the flake")
         result = self.run_cli("publish", "--commit", head)
         self.assertEqual(result.code, cli.EXIT_OK)
@@ -153,9 +156,36 @@ class PublishCommandTest(RepoTestCase):
                         "-",
                     ],
                     "rules changed: yes\n\n- `feat: add the flake`\n",
-                )
+                ),
+                (["api", "repos/{owner}/{repo}/git/ref/tags/v1.0.0"], None),
             ],
         )
+
+    def test_publish_fails_when_the_tag_appeared_on_github_at_another_commit(
+        self,
+    ) -> None:
+        """GitHub ignores `--target` for an existing tag: exit 1, no success text.
+
+        The local clone has no `v1.0.0`, so the plan asks for it. Between the
+        checkout and the call, someone made the tag on another commit.
+        """
+        self.commit({"flake.nix": "{}\n"}, "feat: add the flake")
+        other = "0123456789abcdef0123456789abcdef01234567"
+        self.gh.remote_tags["v1.0.0"] = other
+        result = self.run_cli("publish")
+        self.assertEqual(result.code, cli.EXIT_CANNOT_RELEASE)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("v1.0.0", result.stderr)
+        self.assertIn(other, result.stderr)
+
+    def test_publish_accepts_an_annotated_tag_on_the_commit(self) -> None:
+        """The check follows an annotated tag to its commit."""
+        head = self.commit({"flake.nix": "{}\n"}, "feat: add the flake")
+        self.gh.remote_tags["v1.0.0"] = head
+        self.gh.annotated_tags.add("v1.0.0")
+        result = self.run_cli("publish")
+        self.assertEqual(result.code, cli.EXIT_OK)
+        self.assertEqual(result.stdout, f"released v1.0.0 at commit {head}\n")
 
     def test_publish_leaves_the_local_tags_alone(self) -> None:
         """The tag is made by GitHub, so the local repository gets none."""
