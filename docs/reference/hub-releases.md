@@ -93,7 +93,7 @@ that makes them rules:
 | ----- | -------------- |
 | `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`, `.github/pull_request_template.md`, `.github/ISSUE_TEMPLATE/**` | GitHub applies them to every repository of the organization that has no file of its own. A change reaches every repository. |
 | Every other path below `docs/`, such as `docs/PULL_REQUEST_TEMPLATE/**`, `docs/ISSUE_TEMPLATE/**` and a file directly in `docs/` | GitHub reads default community files from `docs/` as well as from the root and `.github/`. Its documentation names the pull request template and the folder `docs/PULL_REQUEST_TEMPLATE/` there. It places issue templates and discussion category forms in `.github/` only, and the hub still treats every unnamed folder as a rule, so it never has to decide which ones GitHub reads. |
-| `flake.nix`, `flake.lock`, `treefmt.nix` | The flake of every consumer. |
+| `flake.nix`, `nix/lib/**`, `flake.lock`, `treefmt.nix` | The flake of every consumer. `nix/lib/` holds the functions that the flake exports as `lib` and the tools that its apps and checks run. |
 | `config/**` | `sync-config` copies them into every consumer. |
 | `vale/Sealambda/*.yml` (the rules) | The Vale style of `mkDocsCheck`. |
 | `nix/scripts/**` | The tools that the flake runs. The `decisions` tool and `check-docs.sh` run in the checks of a consumer. |

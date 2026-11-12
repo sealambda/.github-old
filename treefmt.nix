@@ -1,4 +1,4 @@
-# The organization's treefmt module. `flake.nix` exports it through
+# The organization's treefmt module. `nix/lib/treefmt.nix` evaluates it for
 # `lib.mkTreefmt`. Every program here either formats a file or fails the check.
 {
   projectRootFile = "flake.nix";
