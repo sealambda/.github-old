@@ -182,7 +182,7 @@ runs from a named hub commit, as
 ## Extend the Renovate preset
 
 Renovate resolves `github>sealambda/.github` to `default.json` at the root of
-the hub.
+the hub. The hub also publishes version 2 of the preset as `v2.json`.
 
 1. Extend the preset in the repository's `renovate.json`:
 
@@ -192,6 +192,10 @@ the hub.
      "extends": ["github>sealambda/.github"]
    }
    ```
+
+   To use version 2, extend `github>sealambda/.github:v2#<tag>` instead, where
+   `<tag>` is a release of the hub. The
+   [preset](../reference/renovate-preset.md#version-2) lists what changes.
 
 2. Keep the repository's own `enabledManagers`, `constraints` and
    `packageRules` in the same file. Don't repeat a setting that the

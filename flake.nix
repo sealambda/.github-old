@@ -170,6 +170,7 @@
           ./nix/scripts/decisions
           ./nix/scripts/gitpolicy
           ./nix/scripts/leaks
+          ./nix/scripts/presetcompat
           ./nix/scripts/release
           ./nix/scripts/versions
           ./nix/scripts/workflows
@@ -177,6 +178,7 @@
           ./nix/tests/decisions
           ./nix/tests/gitpolicy
           ./nix/tests/leaks
+          ./nix/tests/presetcompat
           ./nix/tests/release
           ./nix/tests/versions
           ./nix/tests/workflows
@@ -589,12 +591,54 @@
 
         # Fails when the Renovate configuration of the hub is not valid:
         # `renovate.json`, which the hub's own repository uses, and the shared
-        # preset `default.json`. The rules are in
+        # presets `default.json` and `v2.json`. The rules are in
         # `docs/reference/renovate-config-check.md`. The check needs no
         # network: it reads files.
         renovate-config = mkRenovateConfigCheck pkgs self {
-          presets = [ "default.json" ];
+          presets = [
+            "default.json"
+            "v2.json"
+          ];
         };
+
+        # Fails when `v2.json` loses a guarantee of `default.json`: the wait of
+        # 7 days, the alerts from the OSV database, a package rule or an
+        # `extends` item of version 1 (but the approval of major updates, which
+        # version 2 drops on purpose), the schedule of the lock file
+        # maintenance, `rebaseWhen`, the one rule for each of the two series
+        # of tags of the hub, the two rules that add the label `breaking`, and
+        # the merge rule of the hub input. It also fails on a setting that
+        # turns Renovate off, and on a rule that version 2 adds and that
+        # shortens the wait or disables a package. It does not evaluate the
+        # rules in the order in which Renovate applies them. The invariants
+        # are in `nix/scripts/presetcompat` and the
+        # reference is `docs/reference/renovate-preset.md`. The check needs no
+        # network: it reads two files.
+        presetcompat =
+          pkgs.runCommand "presetcompat"
+            {
+              nativeBuildInputs = [ (tools.presetcompat.mkTool pkgs) ];
+            }
+            ''
+              cd ${self}
+              presetcompat check default.json v2.json
+              touch "$out"
+            '';
+
+        # Runs the unit tests of `nix/scripts/presetcompat`: each invariant
+        # with a pair of presets that keeps it and a pair that breaks it, the
+        # two series of tags, and the command line.
+        check-presetcompat-tests =
+          pkgs.runCommand "check-presetcompat-tests"
+            {
+              nativeBuildInputs = [ pkgs.python3 ];
+              env = tools.presetcompat.env;
+            }
+            ''
+              export HOME="$TMPDIR"
+              python -m unittest discover -v -s ${./nix/tests/presetcompat}
+              touch "$out"
+            '';
 
         # Runs the unit tests of `nix/scripts/workflows`: each rule with
         # workflows that it accepts and workflows that it rejects, the three
@@ -749,6 +793,7 @@
                 nix/scripts/decisions nix/tests/decisions \
                 nix/scripts/gitpolicy nix/tests/gitpolicy \
                 nix/scripts/leaks nix/tests/leaks \
+                nix/scripts/presetcompat nix/tests/presetcompat \
                 nix/scripts/release nix/tests/release \
                 nix/scripts/versions nix/tests/versions \
                 nix/scripts/workflows nix/tests/workflows

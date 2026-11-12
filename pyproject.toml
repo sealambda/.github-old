@@ -12,6 +12,7 @@ src = [
   "nix/tests/decisions",
   "nix/tests/gitpolicy",
   "nix/tests/leaks",
+  "nix/tests/presetcompat",
   "nix/tests/release",
   "nix/tests/versions",
   "nix/tests/workflows",

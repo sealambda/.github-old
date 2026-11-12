@@ -1,0 +1,145 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": [
+    "Sealambda dependency update policy, version 2. A repository extends it with github>sealambda/.github:v2#<tag>, where the tag is a release of the hub. The file holds every rule of default.json, so it does not extend that file.",
+    "It builds on config:best-practices, which pins GitHub Actions and Docker images by digest, and sets the commit type to build and the label to dependencies.",
+    "A release waits 7 days before Renovate proposes it. The Renovate schedule and the lock file maintenance run on Monday mornings, in UTC. A major version and a breaking version open as pull requests with a label, and a person reviews them. Renovate rebases a pull request only when it conflicts, so a rebase doesn't dismiss an approval, except for a pull request that merges by itself: it rebases when it falls behind its base branch.",
+    "A security fix, the hub pin and the hub flake input open on any day. Any day means the schedule only: the 7 day wait still applies to the hub pin and the actions series, and the flake input has none, because it follows a Git ref. The hub flake input merges by itself when the checks pass, so it relies on the review rules of the hub repository.",
+    "The Nix manager and the mise manager are on."
+  ],
+  "extends": [
+    "config:best-practices",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(build)",
+    ":label(dependencies)"
+  ],
+  "schedule": ["* 0-9 * * 1"],
+  "minimumReleaseAge": "7 days",
+  "osvVulnerabilityAlerts": true,
+  "rebaseWhen": "conflicted",
+  "lockFileMaintenance": {
+    "schedule": ["* 0-9 * * 1"]
+  },
+  "nix": {
+    "enabled": true
+  },
+  "mise": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "description": "A package from the npm registry, which pnpm installs from, waits 7 days like every other release. config:best-practices shortens the wait for that registry to 3 days.",
+      "matchDatasources": ["npm"],
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "Renovate cannot check the age of these update types, because they have no release date. Without this rule the age check stays pending and Renovate never creates the branch.",
+      "matchUpdateTypes": ["lockFileMaintenance", "pin", "replacement", "bump", "lockfileUpdate", "rollback"],
+      "minimumReleaseAge": null
+    },
+    {
+      "description": "A flake input that follows a Git ref has no release date, so its age cannot be checked.",
+      "matchManagers": ["nix"],
+      "minimumReleaseAge": null
+    },
+    {
+      "description": "A development dependency keeps the range that its manifest declares. config:best-practices pins it to one version, and the lock file already fixes the resolved version.",
+      "matchDepTypes": ["devDependencies", "dev-dependencies", "dev"],
+      "rangeStrategy": "auto"
+    },
+    {
+      "description": "Mix: one pull request for the minor and patch versions.",
+      "matchManagers": ["mix"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Mix minor and patch"
+    },
+    {
+      "description": "pnpm: one pull request for the minor and patch versions. Renovate names its manager for package.json files npm, and it reads pnpm-lock.yaml through that manager.",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "pnpm minor and patch"
+    },
+    {
+      "description": "The Elixir quality tools update in one pull request.",
+      "matchManagers": ["mix"],
+      "matchPackageNames": ["credo", "dialyxir", "mix_audit", "sobelow"],
+      "groupName": "Elixir QA tools"
+    },
+    {
+      "description": "The actions that the workflows pin by commit SHA, with the version in a comment: one pull request for all of them.",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions"
+    },
+    {
+      "description": "OpenTofu providers come from the OpenTofu registry, the one that tofu init uses.",
+      "matchDatasources": ["terraform-provider"],
+      "registryUrls": ["https://registry.opentofu.org"]
+    },
+    {
+      "description": "required_version names OpenTofu, which Renovate would look up as Terraform; the development shell decides the OpenTofu version.",
+      "matchManagers": ["terraform"],
+      "matchDepTypes": ["required_version"],
+      "enabled": false
+    },
+    {
+      "description": "A security fix inside the declared range changes only the lock file. Renovate merges it after the checks pass.",
+      "matchJsonata": ["isVulnerabilityAlert = true and newValue = currentValue"],
+      "addLabels": ["security"],
+      "automerge": true
+    },
+    {
+      "description": "Any other security fix changes a declared range or a major version. It opens as a draft pull request. A person reviews it, and Renovate never merges it.",
+      "matchJsonata": ["isVulnerabilityAlert = true and newValue != currentValue"],
+      "addLabels": ["security"],
+      "automerge": false,
+      "draftPR": true
+    },
+    {
+      "description": "A major version opens as a pull request with the label major. Version 2 drops the Dashboard approval of default.json, so a person reviews the pull request.",
+      "matchUpdateTypes": ["major"],
+      "addLabels": ["major"]
+    },
+    {
+      "description": "A breaking version opens as a pull request with the label breaking. A version 0.x counts as breaking when its versioning says so, as semver and npm do.",
+      "matchIsBreaking": true,
+      "addLabels": ["breaking"]
+    },
+    {
+      "description": "A minor version of a package at 0.x opens as a pull request with the label breaking, because a 0.x minor may break the API. This covers the versionings that have no breaking check of their own, where matchIsBreaking is true only for a major version, and the versionings whose check never reports a 0.x minor.",
+      "matchUpdateTypes": ["minor"],
+      "matchCurrentVersion": "/^v?0\\./",
+      "addLabels": ["breaking"]
+    },
+    {
+      "description": "The hub pin, the tag of this preset in a repository, opens on any day. It is a tag of the hub with a version of the form v1.2.3. The regex versioning reads only that form, so a tag of the actions series, which starts with actions-v, is never read as a version of the pin.",
+      "matchPackageNames": ["sealambda/.github"],
+      "matchCurrentValue": "/^v\\d/",
+      "versioning": "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
+      "schedule": [],
+      "groupName": "Hub preset pin"
+    },
+    {
+      "description": "The actions series of the hub, the version in the comment of a pinned workflow or action, is a second series of tags in the same repository. It opens on any day. A person reviews it, because the update changes a workflow.",
+      "matchPackageNames": ["sealambda/.github"],
+      "matchCurrentValue": "/^actions-v/",
+      "versioning": "regex:^actions-v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
+      "schedule": [],
+      "automerge": false
+    },
+    {
+      "description": "The flake input named hub is the hub itself. A repository that follows the convention names the input hub. An update of it changes only flake.lock, so it opens on any day and merges automatically when the checks pass. The Nix manager reads the input with the git versioning, which reports a new revision as a digest or patch update, never as a major one, so the update types listed are the ones that occur. A major update is not listed and never merges without a person.",
+      "matchManagers": ["nix"],
+      "matchDepNames": ["hub"],
+      "matchPackageNames": ["https://github.com/sealambda/.github"],
+      "matchUpdateTypes": ["digest", "patch", "minor"],
+      "schedule": [],
+      "rebaseWhen": "behind-base-branch",
+      "automerge": true
+    },
+    {
+      "description": "A security fix that merges by itself rebases when it falls behind its base branch, so a repository that requires an up-to-date branch never keeps it open. Version 2 may not change the security rule of default.json, so this rule repeats its matcher.",
+      "matchJsonata": ["isVulnerabilityAlert = true and newValue = currentValue"],
+      "rebaseWhen": "behind-base-branch"
+    }
+  ]
+}
