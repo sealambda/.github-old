@@ -14,6 +14,7 @@ from release.plan import (
     plan_release,
 )
 from release.series import ACTIONS, HUB
+from release.tags import Bump
 from release_repo import RepoTestCase
 
 ACTION_FILE = ".github/actions/setup-nix/action.yml"
@@ -38,7 +39,7 @@ class ActionsPlanTest(RepoTestCase):
         self.assertEqual(plan.tag, "actions-v1.0.0")
         self.assertEqual(plan.commit, head)
         self.assertIsNone(plan.previous)
-        self.assertTrue(plan.rules_changed)
+        self.assertIs(plan.bump, Bump.MINOR)
         self.assertFalse(plan.make_latest)
         self.assertEqual(
             plan.notes,
@@ -68,7 +69,7 @@ class ActionsPlanTest(RepoTestCase):
         self.assertEqual(
             (plan.tag, plan.commit, plan.previous), ("actions-v1.0.0", head, None)
         )
-        self.assertTrue(plan.rules_changed)
+        self.assertIs(plan.bump, Bump.MINOR)
         self.assertEqual(
             plan.notes, f"{LABEL_YES}\n\n- feat: add action\n- feat: add pins\n"
         )
@@ -87,7 +88,7 @@ class ActionsPlanTest(RepoTestCase):
         self.assertEqual(
             (plan.tag, plan.previous), ("actions-v1.2.0", "actions-v1.1.0")
         )
-        self.assertTrue(plan.rules_changed)
+        self.assertIs(plan.bump, Bump.MINOR)
         self.assertTrue(plan.notes.startswith(f"{LABEL_YES}\n"))
 
     def test_only_versions_json_raises_the_patch(self) -> None:
@@ -97,7 +98,7 @@ class ActionsPlanTest(RepoTestCase):
         self.commit({"versions.json": "2\n"}, "chore: bump the pin")
         plan = self.planned()
         self.assertEqual(plan.tag, "actions-v1.1.1")
-        self.assertFalse(plan.rules_changed)
+        self.assertIs(plan.bump, Bump.PATCH)
         self.assertEqual(plan.notes, f"{LABEL_NO}\n\n- chore: bump the pin\n")
 
     def test_versions_json_with_an_action_file_raises_the_minor(self) -> None:
@@ -147,7 +148,7 @@ class ActionsPlanTest(RepoTestCase):
         hub = plan_release(self.git, "HEAD", HUB)
         assert isinstance(hub, Plan), hub
         self.assertEqual((hub.tag, hub.previous), ("v1.5.1", "v1.5.0"))
-        self.assertFalse(hub.rules_changed)
+        self.assertIs(hub.bump, Bump.PATCH)
         self.assertTrue(hub.make_latest)
 
     def test_the_hub_plan_ignores_actions_tags(self) -> None:
@@ -245,7 +246,7 @@ class ActionsExistingTagTest(RepoTestCase):
             (plan.tag, plan.commit, plan.previous),
             ("actions-v1.1.0", head, "actions-v1.0.0"),
         )
-        self.assertTrue(plan.rules_changed)
+        self.assertIs(plan.bump, Bump.MINOR)
         self.assertFalse(plan.make_latest)
         self.assertEqual(
             plan.notes, f"{LABEL_YES}\n\n- fix: change action\n- feat: hub\n"
@@ -259,4 +260,35 @@ class ActionsExistingTagTest(RepoTestCase):
             self.git, AlreadyReleased(head, "actions-v1.0.0"), ACTIONS
         )
         self.assertIsNone(plan.previous)
-        self.assertFalse(plan.rules_changed)
+        self.assertIs(plan.bump, Bump.NONE)
+        self.assertEqual(plan.notes, f"{LABEL_NO}\n\n- feat: add pins\n")
+
+    def test_the_first_actions_tag_on_an_action_file_says_yes(self) -> None:
+        """A manual first tag on a tree with an action file gets `yes`."""
+        head = self.commit({ACTION_FILE: "a\n"}, "feat: add action")
+        self.tag("actions-v1.0.0")
+        plan = plan_for_existing_tag(
+            self.git, AlreadyReleased(head, "actions-v1.0.0"), ACTIONS
+        )
+        self.assertIs(plan.bump, Bump.MINOR)
+        self.assertEqual(plan.notes, f"{LABEL_YES}\n\n- feat: add action\n")
+
+    def test_a_tag_on_a_docs_only_commit_gets_no_and_no_latest_label(self) -> None:
+        """A tag after the previous one with no workflow file in the range.
+
+        The tag exists, so the plan never refuses it: the answer is `no`, the
+        kind is `NONE` and the release does not take the "latest" label.
+        """
+        self.commit({ACTION_FILE: "a\n"}, "feat: add action")
+        self.tag("actions-v1.0.0")
+        head = self.commit({"docs/reference/a.txt": "a\n"}, "docs: add a page")
+        self.tag("actions-v1.0.1")
+        plan = plan_for_existing_tag(
+            self.git, AlreadyReleased(head, "actions-v1.0.1"), ACTIONS
+        )
+        self.assertEqual(
+            (plan.tag, plan.previous), ("actions-v1.0.1", "actions-v1.0.0")
+        )
+        self.assertIs(plan.bump, Bump.NONE)
+        self.assertFalse(plan.make_latest)
+        self.assertEqual(plan.notes, f"{LABEL_NO}\n\n- docs: add a page\n")

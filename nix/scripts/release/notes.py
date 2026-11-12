@@ -41,7 +41,7 @@ def _size(text: str) -> int:
 
 
 def render_notes(
-    rules_changed: bool,
+    answer: bool,
     subjects: Sequence[str],
     label: str,
     limit: int = MAX_NOTES_BYTES,
@@ -58,7 +58,7 @@ def render_notes(
     have no such line.
 
     Args:
-        rules_changed: The answer for the release.
+        answer: `True` prints `yes` and `False` prints `no` after the label.
         subjects: The subject lines of the commits in the release, newest
             first. Each is one line.
         label: The question that the first line answers.
@@ -68,8 +68,7 @@ def render_notes(
             `MAX_NOTES_BYTES`. A limit that cannot hold the first line and the
             last line gives notes that exceed it, and the first line stays.
     """
-    answer = "yes" if rules_changed else "no"
-    header = f"{label}: {answer}\n\n"
+    header = f"{label}: {'yes' if answer else 'no'}\n\n"
     bullets = [f"- {_code_span(subject)}\n" for subject in subjects]
     if _size(header) + sum(_size(bullet) for bullet in bullets) <= limit:
         return header + "".join(bullets)

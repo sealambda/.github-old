@@ -2,8 +2,8 @@
 
 import unittest
 
-from release.series import ACTIONS, ALL_SERIES, HUB, Bump
-from release.tags import ACTIONS_PREFIX, HUB_PREFIX
+from release.series import ACTIONS, ALL_SERIES, HUB
+from release.tags import ACTIONS_PREFIX, HUB_PREFIX, Bump
 
 
 class SeriesDefinitionTest(unittest.TestCase):

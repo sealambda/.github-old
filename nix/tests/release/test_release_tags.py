@@ -6,6 +6,7 @@ from release.tags import (
     ACTIONS_PREFIX,
     FIRST_VERSION,
     HUB_PREFIX,
+    Bump,
     Version,
     highest_release,
     lowest_release,
@@ -103,21 +104,28 @@ class LowestReleaseTest(unittest.TestCase):
 
 
 class NextVersionTest(unittest.TestCase):
-    """A change of the rules raises the minor number, any other the patch."""
+    """A minor bump raises the minor number, a patch bump the patch number."""
 
-    def test_first_release_is_1_0_0_whatever_the_answer(self) -> None:
+    def test_first_release_is_1_0_0_whatever_the_bump(self) -> None:
         """Without a previous release the version is `v1.0.0`."""
-        self.assertEqual(next_version(None, True), FIRST_VERSION)
-        self.assertEqual(next_version(None, False), FIRST_VERSION)
+        self.assertEqual(next_version(None, Bump.MINOR), FIRST_VERSION)
+        self.assertEqual(next_version(None, Bump.PATCH), FIRST_VERSION)
         self.assertEqual(FIRST_VERSION.tag_with(HUB_PREFIX), "v1.0.0")
 
-    def test_changed_rules_raise_minor_and_reset_patch(self) -> None:
-        """`v1.2.5` with changed rules gives `v1.3.0`."""
-        self.assertEqual(next_version(Version(1, 2, 5), True), Version(1, 3, 0))
+    def test_minor_bump_raises_minor_and_resets_patch(self) -> None:
+        """`v1.2.5` with a minor bump gives `v1.3.0`."""
+        self.assertEqual(next_version(Version(1, 2, 5), Bump.MINOR), Version(1, 3, 0))
 
-    def test_unchanged_rules_raise_patch(self) -> None:
-        """`v1.2.5` with unchanged rules gives `v1.2.6`."""
-        self.assertEqual(next_version(Version(1, 2, 5), False), Version(1, 2, 6))
+    def test_patch_bump_raises_patch(self) -> None:
+        """`v1.2.5` with a patch bump gives `v1.2.6`."""
+        self.assertEqual(next_version(Version(1, 2, 5), Bump.PATCH), Version(1, 2, 6))
+
+    def test_no_release_has_no_version(self) -> None:
+        """`Bump.NONE` is an error, with or without a previous release."""
+        with self.assertRaises(ValueError):
+            next_version(Version(1, 2, 5), Bump.NONE)
+        with self.assertRaises(ValueError):
+            next_version(None, Bump.NONE)
 
 
 class ActionsSeriesTest(unittest.TestCase):

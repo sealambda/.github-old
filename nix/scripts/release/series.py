@@ -4,13 +4,12 @@ The hub releases two series from one history. The hub series (`HUB`) covers the
 rules that a flake consumer reads, and the actions series (`ACTIONS`) covers the
 workflow and action files that a consumer calls by tag. A `Series` holds what
 differs between them: the tag prefix, the rule that turns changed paths into a
-kind of release (`Bump`), the first line of the notes and the "latest" label.
-Everything else, from the plan to the call of `gh`, is shared.
+kind of release (`release.tags.Bump`), the first line of the notes and the
+"latest" label. Everything else, from the plan to the call of `gh`, is shared.
 """
 
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from enum import Enum
 
 from release.paths import (
     ACTIONS_DATA_PATTERNS,
@@ -18,22 +17,7 @@ from release.paths import (
     matches_any,
     rules_changed,
 )
-from release.tags import ACTIONS_PREFIX, HUB_PREFIX
-
-
-class Bump(Enum):
-    """The kind of release that a set of changed paths asks for.
-
-    Attributes:
-        NONE: No release. Only the actions series returns it.
-        PATCH: The patch number rises.
-        MINOR: The minor number rises and the patch number resets.
-    """
-
-    NONE = "none"
-    PATCH = "patch"
-    MINOR = "minor"
-
+from release.tags import ACTIONS_PREFIX, HUB_PREFIX, Bump
 
 PathRule = Callable[[Iterable[str]], Bump]
 """A rule that turns the changed paths of a range into a `Bump`."""

@@ -5,8 +5,14 @@ from dataclasses import dataclass
 from release import repo
 from release.notes import render_notes
 from release.runner import Runner
-from release.series import Bump, Series
-from release.tags import Version, highest_release, lowest_release, next_version
+from release.series import Series
+from release.tags import (
+    Bump,
+    Version,
+    highest_release,
+    lowest_release,
+    next_version,
+)
 
 
 class ReleaseError(Exception):
@@ -73,9 +79,11 @@ class Plan:
         commit: The full hash of the commit to tag.
         tag: The tag of the release.
         previous: The previous release tag, `None` for the first release.
-        rules_changed: The answer that the first line of the notes holds. For
-            the actions series it answers whether a workflow or action file
-            changed.
+        bump: The kind of release that the rule of the series chose.
+            `Bump.MINOR` is the `yes` of the first line of the notes. A
+            release that the tool creates is `MINOR` or `PATCH`. The plan of
+            a tag that exists already can also hold `Bump.NONE`, when the
+            actions series sees no workflow or action file in the range.
         notes: The text of the release.
         make_latest: Whether the release takes the "latest" label on GitHub.
     """
@@ -83,7 +91,7 @@ class Plan:
     commit: str
     tag: str
     previous: str | None
-    rules_changed: bool
+    bump: Bump
     notes: str
     make_latest: bool = True
 
@@ -112,17 +120,18 @@ def _make_plan(
     series: Series,
     commit: str,
     previous: Version | None,
-    changed: bool,
+    bump: Bump,
     tag: str,
 ) -> Plan:
     """Build the plan of the release `tag` of `series` for `commit`.
 
-    The notes list the subject of each commit after `previous`.
+    The notes list the subject of each commit after `previous`. Their first
+    line answers `yes` for `Bump.MINOR` and `no` for any other kind.
     """
     base = _previous_tag(series, previous)
     subjects = repo.commit_subjects(git, base, commit)
-    notes = render_notes(changed, subjects, label=series.label)
-    return Plan(commit, tag, base, changed, notes, series.make_latest)
+    notes = render_notes(bump is Bump.MINOR, subjects, label=series.label)
+    return Plan(commit, tag, base, bump, notes, series.make_latest)
 
 
 def plan_release(
@@ -168,15 +177,14 @@ def plan_release(
     bump = _bump_since(git, series, commit, previous)
     if bump is Bump.NONE:
         return NoRelease(commit, _previous_tag(series, previous))
-    changed = bump is Bump.MINOR
-    tag = next_version(previous, changed).tag_with(series.prefix)
+    tag = next_version(previous, bump).tag_with(series.prefix)
     holder = repo.tag_commit(git, tag)
     if holder is not None:
         raise ReleaseError(
             f"the tag {tag} exists on commit {holder}, which does not contain "
             f"{commit}: the version {tag} is taken"
         )
-    return _make_plan(git, series, commit, previous, changed, tag)
+    return _make_plan(git, series, commit, previous, bump, tag)
 
 
 def plan_for_existing_tag(
@@ -202,6 +210,4 @@ def plan_for_existing_tag(
     ancestors = set(repo.tags_merged_into(git, released.commit)) - at_commit
     previous = highest_release(ancestors, series.prefix)
     bump = _bump_since(git, series, released.commit, previous)
-    return _make_plan(
-        git, series, released.commit, previous, bump is Bump.MINOR, released.tag
-    )
+    return _make_plan(git, series, released.commit, previous, bump, released.tag)

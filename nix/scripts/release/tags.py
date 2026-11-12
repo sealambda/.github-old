@@ -13,6 +13,7 @@ prefix `v` doesn't match inside `actions-v1.2.3`.
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
+from enum import Enum
 from functools import cache
 
 HUB_PREFIX = "v"
@@ -52,6 +53,21 @@ class Version:
 
 FIRST_VERSION = Version(1, 0, 0)
 """The version of the first release."""
+
+
+class Bump(Enum):
+    """The kind of release that a set of changed paths asks for.
+
+    Attributes:
+        NONE: No release. Only the actions series returns it. It has no
+            version: `next_version` rejects it.
+        PATCH: The patch number rises.
+        MINOR: The minor number rises and the patch number resets.
+    """
+
+    NONE = "none"
+    PATCH = "patch"
+    MINOR = "minor"
 
 
 def parse_tag(name: str, prefix: str) -> Version | None:
@@ -103,20 +119,26 @@ def lowest_release(names: Iterable[str], prefix: str) -> Version | None:
     return min(_release_versions(names, prefix), default=None)
 
 
-def next_version(previous: Version | None, rules_changed: bool) -> Version:
+def next_version(previous: Version | None, bump: Bump) -> Version:
     """Return the version of the next release.
 
     Args:
         previous: The version of the previous release, `None` for the first.
-        rules_changed: Whether the rules changed since the previous release.
+        bump: The kind of release that the rule of the series chose.
 
     Returns:
-        `FIRST_VERSION` without a previous release. A change of the rules
-        raises the minor number and resets the patch number. Any other change
-        raises the patch number.
+        `FIRST_VERSION` without a previous release. `Bump.MINOR` raises the
+        minor number and resets the patch number. `Bump.PATCH` raises the
+        patch number.
+
+    Raises:
+        ValueError: `bump` is `Bump.NONE`. A release that doesn't happen has
+            no version, and the caller must stop before it asks for one.
     """
+    if bump is Bump.NONE:
+        raise ValueError("Bump.NONE asks for no release, so it has no version")
     if previous is None:
         return FIRST_VERSION
-    if rules_changed:
+    if bump is Bump.MINOR:
         return Version(previous.major, previous.minor + 1, 0)
     return Version(previous.major, previous.minor, previous.patch + 1)
