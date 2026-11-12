@@ -197,9 +197,14 @@ with a UTF-16 byte order mark is text, and the check decodes it.
 ## Findings
 
 Each finding prints as `path:line: rule: text. advice`, and one run prints all
-of them. To fix a finding, describe the thing without its name or identifier.
-The rules are broad on purpose: when a rule matches a text that isn't a
-private fact, reword the text.
+of them. The text is the start of the matched value, followed by `...`: at most
+four characters and at most a third of the value. The log of a build in a
+public repository stays readable after the value leaves the tree, so the log
+never holds the whole value. The path and the line locate it.
+
+To fix a finding, describe the thing without its name or identifier. The rules
+are broad on purpose: when a rule matches a text that isn't a private fact,
+reword the text.
 
 ## Limits
 

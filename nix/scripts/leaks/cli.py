@@ -8,7 +8,8 @@ Usage:
 Exit status: 0 when no rule finds a leak, 1 when a rule finds one, 2 for a
 usage error or a file that cannot be read, 3 for an internal error. Each
 finding is printed to standard output as `path:line: rule: text. advice`, all
-in one run.
+in one run. The text is the masked start of the leaked value: the output goes
+to logs that stay readable after the value leaves the tree.
 
 An internal error is an exception that the tool does not expect, which means a
 bug in the tool. The traceback goes to standard error. Status 1 stays reserved

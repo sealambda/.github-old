@@ -12,6 +12,12 @@ from leaks.rules import Policy, Rule, build_rules
 _REPLACEMENT = "\N{REPLACEMENT CHARACTER}"
 """What a stray NUL byte of a text file becomes."""
 
+_SHOWN_CHARACTERS = 4
+"""The most characters of a leaked value that a finding shows."""
+
+_SHOWN_FRACTION = 3
+"""A finding shows at most one in this many characters of a value."""
+
 
 def read_text(path: Path) -> str | None:
     """Read a file as text, or return `None` when it is binary.
@@ -39,8 +45,25 @@ def read_text(path: Path) -> str | None:
     return text.replace("\0", _REPLACEMENT)
 
 
+def mask(value: str) -> str:
+    """Return the start of a leaked value, followed by `...`.
+
+    A finding goes to the log of a build, and the log of a public repository
+    stays readable after the value leaves the tree. The path and the line
+    locate the value, so the finding shows at most `_SHOWN_CHARACTERS`
+    characters and at most one third of the value.
+
+    Args:
+        value: The leaked text, on one line.
+    """
+    shown = min(_SHOWN_CHARACTERS, len(value) // _SHOWN_FRACTION)
+    return value[:shown] + "..."
+
+
 def scan_text(text: str, path: str, rules: Sequence[Rule]) -> list[Finding]:
     """Return one finding for each leak that a rule finds in a text.
+
+    A finding shows the masked start of the value, as `mask` defines.
 
     Args:
         text: The text of one file.
@@ -53,7 +76,7 @@ def scan_text(text: str, path: str, rules: Sequence[Rule]) -> list[Finding]:
     for rule in rules:
         for leak in rule.find(text):
             line = bisect_right(line_starts, leak.offset)
-            shown = leak.text.split("\n", 1)[0]
+            shown = mask(leak.text.split("\n", 1)[0])
             findings.append(
                 Finding(path, line, f"{rule.name}: `{shown}`. {rule.advice}")
             )

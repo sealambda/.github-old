@@ -11,6 +11,7 @@ from pathlib import Path
 
 from decisions.walk import SNIFF_BYTES
 from leaks.cli import EXIT_CLEAN, EXIT_FINDINGS, EXIT_USAGE, main
+from leaks.scan import mask
 
 ACCOUNT_LINE = "account 123456789012\n"
 """A line with one leak of the rule `aws-account`."""
@@ -73,12 +74,28 @@ class ScanTest(ScanTestCase):
         self.assertEqual(
             [line.split(". ")[0] for line in lines],
             [
-                "a/c.yml:1: runner-label: `builder`",
-                "a/c.yml:3: repository: `acme/billing`",
-                "b.md:2: aws-account: `123456789012`",
+                "a/c.yml:1: runner-label: `bu...`",
+                "a/c.yml:3: repository: `acme...`",
+                "b.md:2: aws-account: `1234...`",
             ],
         )
         self.assertIn("3 finding(s)", stderr)
+
+    def test_findings_do_not_print_the_whole_value(self) -> None:
+        """A finding shows at most four characters and a third of the value."""
+        self.write("a.md", "bucket = state-of-the-company-bucket\n" + ACCOUNT_LINE)
+        status, lines, stderr = self.run_cli()
+        self.assertEqual(status, EXIT_FINDINGS)
+        output = "\n".join([*lines, stderr])
+        for value in ("123456789012", "state-of-the", "company-bucket"):
+            self.assertNotIn(value, output)
+
+    def test_mask_shows_a_short_start_of_a_value(self) -> None:
+        """The mask keeps at most four characters and one third of the value."""
+        self.assertEqual(mask("123456789012"), "1234...")
+        self.assertEqual(mask("builder"), "bu...")
+        self.assertEqual(mask("ab"), "...")
+        self.assertEqual(mask(""), "...")
 
     def test_lock_files_and_hidden_files_are_scanned(self) -> None:
         """A lock file and a dotfile are read: a leak there is as public."""
