@@ -372,12 +372,12 @@ style. [Writing style](../reference/writing-style.md) defines its rules:
   a plan or a gap, such as `currently` or `will be`.
 - `Sealambda.History` has the level suggestion. The check doesn't report it. It
   shows in an editor that runs Vale.
-- Nine rules about acronyms, spelling, filler words, headings, titles, and the
-  length of sentences, paragraphs, lists and steps have the level warning. They
-  don't fail the check, and the check doesn't print them. They show in an
-  editor that runs Vale and in a run of Vale without `--minAlertLevel=error`,
-  for example `vale .` in the `docs` dev shell. A hub revision that adds a
-  warning rule leaves the result of the check unchanged.
+- The other rules of the style have the level warning. They don't fail the
+  check, and the check doesn't print them. They show in an editor that runs
+  Vale and in a run of Vale without `--minAlertLevel=error`, for example
+  `vale .` in the `docs` dev shell. A hub revision that adds a warning rule
+  leaves the result of the check unchanged. The table in
+  [Writing style](../reference/writing-style.md#rules) lists them.
 
 The hub's Vale configuration turns `Sealambda.CurrentState` off for
 `docs/decisions/` and `docs/specs/`. It turns `Sealambda.HowToTitle` and

@@ -6,7 +6,8 @@
 # flags the heading when fewer than 80 percent of the words match. The
 # `exceptions` keep the words that are right with a capital letter or without
 # one:
-# - an acronym of two to six capital letters, such as "CI";
+# - an acronym of two to six capital letters, such as "CI" (the shape that
+#   DefineAcronyms.yml finds);
 # - the public names of tools and products that the hub's pages mention,
 #   including the names that start with a lowercase letter;
 # - the six section headings of the MADR template, which fixes their case.

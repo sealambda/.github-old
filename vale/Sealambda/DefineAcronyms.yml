@@ -1,7 +1,8 @@
 # A reader must find the meaning of an acronym on the page where it first
 # appears (docs/reference/writing-style.md#define-acronyms).
 #
-# `first` finds an acronym: two to six capital letters as a whole word.
+# `first` finds an acronym: two to six capital letters as a whole word. The
+# same shape is the acronym exception of HeadingCase.yml.
 # `second` finds a definition: the words of the full name, then the acronym in
 # parentheses, as in "continuous integration (CI)". A definition earlier on the
 # page, in reading order, covers the later uses. An acronym that the list of
@@ -40,7 +41,6 @@ exceptions:
   - ID
   - IDE
   - JSON
-  - LICENSE
   - NOTE
   - OK
   - OS
