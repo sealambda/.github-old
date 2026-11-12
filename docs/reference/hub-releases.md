@@ -69,8 +69,8 @@ release. A merge that changes no path gives `no`.
 A consumer reads the hub in four ways: through its flake (the `lib` functions,
 the apps, the files that `sync-config` copies, the base of the wrapped
 documentation tools and the Vale style), through the
-reusable workflow `secrets.yml`, through the Renovate preset `default.json`,
-and through the default community files that GitHub applies to every
+reusable workflow `secrets.yml`, through the Renovate presets `default.json`
+and `v2.json`, and through the default community files that GitHub applies to every
 repository of the organization. A path is on the list only when none of the
 four reads it.
 

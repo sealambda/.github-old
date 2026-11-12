@@ -34,10 +34,10 @@ and keeps its own facts.
   of the note says
   `rules changed: yes` or `rules changed: no`
   ([Hub releases](docs/reference/hub-releases.md)).
-- **Dependency updates.** `default.json`, a shared
-  [Renovate](https://docs.renovatebot.com/) preset for update timing,
-  grouping and security fixes. A repository's `renovate.json` extends it and
-  adds only its own managers, constraints and rules.
+- **Dependency updates.** `default.json` and `v2.json`, two shared
+  [Renovate](https://docs.renovatebot.com/) presets for update timing,
+  grouping and security fixes. A repository's `renovate.json` extends one of
+  them and adds only its own managers, constraints and rules.
 - **Tool configuration.** Settings for the tools that read only a file in the
   repository: EditorConfig, markdownlint-cli2, Vale and lychee. The
   `sync-config` app copies the files, and the `config-in-sync` check fails
