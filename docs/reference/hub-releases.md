@@ -100,7 +100,7 @@ that makes them rules:
 | `nix/scripts/**` | The tools that the flake runs. The `decisions` and `workflows` tools and `check-docs.sh` run in the checks of a consumer, and the `gitpolicy` tool and the script of `secrets-scan` run in its CI and in the hooks of `lib.mkHooks`. |
 | `schemas/**` | The `decisions` tool validates records against them. |
 | `.github/workflows/secrets.yml` | The reusable workflow that consumers call. |
-| `default.json` | The Renovate preset that consumers extend. |
+| `default.json`, `v2.json` | The Renovate presets that consumers extend. |
 | `versions.json` | The pinned version of Nix that workflows install. |
 | `templates/**` | People copy them into consumers, and the `versions` check reads the workflows below `templates/`. |
 | `.editorconfig`, `.markdownlint-cli2.yaml`, `.vale.ini`, `.vale/**`, `lychee.toml`, `.github/.markdownlint-cli2.yaml` | The hub's own copies of the files in `config/`. The check `config-in-sync` keeps the copies equal, and the source in `config/` is the rule. |
