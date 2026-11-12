@@ -420,8 +420,10 @@
         # on a push. They also read the wiring of the job from the workflow: its
         # `needs` list every job that runs before it, its step gets the real
         # `needs` and event, it runs `always()`, and nothing in it continues on
-        # error. The tests need `jq` and the path of the workflow, and they
-        # reach no network.
+        # error. Other tests read the job `git-policy`: its condition, the range
+        # and the branch name that its two commands check, and the whole history
+        # of its checkout. The tests need `jq` and the path of the workflow, and
+        # they reach no network.
         check-ci-tests =
           pkgs.runCommand "check-ci-tests"
             {
