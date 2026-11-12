@@ -253,9 +253,11 @@ including a real `commit-msg` hook.
 
 ## Limits
 
-- `range` takes about 12 ms for each commit, because it runs one `git` command
-  for the message of each commit. A range of a thousand commits takes about
-  12 seconds. A pull request has far fewer commits.
+- `range` reads all the commits with one `git log` command, so the cost of the
+  process doesn't grow with the length of the range. If one message isn't
+  valid UTF-8, the tool reads the commits again, one command for each message.
+  That path takes about 12 ms for each commit, and only a range with such a
+  message takes it.
 - `range` can't check a root commit. The range `A..B` leaves out `A` and its
   ancestors, and a root commit has no parent to put on the left. `<root>^..B`
   is a usage error, because Git can't resolve the revision.

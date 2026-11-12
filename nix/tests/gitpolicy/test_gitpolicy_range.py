@@ -159,6 +159,41 @@ class RangeTest(RepoTestCase):
         result = self.run_cli("range", f"{base}..HEAD")
         self.assertEqual((0, ""), (result.code, result.stdout), result.stderr)
 
+    def test_a_nul_byte_in_a_message_does_not_mix_up_the_commits(self) -> None:
+        """A message with a NUL byte ends at the byte, and the next commit is read.
+
+        The batch uses NUL as its separator, so this is the case that could
+        shift the fields of every later commit.
+        """
+        base = self.commit("chore: start")
+        self.commit_bytes(b"feat: before\0after\n")
+        bad = self.commit("Add a thing")
+        result = self.run_cli("range", f"{base}..HEAD")
+        lines = result.stdout.splitlines()
+        self.assertEqual(1, len(lines), result.stdout + result.stderr)
+        self.assertTrue(lines[0].startswith(f"{bad[:7]}: "), lines[0])
+
+    def test_a_range_is_read_with_one_git_command(self) -> None:
+        """The cost of a range does not grow with its length: one `git` call.
+
+        The messages have a body, a lone carriage return and an empty line, so
+        the test also shows that the fields of one commit do not mix with the
+        next commit.
+        """
+        base = self.commit("chore: start")
+        for number in range(5):
+            self.commit(f"feat: change {number}\n\nbody\rof {number}\n\nfooter")
+        calls: list[list[str]] = []
+
+        def counting_git(args: Sequence[str], *, stdin: str | None = None) -> str:
+            """Record the arguments and run the real `git`."""
+            calls.append(list(args))
+            return self.git(args, stdin=stdin)
+
+        result = run_main(["range", f"{base}..HEAD"], counting_git)
+        self.assertEqual((0, ""), (result.code, result.stdout), result.stderr)
+        self.assertEqual(1, len(calls), calls)
+
     def test_commit_with_an_empty_message_is_a_problem(self) -> None:
         """A commit with no message has no header, and the check reports it."""
         base = self.commit("chore: start")

@@ -114,7 +114,9 @@ class RepoTestCase(unittest.TestCase):
         commit already.
 
         Args:
-            message: The bytes of the message, stored as they are.
+            message: The bytes of the message, stored as they are. A NUL byte
+                is allowed: Git refuses it in a commit that it checks, so the
+                helper then writes the object with `--literally`.
             encoding: The value of an `encoding` header, or `None` for none.
             signature: Whether the commit carries a `gpgsig` header. The
                 signature is a placeholder: only a verifier that accepts it,
@@ -134,9 +136,10 @@ class RepoTestCase(unittest.TestCase):
                 " placeholder",
                 " -----END PGP SIGNATURE-----",
             ]
+        literally = ["--literally"] if b"\0" in message else []  # skips the fsck
         completed = subprocess.run(
             ["git", "-C", str(self.root), "hash-object", "-t", "commit", "-w"]
-            + ["--stdin"],
+            + [*literally, "--stdin"],
             input="\n".join(headers).encode() + b"\n\n" + message,
             capture_output=True,
             check=True,

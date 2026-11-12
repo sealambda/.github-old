@@ -15,6 +15,11 @@ from release.runner import CommandError, Runner, command_runner
 # setting. Git writes the section and the variable name in lower case.
 _COMMENT_SETTINGS = ("core.commentchar", "core.commentstring")
 
+# The options that make `git log` print the same text on every machine: no
+# signature check from `log.showSignature`, and UTF-8 whatever the setting
+# `i18n.logOutputEncoding` says.
+_STABLE_OUTPUT = ["--no-show-signature", "--encoding=UTF-8"]
+
 # The pattern that selects the same two names, for `git config --get-regexp`.
 _COMMENT_PATTERN = r"^core\.comment(char|string)$"
 
@@ -63,11 +68,55 @@ def _read_message(git: Runner, sha: str) -> str | None:
     Raises:
         CommandError: Git cannot read the commit.
     """
-    command = ["log", "-1", "--format=%B", "--no-show-signature", "--encoding=UTF-8"]
+    command = ["log", "-1", "--format=%B", *_STABLE_OUTPUT]
     try:
         return git([*command, "--end-of-options", sha]).rstrip("\n")
     except UnicodeDecodeError:
         return None
+
+
+def _commits_one_by_one(git: Runner, revision_range: str) -> list[Commit]:
+    """Return the commits of a range with one `git` command per message.
+
+    This is the slow path. A message with bytes that are not UTF-8 fails the
+    decoding of the whole output of a batch, so the caller falls back to this
+    function, where such a message fails alone.
+
+    Raises:
+        CommandError: Git cannot read the range.
+    """
+    listing = git(
+        ["rev-list", "--reverse", "--parents", "--end-of-options", revision_range]
+    )
+    commits: list[Commit] = []
+    for line in listing.splitlines():
+        sha, *parents = line.split()
+        commits.append(Commit(sha, _read_message(git, sha), len(parents) > 1))
+    return commits
+
+
+def _commits_in_batch(git: Runner, revision_range: str) -> list[Commit]:
+    """Return the commits of a range with one `git log` command.
+
+    `-z` ends each commit with a NUL character. A NUL cannot be part of a
+    message or of a hash, so the output splits into three fields per commit:
+    the hash, the hashes of the parents and the message.
+
+    Raises:
+        CommandError: Git cannot read the range.
+        UnicodeDecodeError: The message of some commit is not UTF-8 text.
+    """
+    output = git(
+        ["log", "-z", "--reverse", "--format=%H%x00%P%x00%B", *_STABLE_OUTPUT]
+        + ["--end-of-options", revision_range]
+    )
+    fields = output.split("\0")[:-1]  # the last field is empty: NUL ends a commit
+    return [
+        Commit(sha, message.rstrip("\n"), len(parents.split()) > 1)
+        for sha, parents, message in zip(
+            fields[0::3], fields[1::3], fields[2::3], strict=True
+        )
+    ]
 
 
 def commits_in_range(git: Runner, revision_range: str) -> list[Commit]:
@@ -75,8 +124,11 @@ def commits_in_range(git: Runner, revision_range: str) -> list[Commit]:
 
     The range holds every commit that its end reaches and its start does not,
     merge commits included. A range with no commit returns an empty list.
-    One `git` command lists the commits and one more reads each message, so
-    that a message with bytes that are not UTF-8 fails alone.
+    One `git log` command reads all commits, so the cost of a long range is
+    one process, not one per commit. If the output is not valid UTF-8, the
+    function reads the commits again one by one, so that a message with such
+    bytes becomes a problem of its own commit and the other commits are still
+    checked.
 
     `--end-of-options` ends the options before the range, so a range that
     starts with `-` is a revision for Git, never an option. Git 2.24 added the
@@ -90,14 +142,10 @@ def commits_in_range(git: Runner, revision_range: str) -> list[Commit]:
         CommandError: Git cannot read the range, for example when a revision
             does not exist.
     """
-    listing = git(
-        ["rev-list", "--reverse", "--parents", "--end-of-options", revision_range]
-    )
-    commits: list[Commit] = []
-    for line in listing.splitlines():
-        sha, *parents = line.split()
-        commits.append(Commit(sha, _read_message(git, sha), len(parents) > 1))
-    return commits
+    try:
+        return _commits_in_batch(git, revision_range)
+    except UnicodeDecodeError:
+        return _commits_one_by_one(git, revision_range)
 
 
 def cleanup_setting(git: Runner) -> str:
