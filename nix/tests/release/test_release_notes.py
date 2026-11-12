@@ -4,6 +4,14 @@ import unittest
 
 from release.notes import MAX_NOTES_BYTES, render_notes
 
+GITHUB_BODY_LIMIT = 125_000
+"""The length in characters at which the GitHub API rejects a release body.
+
+The API answers `body is too long (maximum is 125000 characters)`. The number
+is an observed message, not a documented limit, and it is typed here on its own
+so that the test does not read the constant that it checks.
+"""
+
 
 class RenderNotesTest(unittest.TestCase):
     """The first line is the answer, then one bullet for each commit."""
@@ -22,9 +30,14 @@ class RenderNotesTest(unittest.TestCase):
             "rules changed: no\n\n- docs: fix a typo\n",
         )
 
-    def test_default_bound_is_far_below_the_limit_that_github_reports(self) -> None:
-        """GitHub rejects 125000 characters or more, and bytes never undercount."""
-        self.assertLessEqual(MAX_NOTES_BYTES, 100_000)
+    def test_default_bound_is_below_the_limit_that_github_reports(self) -> None:
+        """The bound stays under the length at which GitHub rejects a body.
+
+        The bound counts bytes and the limit counts characters. A byte count is
+        never lower than the character count, so a bound below the limit keeps
+        the notes below it.
+        """
+        self.assertLess(MAX_NOTES_BYTES, GITHUB_BODY_LIMIT)
 
     def test_notes_at_the_limit_stay_whole(self) -> None:
         """Header 20 bytes and two bullets of 13 bytes fill exactly 46 bytes."""
