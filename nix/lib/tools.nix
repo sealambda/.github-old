@@ -1,6 +1,7 @@
 # The Python tools of the hub: `decisions`, `leaks`, `versions`, `workflows`,
-# `gitpolicy` and `release`, each the package of the same name below
-# `nix/scripts`. `flake.nix` imports this file for the apps and the checks, and
+# `presetcompat`, `gitpolicy` and `release`, each the package of the same name
+# below `nix/scripts`. `flake.nix` imports this file for the apps and the
+# checks, and
 # `decisions.nix`, `workflows.nix` and `git-policy.nix` build
 # `mkDecisionsCheck`, `mkWorkflowsCheck` and `mkGitPolicyTool` on their tools.
 #
@@ -80,6 +81,16 @@ in
     name = "workflows";
     uses = [ "decisions" ];
     runtimeInputs = pkgs: [ (decisionsPython pkgs) ];
+  };
+
+  # The `presetcompat` command: `python -P -m presetcompat`, the code in
+  # `nix/scripts/presetcompat`. It checks that `v2.json` keeps the guarantees of
+  # `default.json`. The package imports the findings of the package `decisions`,
+  # and both use only the standard library.
+  presetcompat = mkPythonTool {
+    name = "presetcompat";
+    uses = [ "decisions" ];
+    runtimeInputs = pkgs: [ pkgs.python3 ];
   };
 
   # The `gitpolicy` command: `python -P -m gitpolicy`, the code in

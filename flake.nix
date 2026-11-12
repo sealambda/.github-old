@@ -170,6 +170,7 @@
           ./nix/scripts/decisions
           ./nix/scripts/gitpolicy
           ./nix/scripts/leaks
+          ./nix/scripts/presetcompat
           ./nix/scripts/release
           ./nix/scripts/versions
           ./nix/scripts/workflows
@@ -177,6 +178,7 @@
           ./nix/tests/decisions
           ./nix/tests/gitpolicy
           ./nix/tests/leaks
+          ./nix/tests/presetcompat
           ./nix/tests/release
           ./nix/tests/versions
           ./nix/tests/workflows
@@ -596,6 +598,21 @@
           presets = [ "default.json" ];
         };
 
+        # Runs the unit tests of `nix/scripts/presetcompat`: each invariant
+        # with a pair of presets that keeps it and a pair that breaks it, the
+        # two series of tags, and the command line.
+        check-presetcompat-tests =
+          pkgs.runCommand "check-presetcompat-tests"
+            {
+              nativeBuildInputs = [ pkgs.python3 ];
+              env = tools.presetcompat.env;
+            }
+            ''
+              export HOME="$TMPDIR"
+              python -m unittest discover -v -s ${./nix/tests/presetcompat}
+              touch "$out"
+            '';
+
         # Runs the unit tests of `nix/scripts/workflows`: each rule with
         # workflows that it accepts and workflows that it rejects, the three
         # forms of the `on` key, and the command line. The tests of the file
@@ -749,6 +766,7 @@
                 nix/scripts/decisions nix/tests/decisions \
                 nix/scripts/gitpolicy nix/tests/gitpolicy \
                 nix/scripts/leaks nix/tests/leaks \
+                nix/scripts/presetcompat nix/tests/presetcompat \
                 nix/scripts/release nix/tests/release \
                 nix/scripts/versions nix/tests/versions \
                 nix/scripts/workflows nix/tests/workflows
