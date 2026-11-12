@@ -23,8 +23,7 @@ shell is `base`.
 | `docs` | lychee | `lychee` |
 | `docs` | markdownlint-cli2 | `markdownlint-cli2` |
 | `docs` | Vale | `vale` |
-| `docs` | Vale style Microsoft | `valeStyles.microsoft` |
-| `docs` | Vale style Readability | `valeStyles.readability` |
+| `docs` | Vale style Google | `valeStyles.google` |
 | `docs` | Vale style Sealambda | The hub's `vale/Sealambda` folder |
 
 ## Rules

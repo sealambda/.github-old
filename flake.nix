@@ -76,8 +76,7 @@
       /**
         Builds the documentation tools from one package set: the three tools of
         the `docs` dev shell and of `mkDocsCheck`. The Vale of these tools has
-        the styles Microsoft and Readability from nixpkgs and the hub's own
-        style Sealambda.
+        the style Google from nixpkgs and the hub's own style Sealambda.
 
         # Inputs
 
@@ -103,8 +102,7 @@
           # project `StylesPath` holds only the vocabularies. Vale ignores that
           # variable when it runs with `--no-global`.
           valeWithStyles = pkgs.vale.withStyles (styles: [
-            styles.microsoft
-            styles.readability
+            styles.google
             (mkValeStyleSealambda pkgs)
           ]);
         in

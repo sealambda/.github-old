@@ -3,12 +3,12 @@
 A page states what's true now. This page defines the Vale rules that check
 that, and the places where they don't apply. The rule that a document describes
 only the current state is in
-[CONTRIBUTING.md](../../CONTRIBUTING.md#current-state-only). Google's and
-Microsoft's style guides give the same advice: write in the present tense.
+[CONTRIBUTING.md](../../CONTRIBUTING.md#current-state-only). Google's
+style guide gives the same advice: write in the present tense.
 
 The rules are the Vale style `Sealambda`. Its source is the folder
-`vale/Sealambda` in the hub. The `docs` check runs it with the styles Microsoft
-and Readability, as [Adopt the hub](../how-to/adopt-the-hub.md#gate-the-documentation)
+`vale/Sealambda` in the hub. The `docs` check runs it with the style Google,
+as [Adopt the hub](../how-to/adopt-the-hub.md#gate-the-documentation)
 shows.
 
 ## Rules

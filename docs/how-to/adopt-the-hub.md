@@ -117,7 +117,7 @@ the hub's version of each file into the repository.
    and Vale stops with an error when a listed vocabulary is missing.
 3. Run Vale in the hub's `docs` dev shell. Its Vale comes from the hub's
    `vale.withStyles` package, which sets `VALE_STYLES_PATH`, so Vale finds the
-   Microsoft, Readability and Sealambda styles in the Nix store. The project
+   Google and Sealambda styles in the Nix store. The project
    `StylesPath`, `.vale/styles`, holds only the tracked vocabularies. Don't run
    `vale sync`: the synced `.vale.ini` lists no packages. Don't pass
    `--no-global`: that flag makes Vale ignore `VALE_STYLES_PATH`, and Vale
@@ -136,8 +136,8 @@ the hub's version of each file into the repository.
    [ hub.devShells.<system>.docs ]`, or add the same Vale package to it.
 
    If an earlier `vale sync` left a style directory such as
-   `.vale/styles/Microsoft`, delete each style directory but keep `config`:
-   `rm -rf -- .vale/styles/Microsoft .vale/styles/Readability`. Vale takes a
+   `.vale/styles/Google`, delete each style directory but keep `config`:
+   `rm -rf -- .vale/styles/Google`. Vale takes a
    rule from the Nix style when both paths hold a rule of the same name, but a
    stale rule that only the old directory has still runs. Keep, or add, these
    two rules in the repository's `.gitignore`, so that nobody commits a
