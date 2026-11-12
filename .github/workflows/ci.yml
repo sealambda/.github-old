@@ -7,9 +7,17 @@ on:
 
 permissions: {}
 
+# A run of a pull request never cancels another run. A push that updates a pull
+# request and its base branch together can start two runs for one head commit.
+# The group names the head commit, so the two runs share a group, wait for each
+# other, and both finish. A run that a newer run cancelled would leave a failed
+# `ci` check on the head commit, because the job `ci` runs in a cancelled run
+# and fails there. A new head commit starts a group of its own, so the run of
+# the older commit finishes too. The group of a push has no head commit: it
+# holds one group for the branch, and a newer push cancels the run in progress.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: ${{ github.event_name != 'pull_request' }}
 
 jobs:
   flake-check:

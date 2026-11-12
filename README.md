@@ -59,8 +59,9 @@ The pages follow [Diátaxis](https://diataxis.fr/).
   [Renovate preset](docs/reference/renovate-preset.md),
   [decision records](docs/reference/decision-records.md),
   [writing style](docs/reference/writing-style.md), the
-  [leak check](docs/reference/leak-check.md) and
-  [licensing](docs/reference/licensing.md).
+  [leak check](docs/reference/leak-check.md),
+  [licensing](docs/reference/licensing.md) and the
+  [CI of the hub](docs/reference/hub-ci.md).
 - **Explanation.** The [decision records](docs/decisions/) say why the hub
   works as it does. [ADR 0005](docs/decisions/0005-check-decision-records-with-a-hermetic-flake-check.md)
   explains the decision records check.
