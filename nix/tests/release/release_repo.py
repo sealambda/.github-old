@@ -3,6 +3,7 @@
 import contextlib
 import io
 import os
+import subprocess
 import tempfile
 import unittest
 from collections.abc import Mapping, Sequence
@@ -147,6 +148,41 @@ class RepoTestCase(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
         self.git(["add", "--all"])
+        self.git(["commit", "--quiet", "--allow-empty", "--message", message])
+        return self.git(["rev-parse", "HEAD"]).strip()
+
+    def commit_raw_path(self, path: bytes, message: str = "change") -> str:
+        """Commit an empty file at `path`, which may not be valid UTF-8.
+
+        A file system can refuse such a name, so the file goes into the index
+        with git plumbing and never into the work tree.
+
+        Args:
+            path: The path below the root, as the bytes that git stores.
+            message: The commit message.
+
+        Returns:
+            The full hash of the new commit.
+        """
+        root = str(self.root)
+        blob = subprocess.run(
+            ["git", "-C", root, "hash-object", "-w", "--stdin"],
+            input=b"",
+            capture_output=True,
+            check=True,
+        ).stdout.strip()
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                root,
+                "update-index",
+                "--add",
+                "--cacheinfo",
+                b"100644," + blob + b"," + path,
+            ],
+            check=True,
+        )
         self.git(["commit", "--quiet", "--allow-empty", "--message", message])
         return self.git(["rev-parse", "HEAD"]).strip()
 

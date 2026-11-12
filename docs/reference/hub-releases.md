@@ -59,7 +59,10 @@ differ between the previous release and the released commit, with renames
 counted as a delete and an add.
 
 The answer is `no` only when every changed path is on the list below. Every
-other path gives `yes`, including a path that no one has classified yet. The
+other path gives `yes`, including a path that no one has classified yet and a
+path that isn't valid UTF-8 (the tool reads it with the replacement character
+U+FFFD, which no pattern names, except inside a folder that a `**` pattern
+covers). The
 first release gives `yes` without a comparison, because it has no previous
 release. A merge that changes no path gives `no`.
 

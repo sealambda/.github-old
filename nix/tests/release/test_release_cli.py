@@ -62,6 +62,26 @@ class PlanCommandTest(RepoTestCase):
             "--- notes ---\nrules changed: no\n\n- `chore: empty commit`\n",
         )
 
+    def test_path_that_is_not_utf8_is_an_unknown_path_and_gives_yes(self) -> None:
+        """Raw bytes in a path do not stop the tool: the path is unclassified."""
+        self.commit({"flake.nix": "{}\n"}, "feat: add the flake")
+        self.tag("v1.0.0")
+        self.commit_raw_path(b"unknown/bad\xff.txt", "feat: add a raw path")
+        result = self.run_cli("plan")
+        self.assertEqual(result.code, cli.EXIT_OK)
+        self.assertIn("tag: v1.1.0\n", result.stdout)
+        self.assertIn("--- notes ---\nrules changed: yes\n", result.stdout)
+
+    def test_path_that_is_not_utf8_below_a_free_folder_stays_free(self) -> None:
+        """The replacement character keeps the folder, so the pattern matches."""
+        self.commit({"flake.nix": "{}\n"}, "feat: add the flake")
+        self.tag("v1.0.0")
+        self.commit_raw_path(b"docs/reference/bad\xff.md", "docs: add a raw page")
+        result = self.run_cli("plan")
+        self.assertEqual(result.code, cli.EXIT_OK)
+        self.assertIn("tag: v1.0.1\n", result.stdout)
+        self.assertIn("--- notes ---\nrules changed: no\n", result.stdout)
+
     def test_commit_that_a_later_release_contains_is_covered(self) -> None:
         """The old run of a skipped commit gets no tag behind a newer release.
 

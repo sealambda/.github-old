@@ -55,7 +55,11 @@ def command_runner(prefix: Sequence[str]) -> Runner:
     Returns:
         A runner. It raises `CommandError` when the program is missing or exits
         with a nonzero status. The message holds the command and the standard
-        error, and `CommandError.stderr` holds the standard error alone.
+        error, and `CommandError.stderr` holds the standard error alone. The
+        runner decodes the output as UTF-8 and replaces each byte that is not
+        valid UTF-8 with U+FFFD, so a file name that git prints as raw bytes
+        does not stop the tool. Such a path matches no pattern of
+        `release.paths`, and its answer is `rules changed: yes`.
     """
 
     def run(args: Sequence[str], *, stdin: str | None = None) -> str:
@@ -67,6 +71,7 @@ def command_runner(prefix: Sequence[str]) -> Runner:
                 input=stdin,
                 capture_output=True,
                 encoding="utf-8",
+                errors="replace",
                 check=False,
             )
         except FileNotFoundError as error:

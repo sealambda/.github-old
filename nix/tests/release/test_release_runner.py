@@ -20,6 +20,14 @@ class CommandRunnerTest(unittest.TestCase):
         script = "import sys; sys.stdout.write(sys.stdin.read())"
         self.assertEqual(run([script], stdin="notes\n"), "notes\n")
 
+    def test_output_that_is_not_utf8_is_decoded_with_a_replacement_character(
+        self,
+    ) -> None:
+        """A byte that is not UTF-8 becomes U+FFFD, and the call succeeds."""
+        run = command_runner([sys.executable, "-c"])
+        script = "import sys; sys.stdout.buffer.write(b'a\\xffb\\n')"
+        self.assertEqual(run([script]), "a\N{REPLACEMENT CHARACTER}b\n")
+
     def test_nonzero_status_raises_with_the_command_and_the_error_text(self) -> None:
         """The message names the command and holds its standard error."""
         run = command_runner([sys.executable, "-c"])
