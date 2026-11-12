@@ -8,6 +8,7 @@ target-version = "py314"
 line-length = 88
 src = [
   "nix/scripts",
+  "nix/tests/ci",
   "nix/tests/decisions",
   "nix/tests/gitpolicy",
   "nix/tests/leaks",

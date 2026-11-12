@@ -79,6 +79,7 @@
           ./nix/scripts/release
           ./nix/scripts/versions
           ./nix/scripts/workflows
+          ./nix/tests/ci
           ./nix/tests/decisions
           ./nix/tests/gitpolicy
           ./nix/tests/leaks
@@ -412,6 +413,30 @@
               touch "$out"
             '';
 
+        # Runs the tests of the aggregate job `ci` of `.github/workflows/ci.yml`.
+        # The tests read the `jq` program from the workflow file and run it on
+        # sample results of the needed jobs: it must fail for a failed, a
+        # cancelled or a skipped job, and accept only the skip of `git-policy`
+        # on a push. They also read the wiring of the job from the workflow: its
+        # `needs` list every job that runs before it, its step gets the real
+        # `needs` and event, it runs `always()`, and nothing in it continues on
+        # error. The tests need `jq` and the path of the workflow, and they
+        # reach no network.
+        check-ci-tests =
+          pkgs.runCommand "check-ci-tests"
+            {
+              nativeBuildInputs = [
+                (tools.decisionsPython pkgs)
+                pkgs.jq
+              ];
+              env.CI_WORKFLOW = "${./.github/workflows/ci.yml}";
+            }
+            ''
+              export HOME="$TMPDIR"
+              python -m unittest discover -v -s ${./nix/tests/ci}
+              touch "$out"
+            '';
+
         # Runs the unit tests of `nix/scripts/gitpolicy`: the rules for commit
         # messages and branch names as tables, and the range, branch and hook
         # commands against temporary Git repositories. The rules themselves
@@ -501,6 +526,7 @@
               ruff format --check --no-cache nix
               ruff check --no-cache nix
               mypy --cache-dir "$TMPDIR/mypy" \
+                nix/tests/ci \
                 nix/scripts/decisions nix/tests/decisions \
                 nix/scripts/gitpolicy nix/tests/gitpolicy \
                 nix/scripts/leaks nix/tests/leaks \
