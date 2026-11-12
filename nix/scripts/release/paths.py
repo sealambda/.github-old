@@ -16,15 +16,14 @@ series releases them.
 from collections.abc import Iterable
 from pathlib import PurePosixPath
 
-ACTIONS_FILE_PATTERNS: tuple[str, ...] = (
-    ".github/actions/**",
-    ".github/workflows/standards.yml",
-)
+ACTIONS_FILE_PATTERNS: tuple[str, ...] = (".github/actions/**",)
 """The workflow and action files that the actions series releases.
 
-The reusable workflow `secrets.yml` is not here: it stays in the hub series.
-The file `standards.yml` is a path that the actions series reserves. A pattern
-that names no file is harmless.
+The reusable workflow `secrets.yml` is not here: it stays in the hub series. A
+pattern names a file that the hub holds. The pull request that adds a reusable
+workflow for consumers to call by the actions tag adds its pattern here, with
+the tests and the page, so that the file gets its classification with its
+contract.
 """
 
 ACTIONS_DATA_PATTERNS: tuple[str, ...] = ("versions.json",)

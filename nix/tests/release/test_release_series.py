@@ -71,11 +71,14 @@ class ActionsBumpTest(unittest.TestCase):
             Bump.MINOR,
         )
 
-    def test_the_standards_workflow_gives_minor(self) -> None:
-        """A change of the reusable workflow `standards.yml` changes the steps."""
+    def test_a_workflow_that_no_pattern_names_gives_no_release(self) -> None:
+        """No reservation: `standards.yml` is no actions path yet."""
         self.assertIs(
-            ACTIONS.bump_for_changes([".github/workflows/standards.yml"]),
-            Bump.MINOR,
+            ACTIONS.bump_for_changes([".github/workflows/standards.yml"]), Bump.NONE
+        )
+        self.assertIs(
+            ACTIONS.bump_for_first_release([".github/workflows/standards.yml"]),
+            Bump.NONE,
         )
 
     def test_versions_json_alone_gives_patch(self) -> None:

@@ -38,11 +38,14 @@ The series releases these paths:
 
 | Path | Kind |
 | ---- | ---- |
-| `.github/actions/**`, `.github/workflows/standards.yml` | A workflow or action file. A consumer that calls the tag runs different steps. |
+| `.github/actions/**` | A workflow or action file. A consumer that calls the tag runs different steps. |
 | `versions.json` | A data file. An action reads it, and the steps stay the same. |
 
-`.github/workflows/secrets.yml` stays in the hub series. The hub has no file
-`standards.yml`, so that pattern matches no file.
+`.github/workflows/secrets.yml` stays in the hub series. The pull request that
+adds another reusable workflow for consumers to call by the actions tag adds
+its pattern to `ACTIONS_FILE_PATTERNS` in `nix/scripts/release/paths.py`, with
+its tests and this page. Until then a new workflow file is a hub rule, like any
+unlisted path.
 
 | Changed paths since the previous actions tag | Next version after `actions-v1.4.2` |
 | -------------------------------------------- | ----------------------------------- |
@@ -162,7 +165,7 @@ four reads it.
 | `.github/CODEOWNERS` | GitHub reads the file of each repository and doesn't inherit one. It sets the reviewers of the hub only. |
 | `.github/workflows/ci.yml` | The hub's own CI. It has no `workflow_call` trigger, so no consumer calls it. |
 | `.gitignore` | The ignore list of the hub's own work tree. |
-| `.github/actions/**`, `.github/workflows/standards.yml`, `versions.json` | The paths of the actions series. A consumer reads them by the tag of that series, and none of the four readers above reads them: the actions series decides their release, and the hub series gives a patch. Each of the three paths gives `no` here. Without the listing, each would give `yes`, like any unlisted path. `versions.json` holds the pinned version of Nix. No function of the flake reads the file. Only the hub's own `versions` check and the action `setup-nix` read it. The hub has no file `standards.yml`, so that pattern matches no file. |
+| `.github/actions/**`, `versions.json` | The paths of the actions series. A consumer reads them by the tag of that series, and none of the four readers above reads them: the actions series decides their release, and the hub series gives a patch. Each of the two paths gives `no` here. Without the listing, each would give `yes`, like any unlisted path. `versions.json` holds the pinned version of Nix. No function of the flake reads the file. Only the hub's own `versions` check and the action `setup-nix` read it. |
 
 Every other tracked path stays `yes`. This table groups them by the reader
 that makes them rules:
