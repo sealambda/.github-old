@@ -66,6 +66,18 @@ class CommitMsgCommandTest(RepoTestCase):
         self.assertEqual(2, result.code)
         self.assertIn("not UTF-8 text", result.stderr)
 
+    def test_a_setting_in_another_encoding_does_not_stop_the_check(self) -> None:
+        """A value that is not UTF-8, in a setting the tool does not read, is fine.
+
+        The value sits in the repository configuration, as a Latin-1 name in
+        `user.name` would. Git itself reads such a file without a problem, and
+        the tool must not fail on it: it asks Git for two settings only.
+        """
+        with (self.root / ".git" / "config").open("ab") as config:
+            config.write(b"[alias]\n\tcafe = caf\xe9\n")
+        result = self.run_cli("commit-msg", str(self.write("feat: add x\n")))
+        self.assertEqual((0, "", ""), (result.code, result.stdout, result.stderr))
+
     def test_cleanup_setting_decides_what_a_comment_is(self) -> None:
         """With `commit.cleanup` set to `whitespace` a `#` line stays.
 

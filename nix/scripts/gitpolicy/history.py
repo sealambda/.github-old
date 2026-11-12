@@ -9,11 +9,14 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from gitpolicy.vocabulary import DEFAULT_COMMENT
-from release.runner import Runner, command_runner
+from release.runner import CommandError, Runner, command_runner
 
-# The names that `git config --list` prints for the two aliases of the comment
+# The names that `git config` prints for the two aliases of the comment
 # setting. Git writes the section and the variable name in lower case.
 _COMMENT_SETTINGS = ("core.commentchar", "core.commentstring")
+
+# The pattern that selects the same two names, for `git config --get-regexp`.
+_COMMENT_PATTERN = r"^core\.comment(char|string)$"
 
 
 @dataclass(frozen=True)
@@ -113,16 +116,25 @@ def comment_setting(git: Runner) -> str:
     """Return the string that `core.commentChar` or `core.commentString` sets.
 
     The two names are aliases of one setting, and the one that Git reads last
-    wins, so the function reads all settings in the order that Git reads them
-    and keeps the last of the two. It returns `#`, the default of Git, when
-    neither is set. The value `auto` is returned as written: Git picks the
-    character at the time of the commit, and nothing tells the caller which.
+    wins. `git config --get-regexp` prints only the matching settings, in the
+    order that Git reads them, so the function keeps the last. Settings that
+    the function does not need never reach it: a value in another encoding
+    cannot fail the decoding, and a secret in a URL is not read. It returns
+    `#`, the default of Git, when neither is set. The value `auto` is returned
+    as written: Git picks the character at the time of the commit, and nothing
+    tells the caller which.
 
     Raises:
         CommandError: Git failed, for example when it is not installed.
     """
+    try:
+        listing = git(["config", "--null", "--get-regexp", _COMMENT_PATTERN])
+    except CommandError as error:
+        if error.stderr:
+            raise
+        return DEFAULT_COMMENT  # Git exits with 1 and prints nothing: no match
     value = DEFAULT_COMMENT
-    for entry in git(["config", "--null", "--list"]).split("\0"):
+    for entry in listing.split("\0"):
         name, _, setting = entry.partition("\n")
         if name in _COMMENT_SETTINGS:
             value = setting

@@ -310,6 +310,18 @@ class BranchTest(RepoTestCase):
         self.assertEqual(2, self.run_cli("branch", "--he").code)
         self.assertEqual(2, self.run_cli("branch", "-x/y").code)
 
+    def test_a_branch_name_that_is_not_utf8_is_a_usage_error(self) -> None:
+        """A name that Git prints as bytes outside UTF-8 gives status 2.
+
+        The run is not an internal error: the status 3 is for bugs of the tool.
+        """
+        self.commit("chore: start")
+        (self.root / ".git" / "HEAD").write_bytes(b"ref: refs/heads/caf\xe9\n")
+        result = self.run_cli("branch")
+        self.assertEqual(2, result.code, result.stderr)
+        self.assertIn("not UTF-8", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
     def outcome(self, *args: str) -> tuple[int, str]:
         """Run the CLI and return the exit status and the standard output."""
         result = self.run_cli(*args)

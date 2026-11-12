@@ -21,8 +21,9 @@ with `-` needs `--` before it, and the check then reports it as a bad name.
 Every command runs `git` in the current directory.
 
 Exit status: 0 when nothing is wrong, and for `--help`; 1 when a message or a
-name breaks a rule; 2 for a usage error, a file that cannot be read or a
-failing `git` command; 3 for an internal error. Each problem is printed to
+name breaks a rule; 2 for a usage error, a file that cannot be read, a failing
+`git` command or a `git` command that prints text that is not UTF-8, such as a
+branch name in another encoding; 3 for an internal error. Each problem is printed to
 standard output on its own line, with the file, the commit or the branch in
 front, and one run prints all of them.
 
@@ -302,6 +303,12 @@ def main(argv: Sequence[str] | None = None, *, git: Runner | None = None) -> int
         return EXIT_USAGE
     except (OSError, CommandError) as error:
         print(f"gitpolicy: {error}", file=sys.stderr)
+        return EXIT_USAGE
+    except UnicodeDecodeError as error:
+        print(
+            f"gitpolicy: a git command printed text that is not UTF-8: {error}",
+            file=sys.stderr,
+        )
         return EXIT_USAGE
     except Exception:  # the last resort: report any bug with its trace
         traceback.print_exc()
