@@ -193,6 +193,12 @@ and enter the shell again, or use a dev shell that installs no hook, such as
 `default`. Nothing else needs a cleanup. Outside a Git repository the check
 passes, and the installer prints its own warning.
 
+When Git fails for another reason, such as a configuration file that it can't
+parse or a directory that it refuses, the check can't tell whether an outside
+`core.hooksPath` exists. It prints the message of Git and ends the shell with
+status 1, as it does for a value. Without the check, the installer would print
+that it found no repository and the shell would go on with no hook.
+
 ### A repository without a work tree
 
 A bare repository and the `.git` folder of a work tree are in a Git repository
@@ -304,15 +310,15 @@ the ones that a repository uses:
   the hooks with the installation script into a new repository and uses real
   Git. The cases cover the installation, an old hook that passes and one that
   fails, an earlier local `core.hooksPath`, a global one and an empty one that
-  make the installation fail, the skip in a bare repository and in a `.git`
-  folder, the installation in linked work trees, a clean commit and
-  one refusal for each hook of the `pre-commit` stage: a badly formatted file,
-  a Markdown violation, a workflow without `timeout-minutes` and a staged false
-  secret. They also cover the
-  secret scan of a commit that only deletes a file, what the hooks read when a
-  file is staged in part, a bad message, a `fixup!` commit, `SKIP`, a push from
-  a branch with a bad name and the pushes that skip the hook. The false secret
-  is assembled when the test runs, so no file holds it.
+  make the installation fail, a Git configuration that Git can't read, the skip
+  in a bare repository and in a `.git` folder, the installation in linked work
+  trees, a clean commit and one refusal for each hook of the `pre-commit`
+  stage: a badly formatted file, a Markdown violation, a workflow without
+  `timeout-minutes` and a staged false secret. They also cover the secret scan
+  of a commit that only deletes a file, what the hooks read when a file is
+  staged in part, a bad message, a `fixup!` commit, `SKIP`, a push from a branch
+  with a bad name and the pushes that skip the hook. The false secret is
+  assembled when the test runs, so no file holds it.
 - The flake check `dev-shells` fails when a dev shell other than `hooks`
   carries a shell hook, or when `default` isn't `base`.
 - The flake check `lib-functions` has two cases for `extraHooks`.

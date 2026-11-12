@@ -418,6 +418,33 @@ case_empty_global_core_hooks_path_is_refused_and_shown() {
   [ ! -e "$WORK/empty-path-hook-ran" ] || fail "Git ran a hook under an empty core.hooksPath"
 }
 
+# A global configuration file that Git can't parse hides every setting from the
+# check, so it can't tell whether a `core.hooksPath` exists outside the
+# repository. The check refuses, as it does for a value, and prints the message
+# of Git. The installer alone would print that it found no `.git` and skip the
+# installation with status 0, and the user would not learn the cause. The refusal
+# holds inside a repository and outside one, and it changes nothing.
+case_unreadable_git_configuration_makes_the_install_fail() {
+  init_repository unreadable
+  local config=$WORK/broken-config
+  printf '[core\n\tbroken\n' >"$config"
+
+  GIT_CONFIG_GLOBAL=$config try_install_in "$REPO"
+  [ "$STATUS" = 1 ] || fail "in a repository: expected status 1, got $STATUS"
+  assert_output_contains "bad config line"
+  assert_output_contains "Git fails in this directory"
+  assert_output_contains "The repository is unchanged"
+  ! git -C "$REPO" config --local --get core.hooksPath >/dev/null ||
+    fail "the installer set the local core.hooksPath"
+  [ ! -e "$REPO/.git/hooks/pre-commit" ] || fail "the installer wrote a hook"
+  [ ! -e "$REPO/.pre-commit-config.yaml" ] || fail "the installer linked the configuration"
+
+  mkdir "$WORK/unreadable-outside"
+  GIT_CONFIG_GLOBAL=$config try_install_in "$WORK/unreadable-outside"
+  [ "$STATUS" = 1 ] || fail "outside a repository: expected status 1, got $STATUS"
+  assert_output_contains "bad config line"
+}
+
 # The installer in the main checkout sets `core.hooksPath` to the relative path
 # `.git/hooks`. Git resolves that path from the root of each work tree, and a
 # linked work tree has a `.git` file, not a directory. So no hook runs in a
@@ -738,6 +765,7 @@ main() {
     case_global_core_hooks_path_outside_a_work_tree_is_no_failure
     case_install_skips_a_repository_without_a_work_tree
     case_empty_global_core_hooks_path_is_refused_and_shown
+    case_unreadable_git_configuration_makes_the_install_fail
     case_linked_worktree_runs_no_hook_before_its_install
     case_linked_worktree_install_is_per_worktree
     case_clean_commit_is_accepted

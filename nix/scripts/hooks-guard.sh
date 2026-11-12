@@ -22,17 +22,49 @@
 # this check skips the installation there (status 2) and prints one line.
 #
 # Outside a Git repository the check exits with status 0, and the installer
-# prints its own warning. Otherwise the check reads every `core.hooksPath` that
-# Git sees, with its scope. It exits with status 0 when no value comes from
-# outside the local configuration of the repository. When one does, it prints
-# the values, the cause and the repair on standard error, changes nothing and
-# exits with status 1. The scopes `worktree` and `command` count as outside too:
+# prints its own warning. When Git fails for another reason, such as a
+# configuration file that it can't parse or a directory that it refuses, the
+# check can't know what `core.hooksPath` the installer would meet. It prints the
+# message of Git, changes nothing and exits with status 1.
+#
+# Otherwise the check reads every `core.hooksPath` that Git sees, with its
+# scope. It exits with status 0 when no value comes from outside the local
+# configuration of the repository. When one does, it prints the values, the
+# cause and the repair on standard error, changes nothing and exits with
+# status 1. The scopes `worktree` and `command` count as outside too:
 # a value of either scope wins over the value that the installer writes. An
 # empty value counts as well, and the message shows it as `(empty)`: Git runs
 # no hook with an empty `core.hooksPath`, and prek refuses to install under it.
 
+# Prints why `git rev-parse` fails in the current directory, in the C locale so
+# that the text of the message doesn't depend on the language of the user.
+rev_parse_error() {
+  { LC_ALL=C git rev-parse --is-inside-work-tree >/dev/null; } 2>&1 || true
+}
+
+# Ends the check with status 1 after it prints the cause $1 on standard error,
+# then the text $2 when there is one. Pass the message of Git as $2 when the
+# call of Git hid it.
+refuse_unreadable_git() {
+  {
+    echo "The Git hooks are not installed: $1"
+    echo
+    if [ -n "${2:-}" ]; then
+      printf '%s\n\n' "$2"
+    fi
+    echo "The check can't tell whether Git reads a core.hooksPath from outside this"
+    echo "repository. The repository is unchanged. Repair the cause and enter this"
+    echo "shell again."
+  } >&2
+  exit 1
+}
+
 if ! inside=$(git rev-parse --is-inside-work-tree 2>/dev/null); then
-  exit 0
+  error=$(rev_parse_error)
+  case $error in
+  *"not a git repository"*) exit 0 ;;
+  *) refuse_unreadable_git "Git fails in this directory." "$error" ;;
+  esac
 fi
 
 if [ "$inside" != true ]; then
@@ -41,8 +73,13 @@ if [ "$inside" != true ]; then
 fi
 
 # Each line is `<scope><TAB><value>`. The command exits with status 1 when
-# no value exists.
-settings=$(git config --show-scope --get-all core.hooksPath || true)
+# no value exists. Any other failing status means that Git could not read its
+# configuration, and Git has printed the cause on standard error.
+config_status=0
+settings=$(git config --show-scope --get-all core.hooksPath) || config_status=$?
+if [ "$config_status" -gt 1 ]; then
+  refuse_unreadable_git "Git can't read its configuration (status $config_status)."
+fi
 
 outside=
 while IFS=$'\t' read -r scope value; do
