@@ -2,7 +2,7 @@
 
 This folder is a repository that adopts the hub with the steps of the hub page
 *Adopt the hub in a repository*. Its flake calls `mkTreefmt`, `mkConfigCheck`,
-`mkDocsCheck` and `mkDecisionsCheck` as a consumer does.
+`mkDocsCheck`, `mkDecisionsCheck` and `mkWorkflowsCheck` as a consumer does.
 
 The files `.editorconfig`, `.markdownlint-cli2.yaml`, `.vale.ini`, `lychee.toml`
 and the Vale vocabulary `Sealambda` are copies that `sync-config` writes. The
