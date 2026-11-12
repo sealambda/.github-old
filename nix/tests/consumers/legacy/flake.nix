@@ -48,6 +48,14 @@
           exclude = [ ];
         };
         workflows = hub.lib.mkWorkflowsCheck pkgs self;
+        # The tool runs on a branch name, which needs no Git history, so the
+        # check builds in the sandbox. A repository runs `range` in CI.
+        gitpolicy =
+          pkgs.runCommand "gitpolicy" { nativeBuildInputs = [ (hub.lib.mkGitPolicyTool pkgs) ]; }
+            ''
+              gitpolicy branch fix/listen-address
+              touch "$out"
+            '';
       });
     };
 }
