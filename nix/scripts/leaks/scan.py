@@ -9,7 +9,7 @@ from decisions.findings import Finding
 from decisions.walk import SNIFF_BYTES, is_excluded, list_files
 from leaks.rules import Policy, Rule, build_rules
 
-_REPLACEMENT = "�"
+_REPLACEMENT = "\N{REPLACEMENT CHARACTER}"
 """What a stray NUL byte of a text file becomes."""
 
 
