@@ -17,7 +17,7 @@ import os
 import unittest
 from pathlib import Path
 
-from versions.cli import EXIT_FINDINGS
+from decisions.cli_common import EXIT_FINDINGS
 from versions_fixtures import (
     INSTALL_URL,
     INSTALLER,
