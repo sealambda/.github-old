@@ -10,6 +10,13 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Builds the Git hook configuration that `lib.mkHooks` returns. It has no
+    # releases, so `flake.lock` pins it. Its own nixpkgs is the hub's.
+    git-hooks = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -17,6 +24,7 @@
       self,
       nixpkgs,
       treefmt-nix,
+      git-hooks,
     }:
     let
       systems = [
@@ -70,8 +78,35 @@
         })
         mkSecretsScan
         ;
+      inherit
+        (import ./nix/lib/hooks.nix {
+          inherit (nixpkgs) lib;
+          inherit
+            git-hooks
+            hubPackagesFor
+            mkTreefmt
+            mkDocsTools
+            mkSecretsScan
+            mkGitPolicyTool
+            tools
+            ;
+        })
+        mkHooks
+        ;
 
       treefmtFor = eachSystem (pkgs: mkTreefmt pkgs [ ]);
+
+      # The hooks of the hub's own repository: the hub's formatter and no hook
+      # of its own. The `hooks` dev shell installs them, and the check
+      # `pre-commit` runs their `pre-commit` stage.
+      hooksFor = eachSystem (
+        pkgs:
+        mkHooks {
+          inherit pkgs;
+          src = self;
+          treefmt = treefmtFor.${pkgs.stdenv.hostPlatform.system};
+        }
+      );
 
       docsToolsFor = eachSystem mkDocsTools;
 
@@ -144,6 +179,7 @@
           mkWorkflowsCheck
           mkGitPolicyTool
           mkSecretsScan
+          mkHooks
           ;
       };
 
@@ -201,7 +237,24 @@
             (mkSecretsScan { inherit pkgs; })
           ];
         };
+
+        # The shell that a person enters without a name, and that the CI job
+        # `secrets` of the reusable workflow enters. It installs no Git hook:
+        # the installer changes the Git configuration of the clone, so a shell
+        # that people already enter must not run it. The check `dev-shells`
+        # keeps it this way.
         default = base;
+
+        # `base`, plus the Git hooks of the hub's own repository. Entering it
+        # installs the hooks in the clone (`lib.mkHooks`,
+        # `docs/reference/hooks.md`), and the page says what that changes in
+        # the clone. The hook is only here and not in `base`, because every
+        # other shell, and the shells of the repositories that consume the hub,
+        # include `base` and would install the hooks too.
+        hooks = pkgs.mkShell {
+          inputsFrom = [ base ];
+          inherit (hooksFor.${pkgs.stdenv.hostPlatform.system}) shellHook;
+        };
 
         elixir = pkgs.mkShell {
           inputsFrom = [ base ];
@@ -237,6 +290,75 @@
         config-in-sync = mkConfigCheck pkgs self;
         docs = mkDocsCheck pkgs self;
         formatting = treefmtFor.${pkgs.stdenv.hostPlatform.system}.config.build.check self;
+
+        # Fails the evaluation when a dev shell other than `hooks` carries a
+        # shell hook, or when `default` isn't `base`. A hook in `base` reaches
+        # every shell that includes it, so it would install the Git hooks in
+        # every repository that builds on the hub's shells, and the CI job
+        # `secrets` enters `default`. The message names the shells at fault.
+        dev-shells =
+          let
+            shells = self.devShells.${pkgs.stdenv.hostPlatform.system};
+
+            # `mkShell` joins the hooks of the shells that it includes and of
+            # itself with a line break, and each empty hook adds one. A shell
+            # that includes two shells has the text "\n" and no hook, so a
+            # hook is a text with more than white space.
+            hasHook = shell: nixpkgs.lib.trim shell.shellHook != "";
+
+            withHook = builtins.attrNames (nixpkgs.lib.filterAttrs (_: hasHook) shells);
+
+            # A shell with two included shells and no hook of its own. A
+            # future shell of this form must not fail the check.
+            includesTwoShells = pkgs.mkShell {
+              inputsFrom = [
+                shells.base
+                shells.node
+              ];
+            };
+          in
+          assert nixpkgs.lib.assertMsg (
+            !hasHook includesTwoShells
+          ) "dev-shells: a shell with two included shells and no hook counts as one with a hook.";
+          assert nixpkgs.lib.assertMsg (withHook == [ "hooks" ])
+            "dev-shells: only the shell `hooks` may carry a shell hook, found: ${nixpkgs.lib.concatStringsSep ", " withHook}";
+          assert nixpkgs.lib.assertMsg (
+            shells.default.drvPath == shells.base.drvPath
+          ) "dev-shells: the shell `default` must be `base`";
+          pkgs.runCommand "dev-shells" { } ''
+            touch "$out"
+          '';
+
+        # Runs the `pre-commit` stage of the hub's own hooks on every file of
+        # the source: the formatter, the documentation check and the workflow
+        # check. It runs the hook `secrets-scan` too, but the scratch repository
+        # commits the source first, so nothing is staged and that hook scans
+        # nothing: the check doesn't gate secrets. The hooks of the other
+        # stages need a commit message and a push, so `hooks-tests` covers them.
+        pre-commit = hooksFor.${pkgs.stdenv.hostPlatform.system};
+
+        # Runs the cases of `nix/tests/hooks.sh`: real Git against temporary
+        # repositories that get the hub's hooks from the installation script of
+        # `lib.mkHooks`. They cover the stages that `pre-commit` can't run,
+        # `commit-msg` and `pre-push`, and the refusal of a staged secret. The
+        # cases need `git`, `prek` and a writable HOME, and they reach no
+        # network.
+        hooks-tests =
+          let
+            hooks = hooksFor.${pkgs.stdenv.hostPlatform.system};
+          in
+          pkgs.runCommand "hooks-tests"
+            {
+              nativeBuildInputs = [
+                pkgs.git
+                hooks.config.package
+              ];
+              env.HOOKS_INSTALL = pkgs.writeText "install-hooks.sh" hooks.config.installationScript;
+            }
+            ''
+              HOME="$TMPDIR" bash ${./nix/tests/hooks.sh}
+              touch "$out"
+            '';
 
         # Runs the tests of `nix/tests/check-docs.sh`. The tests need a
         # writable HOME and the commands `check-docs`, `sync-config` and the

@@ -65,8 +65,9 @@ that the configuration is small, replaces this decision by a new record.
 The tool is the package `nix/scripts/gitpolicy`. Two pure functions hold the
 rules, `check_commit_message` and `check_branch_name`, and one constant holds
 the types for both. The hub's CI runs `gitpolicy range` and `gitpolicy branch`.
-A repository can run `gitpolicy commit-msg` from a `commit-msg` hook that it
-installs: the hub ships no hook. The hub exports the tool as
+A repository can run `gitpolicy commit-msg` from a `commit-msg` hook, and
+[ADR 0008](0008-offer-git-hooks-through-git-hooks-nix.md) adds the hooks that
+do so. The hub exports the tool as
 `lib.mkGitPolicyTool`, as `packages.<system>.gitpolicy` and as the app
 `gitpolicy`. The rules run where Git is present, in CI and in a hook, not in a
 flake check, and the flake check `check-gitpolicy-tests` tests them. The hub's
@@ -83,8 +84,9 @@ CI job `git-policy` runs the tool on every pull request.
   reading has tests on temporary repositories.
 - Bad, because the hub owns a small parser that `conform` would have
   provided.
-- Bad, because the rules run in CI and in a hook that a repository installs,
-  so `nix flake check` doesn't show a bad commit message.
+- Bad, because the rules run in CI and in the hooks of `lib.mkHooks`
+  ([ADR 0008](0008-offer-git-hooks-through-git-hooks-nix.md)), so
+  `nix flake check` doesn't show a bad commit message.
 - Bad, because the limit of 100 characters can reject a Renovate commit. The
   number is the `header-max-length` of the `commitlint` configuration
   `config-conventional`, not a limit that Renovate sets. The Renovate

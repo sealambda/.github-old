@@ -2,6 +2,8 @@ Corepack
 Dialyxir
 fixup
 Kopp
+lefthook
 Nygard
+prek
 Sobelow
 Zimmermann

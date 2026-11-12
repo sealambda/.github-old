@@ -56,12 +56,18 @@ and keeps its own facts.
   group ([Workflow checks](docs/reference/workflow-checks.md)). The tool
   `gitpolicy`, as `lib.mkGitPolicyTool`, checks that a commit header is a
   Conventional Commit and that a branch name is `<type>/<slug>`. It runs in CI
-  and in a Git hook that a repository adds, because a flake check sees no
-  history
+  and in the hub's Git hooks, because a flake check sees no history
   ([Git policy](docs/reference/git-policy.md)). The command `secrets-scan`, as
   `lib.mkSecretsScan`, scans the history or the staged changes with a secret
   scanner, gitleaks by default, and the hub's base configuration
   ([Secrets scan](docs/reference/secrets-scan.md)).
+- **Git hooks.** The function `lib.mkHooks` builds Git hooks with git-hooks.nix
+  and prek. They run the formatter, the documentation check, the workflow
+  checks and the secrets scan before a commit, the commit message check at the
+  `commit-msg` stage and the branch name check before a push. The `hooks` dev
+  shell installs them (`nix develop .#hooks`), and the flake check `pre-commit`
+  runs them. The `default` shell installs nothing. A person can skip a hook, so
+  CI stays the gate ([Git hooks](docs/reference/hooks.md)).
 
 ## Documentation
 
@@ -82,7 +88,8 @@ The pages follow [Diátaxis](https://diataxis.fr/).
   [writing style](docs/reference/writing-style.md), the
   [leak check](docs/reference/leak-check.md),
   [workflow checks](docs/reference/workflow-checks.md), the
-  [Git policy](docs/reference/git-policy.md),
+  [Git policy](docs/reference/git-policy.md), the
+  [Git hooks](docs/reference/hooks.md),
   [wrapped documentation tools](docs/reference/wrapped-tools.md),
   [secrets scan](docs/reference/secrets-scan.md),
   [licensing](docs/reference/licensing.md),
@@ -94,7 +101,9 @@ The pages follow [Diátaxis](https://diataxis.fr/).
   [ADR 0006](docs/decisions/0006-check-commits-and-branches-with-a-hub-tool.md)
   explains why the Git policy is a hub tool.
   [ADR 0007](docs/decisions/0007-layer-the-repository-configuration-over-a-hub-base.md)
-  explains how a repository's configuration layers over the hub's base.
+  explains how a repository's configuration layers over the hub's base, and
+  [ADR 0008](docs/decisions/0008-offer-git-hooks-through-git-hooks-nix.md)
+  explains why the hub offers Git hooks.
 - **Templates.** [Templates](templates/README.md) for decision records and
   pages.
 

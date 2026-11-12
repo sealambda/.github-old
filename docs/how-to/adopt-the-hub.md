@@ -381,8 +381,7 @@ workflow](#call-the-reusable-workflow) says what that means for `secrets.yml`.
 
 The `gitpolicy` tool checks that each commit header is a Conventional Commit and
 that a branch name is `<type>/<slug>`. A flake check sees no Git history, so the
-tool runs in CI and, if the repository adds one, in a Git hook, not in
-`nix flake check`.
+tool runs in CI and in the Git hooks of the hub, not in `nix flake check`.
 [Git policy](../reference/git-policy.md) defines the rules.
 
 1. Run the tool from the hub input. The command needs no flake output of the
@@ -396,10 +395,9 @@ tool runs in CI and, if the repository adds one, in a Git hook, not in
    To put the tool in a dev shell, add `hub.lib.mkGitPolicyTool pkgs` to the
    packages of the shell.
 
-2. Optional: add a `commit-msg` hook that runs
-   `gitpolicy commit-msg "$1" --allow-autosquash`. The hub ships no hook, so
-   the repository installs it. Git passes the path of the message file as `$1`.
-   The option lets a `fixup!` commit pass while the work is in progress.
+2. Optional: run the commit and branch checks in Git hooks. The hub's hooks do
+   so, and [Install the Git hooks](#install-the-git-hooks) adds them. A person
+   can skip a hook, so keep the CI job of the next step.
 3. Add a job to the repository's pull request workflow. Fetch the whole history
    and check the range from the base commit to the head commit, as the `git-policy`
    job of the hub's `.github/workflows/ci.yml` does. Pass the commits and the
@@ -417,6 +415,71 @@ The tool builds from the hub's own nixpkgs, whatever nixpkgs the repository
 follows. A change of a rule reaches the repository with `nix flake update hub`.
 [ADR 0006](../decisions/0006-check-commits-and-branches-with-a-hub-tool.md)
 gives the reasons.
+
+## Install the Git hooks
+
+The hub's hooks run its tools on the machine of the person who commits: the
+formatter, the documentation check, the workflow checks and the secrets scan
+before a commit, the commit message check at the `commit-msg` stage, and the
+branch name check before a push. A hook shows a problem sooner, and it gates
+nothing, because a person can skip it. Keep the flake checks and the CI jobs
+that the sections above add. [Git hooks](../reference/hooks.md) lists what runs
+at each stage and what the installer does.
+
+1. Build the hooks in the repository's `flake.nix`, with the formatter that the
+   repository already uses for `nix fmt`. Define `hooksFor` in the `let` block
+   after `treefmtFor`:
+
+   ```nix
+   hooksFor = forAllSystems (
+     pkgs:
+     hub.lib.mkHooks {
+       inherit pkgs;
+       src = self;
+       treefmt = treefmtFor.${pkgs.stdenv.hostPlatform.system};
+     }
+   );
+   ```
+
+2. Put the `shellHook` in a dev shell of its own that no other shell includes
+   with `inputsFrom`, and add the check. A separate shell keeps the installer
+   out of the shell that people and CI jobs enter today:
+
+   ```nix
+   hooks = pkgs.mkShell {
+     inputsFrom = [ hub.devShells.${pkgs.stdenv.hostPlatform.system}.node ];
+     inherit (hooksFor.${pkgs.stdenv.hostPlatform.system}) shellHook;
+   };
+   ```
+
+   ```nix
+   pre-commit = hooksFor.${pkgs.stdenv.hostPlatform.system};
+   ```
+
+   The first snippet goes next to `default` in the set that `devShells`
+   defines, and it includes the same hub shell as `default`. The second snippet
+   goes in the set that `checks` defines.
+
+3. Add `.pre-commit-config.yaml` to the `.gitignore`. The shell links the
+   configuration under that name.
+4. Run `nix build .#checks.<system>.pre-commit -L`. The check runs every
+   `pre-commit` hook on all the files, so fix its findings before the first
+   commit.
+5. Enter the shell with `nix develop .#hooks`, once in each clone. The shell
+   installs the hooks. It replaces a `core.hooksPath` that the clone sets, so
+   hooks that live in another folder, such as a husky folder, stop running. A
+   hook of another tool in `.git/hooks` moves to a `.legacy` file and still
+   runs. A global or system `core.hooksPath` makes the shell print a message
+   and exit with status 1, and it installs nothing. The
+   [reference page](../reference/hooks.md#an-earlier-corehookspath) shows the
+   repair.
+6. The variable `SKIP` names hooks to leave out of one command, for example
+   `SKIP=docs git commit`. A skipped hook moves its failure to CI, and the
+   [reference page](../reference/hooks.md#skip-one-hook) states the rule of the
+   hub for a commit that a hook refuses.
+
+Pass `extraHooks` to `mkHooks` to add a hook of the repository. A name that a
+hub hook uses is an error.
 
 ## Call the reusable workflow
 
@@ -460,9 +523,10 @@ the hub's `secrets-scan` command in a hook.
 
 1. Get the command from the hub. The `base` dev shell of the hub holds it, and
    a flake can build it with `hub.lib.mkSecretsScan { inherit pkgs; }`.
-2. Run `secrets-scan staged` in a `pre-commit` hook. It exits with status 1
-   when a staged change holds a secret, and it prints the rule, the file and the
-   line without the secret.
+2. Run `secrets-scan staged` in a `pre-commit` hook. The hub's hooks do so:
+   [Install the Git hooks](#install-the-git-hooks). The command exits with
+   status 1 when a staged change holds a secret, and it prints the rule, the
+   file and the line without the secret.
 3. To suppress a finding that isn't a secret, add its fingerprint on its own
    line to `.gitleaksignore`, or put `gitleaks:allow` in a comment on the line.
    The hub's base configuration is the only one, so a `.gitleaks.toml` in the

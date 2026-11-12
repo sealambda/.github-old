@@ -28,11 +28,27 @@
       ];
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
       treefmtFor = forAllSystems (pkgs: hub.lib.mkTreefmt pkgs [ ]);
+
+      # The Git hooks of the hub with the formatter of this repository. The
+      # shell `hooks` installs them, and the check `pre-commit` runs them.
+      hooksFor = forAllSystems (
+        pkgs:
+        hub.lib.mkHooks {
+          inherit pkgs;
+          src = self;
+          treefmt = treefmtFor.${pkgs.stdenv.hostPlatform.system};
+        }
+      );
     in
     {
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
           inputsFrom = [ hub.devShells.${pkgs.stdenv.hostPlatform.system}.node ];
+        };
+        # The only shell with the installer, as the adoption guide shows.
+        hooks = pkgs.mkShell {
+          inputsFrom = [ hub.devShells.${pkgs.stdenv.hostPlatform.system}.node ];
+          inherit (hooksFor.${pkgs.stdenv.hostPlatform.system}) shellHook;
         };
       });
       formatter = forAllSystems (
@@ -83,6 +99,7 @@
           exclude = [ ];
         };
         workflows = hub.lib.mkWorkflowsCheck pkgs self;
+        pre-commit = hooksFor.${pkgs.stdenv.hostPlatform.system};
       });
     };
 }

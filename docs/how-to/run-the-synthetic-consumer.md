@@ -9,8 +9,10 @@ the hub in one shape of
 The folder `legacy` adopts the hub through the separate `lib` functions and the
 synced configuration files, with one page, one decision record and a ledger.
 The folder `layered` holds no copy of the hub's configuration: its own
-`.vale.ini` and `.markdownlint-cli2.yaml` layer over the hub's base. The README
-of each folder lists its files.
+`.vale.ini` and `.markdownlint-cli2.yaml` layer over the hub's base, and it
+builds the [Git hooks](../reference/hooks.md) with `mkHooks`. The folder
+`legacy` doesn't call `mkHooks`, which shows that the hooks change nothing for
+a repository that doesn't opt in. The README of each folder lists its files.
 
 A folder is copyable. To try the hub in a scratch repository, copy it and run
 `nix flake lock`, because the input URL names the hub on GitHub.

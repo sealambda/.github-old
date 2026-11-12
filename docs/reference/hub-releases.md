@@ -97,7 +97,7 @@ that makes them rules:
 | `flake.nix`, `nix/lib/**`, `flake.lock`, `treefmt.nix` | The flake of every consumer. `nix/lib/` holds the functions that the flake exports as `lib` and the tools that its apps and checks run. |
 | `config/**` | `sync-config` copies five of them into every consumer: the files in `configFiles` of `nix/lib/config.nix`. The wrappers of the `docs` check and shell read the files of Vale, markdownlint-cli2 and lychee from the Nix store as their base ([Wrapped documentation tools](wrapped-tools.md)). The command `secrets-scan` reads `config/gitleaks.toml` from the store only, and no copy reaches a consumer ([Secrets scan](secrets-scan.md)). |
 | `vale/Sealambda/*.yml` (the rules) | The Vale style of `mkDocsCheck`. |
-| `nix/scripts/**` | The tools that the flake runs. The `decisions` and `workflows` tools and `check-docs.sh` run in the checks of a consumer, and the `gitpolicy` tool and the script of `secrets-scan` run in its CI and in a hook that it adds. |
+| `nix/scripts/**` | The tools that the flake runs. The `decisions` and `workflows` tools and `check-docs.sh` run in the checks of a consumer, and the `gitpolicy` tool and the script of `secrets-scan` run in its CI and in the hooks of `lib.mkHooks`. |
 | `schemas/**` | The `decisions` tool validates records against them. |
 | `.github/workflows/secrets.yml` | The reusable workflow that consumers call. |
 | `default.json` | The Renovate preset that consumers extend. |
