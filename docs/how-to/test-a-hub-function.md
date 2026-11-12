@@ -39,7 +39,8 @@ file: `docs.nix`, `decisions.nix`, `config.nix` and `treefmt.nix`.
    cases.
 2. Add a case named `<function>-<situation>`, for example
    `docs-broken-link-fails`. Write one comment above it that states the
-   requirement that the case asserts.
+   requirement that the case asserts. A case name is unique across the case
+   files: a name that two files use fails the evaluation of the check.
 3. Build the fixture with `harness.mkTree`. The fixture is a store path that
    holds the files that you give as text, so no tracked file of the repository
    is a bad example. Set `synced = true` for the tool configuration that
@@ -48,7 +49,9 @@ file: `docs.nix`, `decisions.nix`, `config.nix` and `treefmt.nix`.
 4. Set `check` to the function applied to the fixture. For a case that must
    fail, also set `expectedLog` to the text that the log of the failure must
    hold: the name of the file or the rule that the message names. An empty
-   list is an error, because the case would pass for any failure.
+   list is an error, because the case would pass for any failure. An entry
+   that's a bare file name can match the store path of the fixture, so give
+   the entry a slash before the name, or keep the name out of the fixture.
 
    ```nix
    docs-broken-link-fails = {
@@ -60,9 +63,9 @@ file: `docs.nix`, `decisions.nix`, `config.nix` and `treefmt.nix`.
    A case file can also build its cases from a list, as `config.nix` does for
    each file that `sync-config` writes. Write the list in the case file from
    the requirement. Don't take it from the function's own data: a file that
-   the function drops would then drop its case. Add one case that compares the
-   function's list with the literal one, so both a dropped comparison and a
-   dropped list entry turn a case red.
+   the function drops would then drop its case. Add one case that compares
+   what the function writes with the literal list, so both a dropped
+   comparison and a dropped list entry turn a case red.
 
 5. Run the cases, as in the section above.
 
