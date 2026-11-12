@@ -11,4 +11,11 @@ lists the link that this shell writes.
 The checks that start with `variant-` call the function again, one for each
 optional argument, on a copy of this folder with one more file. Each argument
 has a check that passes with it and, where the argument changes a verdict, a
-check that must fail without it.
+check that must fail without it. The check `variant-treefmt-modules` passes
+because a module keeps a badly formatted file out of the formatter, and
+`variant-decisions-exclude` passes because the folder `fixtures` is out of the
+citation scan. The checks `variant-treefmt-modules-needed` and
+`variant-decisions-exclude-needed` pass only when the same files fail without
+the argument. The check `variant-hooks` passes only when a hook of the
+repository fails the check `pre-commit`, and `variant-scanner` passes only when
+`secrets-scan` runs the scanner that the repository gives.

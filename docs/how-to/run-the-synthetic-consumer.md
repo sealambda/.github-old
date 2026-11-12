@@ -12,7 +12,9 @@ The folder `layered` holds no copy of the hub's configuration: its own
 `.vale.ini` and `.markdownlint-cli2.yaml` layer over the hub's base, and it
 builds the [Git hooks](../reference/hooks.md) with `mkHooks`. The folder
 `legacy` doesn't call `mkHooks`, which shows that the hooks change nothing for
-a repository that doesn't opt in. The README of each folder lists its files.
+a repository that doesn't opt in. The folder `standards` calls only
+`lib.mkStandards`, with the three required arguments, and holds no tool
+configuration. The README of each folder lists its files.
 
 A folder is copyable. To try the hub in a scratch repository, copy it and run
 `nix flake lock`, because the input URL names the hub on GitHub.
@@ -29,6 +31,7 @@ A folder is copyable. To try the hub in a scratch repository, copy it and run
    ```console
    nix flake check --all-systems --no-write-lock-file --override-input hub "path:$PWD" "path:$PWD/nix/tests/consumers/legacy"
    nix flake check --all-systems --no-write-lock-file --override-input hub "path:$PWD" "path:$PWD/nix/tests/consumers/layered"
+   nix flake check --all-systems --no-write-lock-file --override-input hub "path:$PWD" "path:$PWD/nix/tests/consumers/standards"
    ```
 
    `--override-input hub "path:$PWD"` replaces the hub on GitHub with your work
@@ -38,8 +41,8 @@ A folder is copyable. To try the hub in a scratch repository, copy it and run
    fixture lists, and Nix builds only the checks of your own system.
 
 2. Run the `sync-config` app of your work tree in the `legacy` fixture, and list
-   what changes. The `layered` fixture has no synced copy, so it has no such
-   step:
+   what changes. The `layered` and `standards` fixtures have no synced copy, so
+   they have no such step:
 
    ```console
    cd nix/tests/consumers/legacy
