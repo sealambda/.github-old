@@ -96,7 +96,7 @@ that makes them rules:
 | `flake.nix`, `nix/lib/**`, `flake.lock`, `treefmt.nix` | The flake of every consumer. `nix/lib/` holds the functions that the flake exports as `lib` and the tools that its apps and checks run. |
 | `config/**` | `sync-config` copies them into every consumer. |
 | `vale/Sealambda/*.yml` (the rules) | The Vale style of `mkDocsCheck`. |
-| `nix/scripts/**` | The tools that the flake runs. The `decisions` and `workflows` tools and `check-docs.sh` run in the checks of a consumer. |
+| `nix/scripts/**` | The tools that the flake runs. The `decisions` and `workflows` tools and `check-docs.sh` run in the checks of a consumer, and the `gitpolicy` tool runs in its CI and in a hook that it adds. |
 | `schemas/**` | The `decisions` tool validates records against them. |
 | `.github/workflows/secrets.yml` | The reusable workflow that consumers call. |
 | `default.json` | The Renovate preset that consumers extend. |

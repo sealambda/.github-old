@@ -89,6 +89,48 @@ jobs:
             exit 1
           fi
 
+  # Checks every commit of the pull request and the name of its branch with
+  # `gitpolicy`. A flake check sees no history and no branch name, so the
+  # rules run here and in the Git hooks. The job reads the commits of the head
+  # of the pull request, not the merge commit that the checkout holds, because
+  # that merge commit is not a commit of the branch. It runs on pull requests
+  # only: on `main` the rebase merge has already landed the commits, and the
+  # `ci` job accepts that skip. The limit leaves room for a cold Nix cache and
+  # fails a hung job in a quarter of an hour.
+  git-policy:
+    name: git policy
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      # `fetch-depth: 0` fetches the whole history: the range from the base
+      # commit to the head commit of the pull request needs both.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # `install_url` pins the Nix version. `versions.json` holds it, and the
+      # flake check `versions` fails when the two differ.
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+        with:
+          install_url: https://releases.nixos.org/nix/nix-2.35.4/install
+      - name: Check the commit messages
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: nix run .#gitpolicy -- range "$BASE_SHA..$HEAD_SHA"
+      # Runs after a failed commit check too, so one run shows both problems.
+      # The second `--` ends the options of `gitpolicy`, so a name that starts
+      # with `-` reaches the check and fails as a bad name. Without it, the
+      # name would be read as an option, and `--help` would pass the job.
+      - name: Check the branch name
+        if: ${{ !cancelled() }}
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: nix run .#gitpolicy -- branch -- "$HEAD_REF"
+
   # The hub runs its own reusable workflow, as a consumer does. The `./`
   # form stays because actionlint doesn't yet accept the `$/` form that
   # zizmor suggests. No job lints the workflows or the documentation: the
@@ -107,13 +149,15 @@ jobs:
       timeout-minutes: 10
 
   # The one required status check. It fails unless every job it needs
-  # succeeded, so a skipped or cancelled job can't pass by omission. The job
-  # runs one `jq` command and took 4 seconds in each of the last 10 runs, so
-  # 5 minutes is more than 70 times that.
+  # succeeded, so a skipped or cancelled job can't pass by omission. One skip
+  # is by design: `git-policy` runs on pull requests only, so on a push it
+  # may be skipped, and on a pull request it must succeed. The job runs one
+  # `jq` command and took 4 seconds in each of the last 10 runs, so 5 minutes
+  # is more than 70 times that.
   ci:
     name: ci
     if: always()
-    needs: [flake-check, consumer, secrets]
+    needs: [flake-check, consumer, git-policy, secrets]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}
@@ -121,7 +165,13 @@ jobs:
       - name: Require every needed job to succeed
         env:
           NEEDS: ${{ toJSON(needs) }}
-        run: echo "$NEEDS" | jq -e 'all(.[]; .result == "success")'
+          EVENT: ${{ github.event_name }}
+        run: |
+          echo "$NEEDS" | jq -e --arg event "$EVENT" '
+            to_entries | all(.[];
+              .value.result == "success"
+              or (.key == "git-policy" and $event == "push"
+                  and .value.result == "skipped"))'
 
   # A release covers every merge to `main`: the merge gets a tag and a release
   # at its commit, or a later release covers it when a newer pending run

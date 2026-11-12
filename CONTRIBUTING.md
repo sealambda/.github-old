@@ -9,7 +9,7 @@ own. A repository adds its own commands and facts and links here.
 Each commit is one logical change. Use this form:
 
 ```text
-type(scope)!: summary in the imperative, at most 72 characters
+type(scope)!: summary in the imperative, at most 100 characters
 
 Why the change exists: the problem, and why this is the fix. Wrap at 72.
 
@@ -17,7 +17,15 @@ Assisted-by: <tool> (<model>)
 ```
 
 - Follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/).
-  The scope names the area. `!` marks a breaking change.
+  The type is `feat`, `fix`, `docs`, `refactor`, `test`, `ci`, `build`,
+  `chore` or `perf`, in lower case. The scope names the area. `!` marks a
+  breaking change. The header has no final period.
+- To undo a change, write `revert: <description>`. Git's default header,
+  `Revert "<subject>"`, isn't a Conventional Commit.
+- The tool `gitpolicy` checks these rules. The hub's CI runs it on every pull
+  request, and a repository can run it from a `commit-msg` hook of its own.
+  [Git policy](https://github.com/sealambda/.github/blob/main/docs/reference/git-policy.md)
+  lists them.
 - Say why in the body. The diff shows what.
 - **Sign every commit.** Use SSH signing and add the key to GitHub as a
   signing key:
@@ -39,7 +47,10 @@ Assisted-by: <tool> (<model>)
   hundred lines of written code.
 - The title is a Conventional Commit. The body follows the pull request
   template.
-- Branch names are `<type>/<topic>`, for example `fix/listen-address`.
+- Branch names are `<type>/<short-slug>` with a type from the list above, for
+  example `fix/listen-address`. The slug is lower-case letters and digits that
+  single hyphens join. Two names are the exception: `main`, and `renovate/...`
+  for the branches of Renovate.
 - Update a branch by rebase. Never merge the base into it.
 - Make dependent changes a stack: one pull request per layer, each on the
   branch of the layer below.
@@ -50,8 +61,11 @@ Assisted-by: <tool> (<model>)
 ## Review and landing
 
 - A code owner who didn't commit to the pull request approves it.
-- Fix review findings with fixup commits. Fold them in before landing with
-  `git rebase -i --autosquash`.
+- Fix review findings with fixup commits, so that the reviewer sees each
+  change. Then fold them in with `git rebase -i --autosquash`. The CI check of
+  the commits fails a `fixup!`, `squash!` or `amend!` commit, so the pull
+  request check stays red until you fold them in and push the result. Fold them
+  in before you ask for the final approval.
 - Land with **Rebase and merge**. `main` stays linear. Nobody pushes to
   `main`.
 - To undo a landed pull request, revert its commits in a new pull request.

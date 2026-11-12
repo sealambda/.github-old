@@ -50,7 +50,12 @@ and keeps its own facts.
   and the ledger are in `schemas/`. The `decisions` app retires a record into
   the ledger. The flake check `lib.mkWorkflowsCheck` fails when a job has no
   `timeout-minutes` or when a pull request workflow has no `concurrency`
-  group ([Workflow checks](docs/reference/workflow-checks.md)).
+  group ([Workflow checks](docs/reference/workflow-checks.md)). The tool
+  `gitpolicy`, as `lib.mkGitPolicyTool`, checks that a commit header is a
+  Conventional Commit and that a branch name is `<type>/<slug>`. It runs in CI
+  and in a Git hook that a repository adds, because a flake check sees no
+  history
+  ([Git policy](docs/reference/git-policy.md)).
 
 ## Documentation
 
@@ -70,13 +75,16 @@ The pages follow [Diátaxis](https://diataxis.fr/).
   [decision records](docs/reference/decision-records.md),
   [writing style](docs/reference/writing-style.md), the
   [leak check](docs/reference/leak-check.md),
-  [workflow checks](docs/reference/workflow-checks.md),
+  [workflow checks](docs/reference/workflow-checks.md), the
+  [Git policy](docs/reference/git-policy.md),
   [licensing](docs/reference/licensing.md),
   [CI of the hub](docs/reference/hub-ci.md) and
   [hub releases](docs/reference/hub-releases.md).
 - **Explanation.** The [decision records](docs/decisions/) say why the hub
   works as it does. [ADR 0005](docs/decisions/0005-check-decision-records-with-a-hermetic-flake-check.md)
-  explains the decision records check.
+  explains the decision records check, and
+  [ADR 0006](docs/decisions/0006-check-commits-and-branches-with-a-hub-tool.md)
+  explains why the Git policy is a hub tool.
 - **Templates.** [Templates](templates/README.md) for decision records and
   pages.
 

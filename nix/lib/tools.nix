@@ -1,8 +1,8 @@
-# The Python tools of the hub: `decisions`, `leaks`, `versions`, `workflows` and
-# `release`, each the package of the same name below `nix/scripts`.
-# `flake.nix` imports this file for the apps and the checks, and
-# `decisions.nix` and `workflows.nix` build `mkDecisionsCheck` and
-# `mkWorkflowsCheck` on their tools.
+# The Python tools of the hub: `decisions`, `leaks`, `versions`, `workflows`,
+# `gitpolicy` and `release`, each the package of the same name below
+# `nix/scripts`. `flake.nix` imports this file for the apps and the checks, and
+# `decisions.nix`, `workflows.nix` and `git-policy.nix` build
+# `mkDecisionsCheck`, `mkWorkflowsCheck` and `mkGitPolicyTool` on their tools.
 #
 # The set holds one entry for each tool: the result of `mkPythonTool`
 # (`python-tool.nix`), with `env`, the run-time environment for the tests of
@@ -80,6 +80,19 @@ in
     name = "workflows";
     uses = [ "decisions" ];
     runtimeInputs = pkgs: [ (decisionsPython pkgs) ];
+  };
+
+  # The `gitpolicy` command: `python -P -m gitpolicy`, the code in
+  # `nix/scripts/gitpolicy`. It checks commit messages and branch names. The
+  # package imports the runner of `git` of the package `release`, and `git`
+  # reads the history. The package uses only the standard library.
+  gitpolicy = mkPythonTool {
+    name = "gitpolicy";
+    uses = [ "release" ];
+    runtimeInputs = pkgs: [
+      pkgs.python3
+      pkgs.git
+    ];
   };
 
   # The `release` command: `python -P -m release`, the code in

@@ -42,8 +42,8 @@ class Runner(Protocol):
         ...
 
 
-def command_runner(prefix: Sequence[str]) -> Runner:
-    """Build a runner for a program.
+def command_runner(prefix: Sequence[str], *, errors: str = "replace") -> Runner:
+    r"""Build a runner for a program.
 
     The child process inherits the environment of the caller. This is how `gh`
     reads `GH_TOKEN` and `GH_REPO`.
@@ -51,15 +51,25 @@ def command_runner(prefix: Sequence[str]) -> Runner:
     Args:
         prefix: The program and the arguments that every call starts with, for
             example `["git", "-C", "/path"]`.
+        errors: How the runner decodes a standard output that is not valid
+            UTF-8, as the `errors` argument of `bytes.decode`. The default
+            `"replace"` turns each invalid byte into U+FFFD, so a file name
+            that git prints as raw bytes does not stop the release tool: such
+            a path matches no pattern of `release.paths`, and its answer is
+            `rules changed: yes`. `"strict"` raises `UnicodeDecodeError`, for a
+            caller that reports the bad bytes itself. The setting does not
+            apply to the standard error, which is always decoded with
+            replacement characters.
 
     Returns:
         A runner. It raises `CommandError` when the program is missing or exits
         with a nonzero status. The message holds the command and the standard
         error, and `CommandError.stderr` holds the standard error alone. The
-        runner decodes the output as UTF-8 and replaces each byte that is not
-        valid UTF-8 with U+FFFD, so a file name that git prints as raw bytes
-        does not stop the tool. Such a path matches no pattern of
-        `release.paths`, and its answer is `rules changed: yes`.
+        runner returns the standard output as the program wrote it: a carriage
+        return stays a carriage return. Text mode of `subprocess` would turn
+        each `\r\n` and each lone `\r` into `\n`, which changes the message of a
+        commit that holds a carriage return. The runner decodes the bytes
+        itself, so this holds for every caller.
     """
 
     def run(args: Sequence[str], *, stdin: str | None = None) -> str:
@@ -68,10 +78,8 @@ def command_runner(prefix: Sequence[str]) -> Runner:
         try:
             completed = subprocess.run(
                 command,
-                input=stdin,
+                input=None if stdin is None else stdin.encode("utf-8"),
                 capture_output=True,
-                encoding="utf-8",
-                errors="replace",
                 check=False,
             )
         except FileNotFoundError as error:
@@ -79,8 +87,8 @@ def command_runner(prefix: Sequence[str]) -> Runner:
                 f"{prefix[0]} is not installed or not on PATH"
             ) from error
         if completed.returncode != 0:
-            stderr = completed.stderr.strip()
+            stderr = completed.stderr.decode("utf-8", errors="replace").strip()
             raise CommandError(f"{' '.join(command)} failed: {stderr}", stderr)
-        return completed.stdout
+        return completed.stdout.decode("utf-8", errors=errors)
 
     return run

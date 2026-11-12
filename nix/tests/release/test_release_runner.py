@@ -23,10 +23,35 @@ class CommandRunnerTest(unittest.TestCase):
     def test_output_that_is_not_utf8_is_decoded_with_a_replacement_character(
         self,
     ) -> None:
-        """A byte that is not UTF-8 becomes U+FFFD, and the call succeeds."""
+        """By default a byte that is not UTF-8 becomes U+FFFD, and the call works.
+
+        The default is `errors="replace"`, so the release tool, which passes no
+        argument, does not stop on a file name that is not UTF-8.
+        """
         run = command_runner([sys.executable, "-c"])
         script = "import sys; sys.stdout.buffer.write(b'a\\xffb\\n')"
         self.assertEqual(run([script]), "a\N{REPLACEMENT CHARACTER}b\n")
+
+    def test_keeps_carriage_returns_in_the_output_and_the_input(self) -> None:
+        r"""A `\r` and a `\r\n` come back as written, not as `\n`.
+
+        Text mode of `subprocess` turns both into a line feed. A commit
+        message with a carriage return would then read differently from the
+        message that Git stores.
+        """
+        run = command_runner([sys.executable, "-c"])
+        script = "import sys; sys.stdout.buffer.write(sys.stdin.buffer.read())"
+        text = "a\rb\r\nc\n"
+        self.assertEqual(run([script], stdin=text), text)
+
+    def test_strict_decoding_raises_a_decode_error_for_output_that_is_not_utf8(
+        self,
+    ) -> None:
+        """With `errors="strict"` bytes that are not UTF-8 fail for the caller."""
+        run = command_runner([sys.executable, "-c"], errors="strict")
+        script = "import sys; sys.stdout.buffer.write(b'\\xff\\xfe')"
+        with self.assertRaises(UnicodeDecodeError):
+            run([script])
 
     def test_nonzero_status_raises_with_the_command_and_the_error_text(self) -> None:
         """The message names the command and holds its standard error."""

@@ -311,6 +311,47 @@ doesn't cover an expression, because the check doesn't read its value, and it
 doesn't cover the jobs of a called workflow. [Call the reusable
 workflow](#call-the-reusable-workflow) says what that means for `secrets.yml`.
 
+## Gate the commits and branches
+
+The `gitpolicy` tool checks that each commit header is a Conventional Commit and
+that a branch name is `<type>/<slug>`. A flake check sees no Git history, so the
+tool runs in CI and, if the repository adds one, in a Git hook, not in
+`nix flake check`.
+[Git policy](../reference/git-policy.md) defines the rules.
+
+1. Run the tool from the hub input. The command needs no flake output of the
+   repository:
+
+   ```console
+   nix run --inputs-from . hub#gitpolicy -- range origin/main..HEAD
+   nix run --inputs-from . hub#gitpolicy -- branch
+   ```
+
+   To put the tool in a dev shell, add `hub.lib.mkGitPolicyTool pkgs` to the
+   packages of the shell.
+
+2. Optional: add a `commit-msg` hook that runs
+   `gitpolicy commit-msg "$1" --allow-autosquash`. The hub ships no hook, so
+   the repository installs it. Git passes the path of the message file as `$1`.
+   The option lets a `fixup!` commit pass while the work is in progress.
+3. Add a job to the repository's pull request workflow. Fetch the whole history
+   and check the range from the base commit to the head commit, as the `git-policy`
+   job of the hub's `.github/workflows/ci.yml` does. Pass the commits and the
+   branch name through `env`, not through the script text, and put `--` before
+   the branch name: `gitpolicy branch -- "$HEAD_REF"`. Add the job to the
+   `needs` of the `ci` job. A job that runs on pull requests only is skipped on
+   a push, so the `ci` job must accept that skip on a push and on no other
+   event. The hub's `ci` job shows the `jq` expression.
+4. Fix the findings of the first run. The command prints one line for each
+   problem, and it exits with status 1 when a commit or a branch breaks a rule.
+   A commit that's already on `main` can't change, so check the range from the
+   base of the pull request, not the whole history.
+
+The tool builds from the hub's own nixpkgs, whatever nixpkgs the repository
+follows. A change of a rule reaches the repository with `nix flake update hub`.
+[ADR 0006](../decisions/0006-check-commits-and-branches-with-a-hub-tool.md)
+gives the reasons.
+
 ## Call the reusable workflow
 
 The hub offers the reusable workflow `secrets.yml`. It runs its tool from the
