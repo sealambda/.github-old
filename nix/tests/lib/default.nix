@@ -23,6 +23,11 @@ let
     ./treefmt.nix
   ];
 
-  cases = pkgs.lib.mergeAttrsList (map (file: import file { inherit pkgs hub harness; }) caseFiles);
+  # `unionOfDisjoint` fails on a name that two files both use. A plain merge
+  # would let the later case replace the earlier one, and the check would pass
+  # with fewer cases than the files hold.
+  cases = pkgs.lib.foldl' pkgs.lib.attrsets.unionOfDisjoint { } (
+    map (file: import file { inherit pkgs hub harness; }) caseFiles
+  );
 in
 pkgs.linkFarm "lib-functions" (harness.toTests cases)
