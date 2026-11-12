@@ -301,8 +301,27 @@
         dev-shells =
           let
             shells = self.devShells.${pkgs.stdenv.hostPlatform.system};
-            withHook = builtins.attrNames (nixpkgs.lib.filterAttrs (_: shell: shell.shellHook != "") shells);
+
+            # `mkShell` joins the hooks of the shells that it includes and of
+            # itself with a line break, and each empty hook adds one. A shell
+            # that includes two shells has the text "\n" and no hook, so a
+            # hook is a text with more than white space.
+            hasHook = shell: nixpkgs.lib.trim shell.shellHook != "";
+
+            withHook = builtins.attrNames (nixpkgs.lib.filterAttrs (_: hasHook) shells);
+
+            # A shell with two included shells and no hook of its own. A
+            # future shell of this form must not fail the check.
+            includesTwoShells = pkgs.mkShell {
+              inputsFrom = [
+                shells.base
+                shells.node
+              ];
+            };
           in
+          assert nixpkgs.lib.assertMsg (
+            !hasHook includesTwoShells
+          ) "dev-shells: a shell with two included shells and no hook counts as one with a hook.";
           assert nixpkgs.lib.assertMsg (withHook == [ "hooks" ])
             "dev-shells: only the shell `hooks` may carry a shell hook, found: ${nixpkgs.lib.concatStringsSep ", " withHook}";
           assert nixpkgs.lib.assertMsg (
