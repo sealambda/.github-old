@@ -41,6 +41,9 @@ and the result would look clean and mean nothing:
   history: it only checks that each object exists, so it passes a blob that
   holds garbage. `git cat-file --batch` and `git rev-list --verify-objects` read
   the content, but they exit 0 for some damaged objects.
+- A merge commit of three or more parents has no diff that the scanner can
+  read. `history` exits with status 4 and names the commits: see
+  [Merge commits](#merge-commits).
 
 The check reads the diff twice. On a synthetic history of 3301 commits, 300 of
 them merge commits, with 15423 objects in a 3.2 MiB pack, `secrets-scan history`
@@ -203,6 +206,15 @@ options of the scanners, so the command names `--full-history --all
 repository with 3300 commits, 300 merge commits and 13000 objects, and about
 0.05 s to the scan of the hub. The hub has no merge commit.
 
+A merge commit with three or more parents, an octopus merge, has no `remerge`
+diff: Git prints the line `diff: warning: Skipping remerge-diff for octopus
+merges.` in place of a diff, so a scanner reads nothing of what the merge
+changed by hand. A secret that only such a merge holds would pass with the
+result `no leaks found`. So `history` lists the octopus merges with
+`git rev-list --min-parents=3 --all` before the scan, and exits with status 4
+and the commit IDs when the list isn't empty. It exits with status 4 as well
+when Git can't list them. `staged` has no such check.
+
 A finding in a file that the merge left in conflict shows the path with the
 prefix `b/`, and its fingerprint has the prefix, as in
 `<commit>:b/<file>:<rule>:<line>`. Git prints a line `remerge CONFLICT` in the
@@ -215,7 +227,7 @@ line.
 | 1 | A finding, or a failure of the scanner. The scanner uses 1 for both, and the output says which. |
 | 2 | A usage error. |
 | 3 | `history` on a shallow clone. Nothing is scanned. |
-| 4 | Git can't produce the diff that the scan reads: a history with a missing or damaged object, or a setting that makes Git fail or warn. Nothing is scanned. |
+| 4 | Git can't produce the diff that the scan reads: a history with a missing or damaged object, or a setting that makes Git fail or warn. Also `history` on a history with a merge commit of three or more parents. Nothing is scanned. |
 | Other | A failure of `git`, such as 128 outside a work tree. |
 
 ## Where the scan runs
@@ -432,14 +444,10 @@ and the command doesn't filter the output:
   line, so it passes. The secret that it leaves is in the history, and the scan
   of the history finds it. A staged rename is an addition at the new path, so
   the scan reads the whole file.
-- A merge commit with three or more parents, an octopus merge, has no `remerge`
-  diff: Git prints the line `diff: warning: Skipping remerge-diff for octopus
-  merges.` in place of a diff. A secret that only such a merge commit holds
-  passes `history` with both scanners, whether the merge adds it in a new file
-  or edits a file by hand. A secret that a merged branch brought is in the
-  commit on that branch, and the scan finds it there. `git rev-list
-  --min-parents=3 --all` lists the octopus merges, and `git show --cc
-  <commit>` shows what one holds that none of its parents has.
+- `history` refuses a history that has an octopus merge (status 4), and no
+  fingerprint or setting accepts one, so a repository with such a merge can't
+  scan its history with the command. `git show --cc <commit>` shows what the
+  merge holds that none of its parents has.
 - A submodule isn't scanned. `history` and `staged` read the commit ID of the
   submodule in the repository, and neither the history nor the files of the
   submodule. Run `secrets-scan` in the repository of the submodule itself.

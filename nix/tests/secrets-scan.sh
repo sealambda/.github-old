@@ -1091,14 +1091,15 @@ commit_octopus_merge_with_secret() {
 }
 
 # A merge of more than two parents has no remerge diff: Git prints a warning
-# line in place of the diff. A secret that only an octopus merge holds passes
-# the scan of the history, whether the merge adds it in a new file or edits a
-# file. Neither parent has the secret. The checks of the setup show that Git
-# has no remerge diff for the merge, that its combined diff holds the secret,
-# and that no parent holds it. This case pins a limit that the page lists: if
-# Git learns to remerge an octopus merge, the first check fails and the page
-# needs a change.
-case_octopus_merge_is_not_scanned() {
+# line in place of the diff, so a scanner reads nothing of what the merge
+# changed by hand. A secret that only an octopus merge holds, in a new file or
+# in an edit of a file, would pass the scan of the history with the result `no
+# leaks found`. The scan refuses such a history with status 4 and names the
+# merge commit, and `staged` is not affected. The checks of the setup show that
+# Git has no remerge diff for the merge, that its combined diff holds the
+# secret, and that no parent holds it. If Git learns to remerge an octopus
+# merge, the first check fails, and the refusal can go.
+case_history_refuses_an_octopus_merge() {
   local how remerge combined
   for how in add edit; do
     commit_octopus_merge_with_secret "octopus-$how" "$how"
@@ -1112,8 +1113,12 @@ case_octopus_merge_is_not_scanned() {
     fi
 
     run_scan history
+    assert_status 4
+    assert_output_lacks "no leaks found"
+    assert_output_contains "$(git rev-parse HEAD)"
+
+    run_scan staged
     assert_status 0
-    assert_output_contains "no leaks found"
   done
 }
 
@@ -1213,7 +1218,7 @@ main() {
     case_rename_limit_warning_does_not_stop_the_scan
     case_history_finds_a_secret_in_a_conflict_resolution
     case_history_does_not_report_a_merged_branch_again
-    case_octopus_merge_is_not_scanned
+    case_history_refuses_an_octopus_merge
     case_submodule_content_is_not_scanned
     case_betterleaks_ignore_names_apply_to_betterleaks_only
   )

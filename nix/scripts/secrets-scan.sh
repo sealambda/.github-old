@@ -48,7 +48,9 @@
 # `history` shows the diff of a merge commit with `--diff-merges=remerge`: the
 # changes that the person who merged made by hand, for example the resolution of
 # a conflict. Without it `git log -p` prints no diff for a merge commit, and a
-# secret that only the merge holds passes.
+# secret that only the merge holds passes. Git has no such diff for a merge of
+# three or more parents, so `history` refuses a history that has one: see
+# `refuse_octopus_merges`.
 #
 # Exit status:
 #   0  No finding.
@@ -57,8 +59,9 @@
 #   2  A usage error.
 #   3  `history` on a shallow clone. Nothing is scanned.
 #   4  Git can't produce the diff that the scanner reads: a damaged history
-#      for `history`, or a failing setting for either command. Nothing is
-#      scanned.
+#      for `history`, or a failing setting for either command. Also `history`
+#      on a history that has a merge commit of three or more parents, which
+#      has no diff to read. Nothing is scanned.
 #   Other  A failure of `git`, for example 128 outside a work tree.
 
 # The `git log` options of a scan of the history. `--log-opts` replaces the
@@ -192,6 +195,27 @@ refuse_unreadable_diff() {
   fi
 }
 
+# Exits with status 4 when a commit of the history has three or more parents, an
+# octopus merge. Git has no `remerge` diff for such a merge: it prints the line
+# "Skipping remerge-diff for octopus merges" in place of a diff, so the scanner
+# reads nothing of what the author of the merge changed by hand, and a secret
+# that only the merge holds passes with "no leaks found". The function lists the
+# merge commits with the same refs as the scan (`--all`), and it exits with
+# status 4 as well when Git can't list them.
+refuse_octopus_merges() {
+  local commits
+  commits=$(git rev-list --min-parents=3 --all) || exit 4
+  if [ -n "$commits" ]; then
+    {
+      echo "secrets-scan: the history has a merge commit of three or more" \
+        "parents, and Git can't show what such a merge changed by hand, so" \
+        "nothing was scanned. The commits:"
+      echo "$commits"
+    } >&2
+    exit 4
+  fi
+}
+
 # Runs the scanner with the arguments $1 and later after `git`, with the hub's
 # base configuration. The flags are the same in gitleaks and in its forks:
 #   --config    Use this file and no other configuration file.
@@ -234,6 +258,7 @@ main() {
   history)
     refuse_shallow_clone
     refuse_unreadable_diff "the history" log --patch -U0 "${HISTORY_LOG_OPTIONS[@]}"
+    refuse_octopus_merges
     ;;
   staged)
     refuse_unreadable_diff "the staged changes" diff -U0 --no-ext-diff --staged .
