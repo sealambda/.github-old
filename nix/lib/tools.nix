@@ -8,6 +8,12 @@
 # the package, and `mkTool`, which returns the command for one package set.
 # The entry `decisions` also holds `python`, a function from a package set to
 # the Python of `decisions` with its two libraries, for the checks that need it.
+#
+# A new tool needs more than an entry here. `python-quality` in `flake.nix`
+# type-checks only the packages that its `mypy` command names, and it reads
+# only the files in its `pythonQualitySource` fileset. `src` in `pyproject.toml`
+# tells the import order check of ruff where the first-party code is. Add the
+# package and its tests to all three places.
 { lib }:
 let
   inherit ((import ./python-tool.nix { inherit lib; })) mkPythonTool;

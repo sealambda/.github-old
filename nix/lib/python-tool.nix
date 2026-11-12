@@ -24,8 +24,11 @@
       imports, default empty.
 
     `schemaDir`
-    : The folder of the JSON Schemas that the package reads through
-      `DECISIONS_SCHEMA_DIR`, default none.
+    : The folder of the JSON Schemas that the package reads, default none. The
+      environment names it in `DECISIONS_SCHEMA_DIR`, the variable of the
+      package `decisions`. The package `versions` imports the schema loading
+      of `decisions`, so it reads the same variable. Only these two tools set
+      `schemaDir`.
 
     `runtimeInputs`
     : A function from a package set to the packages that the command needs on
