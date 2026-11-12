@@ -269,13 +269,48 @@
         fileset = nixpkgs.lib.fileset.unions [
           ./nix/scripts/decisions
           ./nix/scripts/leaks
+          ./nix/scripts/release
           ./nix/scripts/versions
           ./nix/tests/decisions
           ./nix/tests/leaks
+          ./nix/tests/release
           ./nix/tests/versions
           ./pyproject.toml
         ];
       };
+
+      # The Python package `release`. It uses only the standard library.
+      releaseSource = nixpkgs.lib.fileset.toSource {
+        root = ./nix/scripts;
+        fileset = ./nix/scripts/release;
+      };
+
+      # What `release` finds at run time: itself. Python cannot write byte code
+      # into the Nix store.
+      releaseEnv = {
+        PYTHONPATH = "${releaseSource}";
+        PYTHONDONTWRITEBYTECODE = "1";
+      };
+
+      # The `release` command: `python -m release`, the code in
+      # `nix/scripts/release`. It plans and creates the release of a commit of
+      # the hub. `git` answers the questions about the history, and `gh`
+      # creates the release.
+      mkReleaseTool =
+        pkgs:
+        pkgs.writeShellApplication {
+          name = "release";
+          runtimeInputs = [
+            pkgs.python3
+            pkgs.git
+            pkgs.gh
+          ];
+          runtimeEnv = releaseEnv;
+          # `-P` keeps the current directory off `sys.path`: the command runs in
+          # the repository of the caller, and a file there must not replace a
+          # module of the standard library or the package `release`.
+          text = ''exec python -P -m release "$@"'';
+        };
 
       # The Python package `leaks`, and the package `decisions`. `leaks`
       # imports only `decisions.walk` and `decisions.findings`, which use only
@@ -469,6 +504,16 @@
           type = "app";
           program = nixpkgs.lib.getExe (mkDecisionsTool pkgs);
         };
+      });
+
+      # The `release` command for the releases of this repository. It is not a
+      # tool for consumers: it reads the changed paths against the rules of the
+      # hub (`nix/scripts/release/paths.py`). `nix run .#release -- plan` runs
+      # it in the current repository. The CI builds it first and runs the
+      # result in a later step, so that Nix runs without the token that
+      # `publish` needs. The tool comes from the hub's nixpkgs.
+      packages = eachSystem (pkgs: {
+        release = mkReleaseTool pkgs;
       });
 
       # Version policy: a toolchain version is the name of a nixpkgs attribute
@@ -698,6 +743,52 @@
               touch "$out"
             '';
 
+        # Runs the unit tests of `nix/scripts/release`: the rules for the tag
+        # series and the changed paths, and the plan of a release against
+        # temporary Git repositories with a fake `gh`. The tests need `git` and
+        # a writable HOME, and they reach no network. They compare the list of
+        # patterns with the table of the reference page, which the variable
+        # `HUB_RELEASES_DOC` names, because the test folder holds no page.
+        #
+        # The unit tests import the package and inject their runners, so they
+        # do not run the `release` command that CI runs. The second part does:
+        # it runs the built command in a temporary repository with one commit,
+        # which covers the wrapper, its run-time inputs and the default runners.
+        # A directory with a package `release` in it must not shadow the real
+        # one, because the command runs in the repository of the caller.
+        check-release-tests =
+          pkgs.runCommand "check-release-tests"
+            {
+              nativeBuildInputs = [
+                pkgs.python3
+                pkgs.git
+              ];
+              env = releaseEnv // {
+                HUB_RELEASES_DOC = "${./docs/reference/hub-releases.md}";
+              };
+            }
+            ''
+              export HOME="$TMPDIR"
+              python -m unittest discover -v -s ${./nix/tests/release}
+
+              release=${mkReleaseTool pkgs}/bin/release
+              mkdir "$TMPDIR/smoke"
+              cd "$TMPDIR/smoke"
+              git init --quiet --initial-branch=main
+              git -c user.name=smoke -c user.email=smoke@example.com \
+                -c commit.gpgsign=false \
+                commit --quiet --allow-empty --message "feat: first commit"
+              "$release" --help > /dev/null
+              "$release" plan | grep --line-regexp "tag: v1.0.0"
+              mkdir release
+              echo "raise SystemExit('shadowed by the current directory')" \
+                > release/__main__.py
+              : > release/__init__.py
+              "$release" plan | grep --line-regexp "tag: v1.0.0"
+
+              touch "$out"
+            '';
+
         # Formats, lints and type-checks the hub's Python with ruff and mypy,
         # configured in `pyproject.toml`. Only the hub runs this check: it is
         # not part of `mkTreefmt`.
@@ -722,6 +813,7 @@
               mypy --cache-dir "$TMPDIR/mypy" \
                 nix/scripts/decisions nix/tests/decisions \
                 nix/scripts/leaks nix/tests/leaks \
+                nix/scripts/release nix/tests/release \
                 nix/scripts/versions nix/tests/versions
               touch "$out"
             '';

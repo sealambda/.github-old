@@ -7,17 +7,21 @@ on:
 
 permissions: {}
 
-# A run of a pull request never cancels another run. A push that updates a pull
-# request and its base branch together can start two runs for one head commit.
-# The group names the head commit, so the two runs share a group, wait for each
-# other, and both finish. A run that a newer run cancelled would leave a failed
-# `ci` check on the head commit, because the job `ci` runs in a cancelled run
-# and fails there. A new head commit starts a group of its own, so the run of
-# the older commit finishes too. The group of a push has no head commit: it
-# holds one group for the branch, and a newer push cancels the run in progress.
+# A run never cancels another run. A push that updates a pull request and its
+# base branch together can start two runs for one head commit. The group of a
+# pull request names the head commit, so the two runs share a group, wait for
+# each other, and both finish. A run that a newer run cancelled would leave a
+# failed `ci` check on the head commit, because the job `ci` runs in a
+# cancelled run and fails there. A new head commit starts a group of its own,
+# so the run of the older commit finishes too. A run on `main` never cancels
+# another either, because a cancelled run on `main` could leave a merge without
+# its release. The group of a push has no head commit. A group holds one
+# running and one pending run, and a newer pending run replaces the older one:
+# the replaced push gets no release of its own, and the next release covers its
+# commits.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.pull_request.head.sha }}
-  cancel-in-progress: ${{ github.event_name != 'pull_request' }}
+  cancel-in-progress: false
 
 jobs:
   flake-check:
@@ -61,3 +65,46 @@ jobs:
         env:
           NEEDS: ${{ toJSON(needs) }}
         run: echo "$NEEDS" | jq -e 'all(.[]; .result == "success")'
+
+  # A release covers every merge to `main`: the merge gets a tag and a release
+  # at its commit, or a later release covers it when a newer pending run
+  # replaced this run, and then it gets no tag of its own. The job is not part
+  # of the `ci` aggregate: it runs after `ci` succeeds, and a failed release
+  # does not fail the checks of the merge. `if` has no status function, so
+  # GitHub adds `success()` and the job is skipped when `ci` fails. `publish`
+  # creates the tag and the release with one `gh` call at the pushed commit.
+  # GitHub does not document what a failed call leaves behind, so a re-run
+  # checks first: it creates nothing for a commit that a later release covers
+  # or whose release exists, and it adds the release to a tag that has none. A
+  # re-run is safe. This job holds the only write permission of the workflow.
+  release:
+    name: release
+    needs: [ci]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # `gh release create` creates the tag and the release
+    steps:
+      # `fetch-depth: 0` fetches the whole history and every tag: the release
+      # needs the previous tag and the commits since it.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # `install_url` pins the Nix version. `versions.json` holds it, and the
+      # flake check `versions` fails when the two differ.
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+        with:
+          install_url: https://releases.nixos.org/nix/nix-2.35.4/install
+      # Nix evaluates the flake and builds the command in this step, which has
+      # no token: only the second step holds the token, and it runs the built
+      # command and no Nix.
+      - name: Build the release command
+        run: nix build .#release --out-link "$RUNNER_TEMP/release"
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          "$RUNNER_TEMP/release/bin/release" publish --commit "$GITHUB_SHA"

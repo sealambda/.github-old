@@ -1,0 +1,247 @@
+"""Helpers for the release tests: a temporary git repository and a fake `gh`."""
+
+import contextlib
+import io
+import json
+import os
+import subprocess
+import tempfile
+import unittest
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from pathlib import Path
+from unittest import mock
+
+from release.cli import main
+from release.runner import CommandError, Runner, command_runner
+
+
+class FakeGh:
+    """A stand-in for `gh` that records its calls and reaches no network.
+
+    It answers the three commands that the tool uses, as `gh` 2.103 does:
+    `release view <tag>` succeeds for a tag in `releases`, and otherwise it
+    fails with the standard error `release not found`. `release create <tag>`
+    adds the tag to `releases`, and it creates the tag at `--target` when the
+    fake GitHub has no such tag. When the tag exists, GitHub ignores `--target`
+    and so does the fake. `api` reads a tag as the two REST endpoints
+    `git/ref/tags/<tag>` and `git/tags/<hash>` return it. Any other call is a
+    bug of the test.
+
+    Attributes:
+        calls: The arguments and the standard input of each call, in order.
+        releases: The tags that have a release on the fake GitHub.
+        remote_tags: The commit of each tag that exists on the fake GitHub.
+        annotated_tags: The tags of `remote_tags` that are annotated, so the
+            ref of the tag names a tag object and not the commit.
+        failure: A message. When set, every call raises `CommandError` with it,
+            as a failing `gh` does.
+        view_failure: A message. When set, `release view` fails with it as its
+            standard error, for a reason other than a missing release.
+        create_failure: A message. When set, `release create` fails with it as
+            its standard error.
+    """
+
+    def __init__(self) -> None:
+        """Create a fake that has no call, no release and no failure."""
+        self.calls: list[tuple[list[str], str | None]] = []
+        self.releases: set[str] = set()
+        self.remote_tags: dict[str, str] = {}
+        self.annotated_tags: set[str] = set()
+        self.failure: str | None = None
+        self.view_failure: str | None = None
+        self.create_failure: str | None = None
+
+    def __call__(self, args: Sequence[str], *, stdin: str | None = None) -> str:
+        """Record the call, then answer it or fail as the attributes say."""
+        self.calls.append((list(args), stdin))
+        if self.failure is not None:
+            raise CommandError(self.failure)
+        if list(args[:2]) == ["release", "view"]:
+            return self._view(args[2])
+        if list(args[:2]) == ["release", "create"]:
+            self._create(args)
+            return ""
+        if args[0] == "api":
+            return self._api(args[1])
+        raise AssertionError(f"unexpected gh call: {list(args)}")
+
+    def _api(self, endpoint: str) -> str:
+        """Answer `api` for a tag ref or a tag object, as the REST API does."""
+        refs = "repos/{owner}/{repo}/git/ref/tags/"
+        objects = "repos/{owner}/{repo}/git/tags/"
+        if endpoint.startswith(refs):
+            tag = endpoint.removeprefix(refs)
+            if tag not in self.remote_tags:
+                raise CommandError("gh api failed: HTTP 404", "HTTP 404")
+            if tag in self.annotated_tags:
+                return json.dumps({"object": {"type": "tag", "sha": f"object-{tag}"}})
+            return json.dumps(
+                {"object": {"type": "commit", "sha": self.remote_tags[tag]}}
+            )
+        if endpoint.startswith(objects):
+            tag = endpoint.removeprefix(objects).removeprefix("object-")
+            return json.dumps(
+                {"object": {"type": "commit", "sha": self.remote_tags[tag]}}
+            )
+        raise AssertionError(f"unexpected gh api endpoint: {endpoint}")
+
+    def _view(self, tag: str) -> str:
+        """Answer `release view`: the JSON of a release, or a failure."""
+        stderr = self.view_failure
+        if stderr is None and tag not in self.releases:
+            stderr = "release not found"
+        if stderr is not None:
+            raise CommandError(f"gh release view {tag} failed: {stderr}", stderr)
+        return f'{{"tagName":"{tag}"}}\n'
+
+    def _create(self, args: Sequence[str]) -> None:
+        """Answer `release create <tag> ...`: add the release, or fail.
+
+        A new tag lands on the `--target` commit. A tag that exists stays where
+        it is.
+        """
+        tag = args[2]
+        if self.create_failure is not None:
+            message = self.create_failure
+            raise CommandError(f"gh release create {tag} failed: {message}", message)
+        self.releases.add(tag)
+        if "--target" in args:
+            self.remote_tags.setdefault(tag, args[args.index("--target") + 1])
+
+
+@dataclass(frozen=True)
+class CliResult:
+    """The outcome of one run of the command line.
+
+    Attributes:
+        code: The exit status.
+        stdout: What the run printed to standard output.
+        stderr: What the run printed to standard error.
+    """
+
+    code: int
+    stdout: str
+    stderr: str
+
+
+class RepoTestCase(unittest.TestCase):
+    """A test case with a git repository in `self.root` and a fake `gh`.
+
+    Git runs with a private `HOME` and no system or global configuration, so
+    the settings of the person who runs the tests cannot change a result:
+    signing is off and the identity is fixed.
+
+    Attributes:
+        root: The work tree of the repository.
+        git: A runner of git in the work tree.
+        gh: The fake `gh` that `run_cli` passes to the tool.
+    """
+
+    root: Path
+    git: Runner
+    gh: FakeGh
+
+    def setUp(self) -> None:
+        """Create an isolated, empty repository on the branch `main`."""
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        home = Path(temporary.name) / "home"
+        home.mkdir()
+        self.root = Path(temporary.name) / "work"
+        self.root.mkdir()
+        self.enterContext(
+            mock.patch.dict(
+                os.environ,
+                {
+                    "HOME": str(home),
+                    "GIT_CONFIG_GLOBAL": os.devnull,
+                    "GIT_CONFIG_NOSYSTEM": "1",
+                },
+            )
+        )
+        self.git = command_runner(["git", "-C", str(self.root)])
+        self.gh = FakeGh()
+        self.git(["init", "--quiet", "--initial-branch=main"])
+        for key, value in (
+            ("user.name", "Test Maker"),
+            ("user.email", "maker@example.com"),
+            ("commit.gpgsign", "false"),
+            ("tag.gpgsign", "false"),
+        ):
+            self.git(["config", key, value])
+
+    def commit(self, files: Mapping[str, str | None], message: str = "change") -> str:
+        """Write or delete files, commit every change and return the commit.
+
+        Args:
+            files: The text of each path below the root. A value of `None`
+                deletes the file.
+            message: The commit message.
+        """
+        for relative, text in files.items():
+            path = self.root / relative
+            if text is None:
+                path.unlink()
+                continue
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        self.git(["add", "--all"])
+        self.git(["commit", "--quiet", "--allow-empty", "--message", message])
+        return self.git(["rev-parse", "HEAD"]).strip()
+
+    def commit_raw_path(self, path: bytes, message: str = "change") -> str:
+        """Commit an empty file at `path`, which may not be valid UTF-8.
+
+        A file system can refuse such a name, so the file goes into the index
+        with git plumbing and never into the work tree.
+
+        Args:
+            path: The path below the root, as the bytes that git stores.
+            message: The commit message.
+
+        Returns:
+            The full hash of the new commit.
+        """
+        root = str(self.root)
+        blob = subprocess.run(
+            ["git", "-C", root, "hash-object", "-w", "--stdin"],
+            input=b"",
+            capture_output=True,
+            check=True,
+        ).stdout.strip()
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                root,
+                "update-index",
+                "--add",
+                "--cacheinfo",
+                b"100644," + blob + b"," + path,
+            ],
+            check=True,
+        )
+        self.git(["commit", "--quiet", "--allow-empty", "--message", message])
+        return self.git(["rev-parse", "HEAD"]).strip()
+
+    def tag(self, name: str, *, commit: str = "HEAD", annotated: bool = False) -> None:
+        """Create a tag. An annotated tag is its own git object."""
+        if annotated:
+            self.git(["tag", "--annotate", "--message", name, name, commit])
+        else:
+            self.git(["tag", name, commit])
+
+    def tag_names(self) -> list[str]:
+        """Return the names of all tags of the repository."""
+        return self.git(["tag", "--list"]).split()
+
+    def run_cli(self, *args: str) -> CliResult:
+        """Run `release.cli.main` on the repository and capture its output.
+
+        The tool gets a runner of git for the work tree and the fake `gh`.
+        """
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            code = main(list(args), git=self.git, gh=self.gh)
+        return CliResult(code, stdout.getvalue(), stderr.getvalue())
