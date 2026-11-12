@@ -19,6 +19,7 @@ shows. A repository can switch a rule off in its own `.vale.ini`, as
 | `Sealambda.CurrentState` | error | A word of a plan or a gap. |
 | `Sealambda.History` | suggestion | A word of a history. |
 | `Sealambda.DefineAcronyms` | warning | An acronym with no definition. |
+| `Sealambda.OneSpelling` | warning | The unused spelling of a word pair. |
 
 The `docs` check runs Vale with `--minAlertLevel=error`. A finding of level
 error fails the check. A finding of level warning or suggestion doesn't fail
@@ -125,6 +126,43 @@ comment with the reason before it:
 <!-- vale Sealambda.DefineAcronyms = NO -->
 The standard names the SBOM as the output.
 <!-- vale Sealambda.DefineAcronyms = YES -->
+```
+
+## One spelling
+
+`Sealambda.OneSpelling` flags the unused spelling of a word that people write in
+two ways. These are the pairs, with the spelling to use second:
+
+- `e-mail` and `email`
+- `web site` and `website`
+- `data base` and `database`
+- `meta-data` and `metadata`
+- `time-out` and `timeout`
+- `tool-chain` and `toolchain`
+- `work flow` and `workflow`
+
+A page that mixes two spellings makes a reader wonder if they mean two things,
+and a search for one spelling misses the other. The rule matches a capital at
+the start of a sentence, and it gives the suggestion the same case. It doesn't
+match part of a longer word.
+
+The list has only pairs where one spelling is plain wrong. A pair that splits by
+part of speech isn't on it: `set up` is a verb and `setup` is a noun, and
+`log in` is a verb and `login` is a noun. A pair that the hub's own pages write
+both ways isn't on it either, such as `file name` and `filename`. A brand name
+such as `GitHub` isn't on it, because the suggestion takes the case of the
+match.
+
+### A true use of the unused spelling
+
+A quotation or the name of a product can use the unused spelling. Turn the rule
+off for the passage, with the reason in a comment before it:
+
+```markdown
+<!-- This sentence quotes the title of a book. -->
+<!-- vale Sealambda.OneSpelling = NO -->
+The book is called "The Work Flow".
+<!-- vale Sealambda.OneSpelling = YES -->
 ```
 
 ## Test the rules

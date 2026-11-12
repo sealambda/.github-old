@@ -1,0 +1,79 @@
+# Cases for OneSpelling.yml: one spelling per word, matched case-sensitively and
+# outside code. The cases use `contains` because the flake check loads the
+# style under a name that has a store hash, so an exact `want` can't match.
+- name: hyphenated-email-is-flagged
+  rule: OneSpelling.yml
+  input: |
+    Send an e-mail to the team.
+  contains: "Sealambda.OneSpelling:Use 'email' instead of 'e-mail'."
+
+- name: capitalised-email-is-flagged-with-its-case
+  rule: OneSpelling.yml
+  input: |
+    E-mail the team.
+  contains: "Sealambda.OneSpelling:Use 'Email' instead of 'E-mail'."
+
+- name: split-website-is-flagged
+  rule: OneSpelling.yml
+  input: |
+    The web site lists the pages.
+  contains: "Sealambda.OneSpelling:Use 'website' instead of 'web site'."
+
+- name: split-database-is-flagged
+  rule: OneSpelling.yml
+  input: |
+    The data base holds the rows.
+  contains: "Sealambda.OneSpelling:Use 'database' instead of 'data base'."
+
+- name: hyphenated-metadata-is-flagged
+  rule: OneSpelling.yml
+  input: |
+    The file has meta-data.
+  contains: "Sealambda.OneSpelling:Use 'metadata' instead of 'meta-data'."
+
+- name: hyphenated-timeout-is-flagged
+  rule: OneSpelling.yml
+  input: |
+    The call has a time-out.
+  contains: "Sealambda.OneSpelling:Use 'timeout' instead of 'time-out'."
+
+- name: split-toolchain-is-flagged
+  rule: OneSpelling.yml
+  input: |
+    The build uses a tool chain.
+  contains: "Sealambda.OneSpelling:Use 'toolchain' instead of 'tool chain'."
+
+- name: split-workflow-is-flagged
+  rule: OneSpelling.yml
+  input: |
+    The team owns the work flow.
+  contains: "Sealambda.OneSpelling:Use 'workflow' instead of 'work flow'."
+
+- name: preferred-spellings-are-clean
+  rule: OneSpelling.yml
+  input: |
+    Send an email about the website. The database holds metadata. A workflow
+    uses a toolchain with a timeout on GitHub.
+  want: ""
+
+- name: word-inside-a-longer-word-is-clean
+  rule: OneSpelling.yml
+  input: |
+    The Newtime-outline and the weblog are not pairs.
+  want: ""
+
+- name: host-name-in-lowercase-is-clean
+  rule: OneSpelling.yml
+  input: |
+    The page github.com lists the repository.
+  want: ""
+
+- name: avoided-spelling-in-code-is-clean
+  rule: OneSpelling.yml
+  input: |
+    Set the key `e-mail` in the file.
+
+    ```text
+    The web site has a time-out.
+    ```
+  want: ""
