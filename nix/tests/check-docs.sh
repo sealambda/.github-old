@@ -166,6 +166,50 @@ add_every_hub_finding() {
   write_page guide.md "The server currently runs NixOS."
 }
 
+# The rules of the style `Sealambda` that have the level warning. Each one has
+# a finding in the page that `add_every_warning` writes.
+readonly WARNING_RULES=(
+  DefineAcronyms
+  OneSpelling
+  FillerWords
+  HeadingCase
+  HowToTitle
+  SentenceLength
+  ParagraphLength
+  ListLength
+  StepLength
+)
+
+# Writes the page `warnings.md` into the project. It has one finding for each
+# rule in WARNING_RULES and no finding of the level error:
+# - the title `Using the hub` starts with a gerund (HowToTitle);
+# - the heading `Title Case Heading` is not in sentence case (HeadingCase);
+# - `SBOM` has no definition (DefineAcronyms), `e-mail` is the unused spelling
+#   (OneSpelling) and `Just` is a filler word (FillerWords);
+# - the first paragraph has 7 sentences (ParagraphLength) and the second one is
+#   a sentence of 30 words (SentenceLength);
+# - the bulleted list has 1 item (ListLength);
+# - the first numbered step has 27 words (StepLength).
+add_every_warning() {
+  cat >"$PROJECT/warnings.md" <<'EOF'
+# Using the hub
+
+## Title Case Heading
+
+The SBOM lists every part. Just send an e-mail. Read the page. Read the page.
+Read the page. Read the page. Read the page.
+
+This sentence has many words in it so that a reader must keep the whole thing
+in mind before the full stop arrives at the end of the line here.
+
+- One item
+
+1. Open the file and read each line of the long text that follows, then write
+   down every word that you find in it before you go on.
+2. Stop.
+EOF
+}
+
 # Writes the output of the last run into the file $1, with the parts that
 # differ between two projects replaced: the path of the project, the time that
 # lychee prints, and the order of the lines.
@@ -336,6 +380,49 @@ case_history_term_does_not_fail() {
 
   assert_status 0
   assert_output_contains "Sealambda.History:'previously' may describe history"
+}
+
+# Asserts, in the project that holds the page of `add_every_warning`, that the
+# findings of level warning don't change the gate. The check passes and prints
+# no finding of the style `Sealambda`. A Vale run without the level flag, which
+# is what an editor runs, passes too and reports each rule of WARNING_RULES: the
+# check passes because of the level, and not because a rule is missing.
+assert_warnings_leave_the_gate_unchanged() {
+  local rule
+
+  run_check "$PROJECT"
+
+  assert_status 0
+  assert_output_lacks "Sealambda."
+
+  STATUS=0
+  (cd "$PROJECT" && vale --output=line warnings.md) >"$OUT" 2>&1 || STATUS=$?
+
+  assert_status 0
+  for rule in "${WARNING_RULES[@]}"; do
+    assert_output_contains "Sealambda.$rule"
+  done
+}
+
+# A page that breaks only rules of the level warning passes the check in a
+# legacy project, and a plain Vale run reports every one of those rules. The
+# hub's base file gives the rules their level, so a consumer that syncs the file
+# sees no change of the gate when the hub adds a warning rule. Mutation: setting
+# one of the rules to `error` in `vale/Sealambda` makes this case fail.
+case_warning_rules_do_not_fail_a_legacy_project() {
+  new_project warnings-legacy
+  add_every_warning
+
+  assert_warnings_leave_the_gate_unchanged
+}
+
+# The same page passes in a bare project, which has no configuration file: the
+# wrapped tools carry the hub's base configuration and the style.
+case_warning_rules_do_not_fail_a_bare_project() {
+  new_bare_project warnings-bare
+  add_every_warning
+
+  assert_warnings_leave_the_gate_unchanged
 }
 
 # The rule `Sealambda.CurrentState` is off for the decision records and the
@@ -994,6 +1081,8 @@ main() {
     case_current_state_term_fails
     case_current_state_non_hits_pass
     case_history_term_does_not_fail
+    case_warning_rules_do_not_fail_a_legacy_project
+    case_warning_rules_do_not_fail_a_bare_project
     case_current_state_is_off_for_decisions_and_specs
     case_local_anchors_are_checked
     case_no_local_file_applies_the_hub_rules
