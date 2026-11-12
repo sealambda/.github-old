@@ -77,17 +77,23 @@
 
       # The check that runs `nix/tests/secrets-scan.sh` with the scanner
       # `scanner`, a package of `pkgs`. `name` goes into the name of the check.
+      # The tests also run the `git` command of the scan on its own, so the
+      # check passes its path in `SECRETS_SCAN_TEST_GIT`.
       mkSecretsScanTests =
         pkgs: name: scanner:
+        let
+          secretsScan = mkSecretsScan { inherit pkgs scanner; };
+        in
         pkgs.runCommand "secrets-scan-tests-${name}"
           {
             nativeBuildInputs = [
-              (mkSecretsScan { inherit pkgs scanner; })
+              secretsScan
               pkgs.git
             ];
           }
           ''
             HOME="$TMPDIR" SECRETS_SCAN_TEST_SCANNER=${name} \
+              SECRETS_SCAN_TEST_GIT=${nixpkgs.lib.getExe secretsScan.gitWithText} \
               bash ${./nix/tests/secrets-scan.sh}
             touch "$out"
           '';

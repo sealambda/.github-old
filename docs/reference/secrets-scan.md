@@ -479,10 +479,16 @@ secrets-scan = hub.lib.mkSecretsScan {
 };
 ```
 
-The scanner must provide the `git` command with the flags above, it must run
-`git` from PATH so that the flag `--text` of the command reaches it, and it must
-read `.gitleaksignore`. The same 43 cases of `nix/tests/secrets-scan.sh` run
-with gitleaks and with `betterleaks`, and both pass. These differences of
+The scanner must provide the `git` command with the flags above and the flag
+`--log-opts`, which replaces the options of `git log` that the scanner uses
+otherwise. The options of the command carry the guards for the history: see
+[Merge commits](#merge-commits). The scanner must run `git` from PATH so that
+the flags `--text` and `--no-renames` of the command reach it, and it must read
+`.gitleaksignore`. Its `git` command may start with the global options `-C`,
+`-c`, `--git-dir`, `--work-tree`, `--namespace`, `--config-env` and
+`--attr-source`, and with options that have their value after an equals sign.
+The cases of `nix/tests/secrets-scan.sh` run with gitleaks and with
+`betterleaks`, and both pass. These differences of
 `betterleaks` 1.9.0 don't break the contract, and a repository that replaces the
 scanner meets them:
 

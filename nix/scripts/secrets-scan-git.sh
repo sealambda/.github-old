@@ -32,15 +32,21 @@
 # that works for both scans and both scanners.
 #
 # The loop below finds the subcommand: the first argument that isn't a global
-# option. `-C` and `-c` take the next argument, and every other word that
-# starts with `-` stands alone, as in `--git-dir=<path>`. The scanners use no
-# other global option with a separate value.
+# option. The global options of Git 2.56 that take the next argument as their
+# value are `-C`, `-c`, `--git-dir`, `--work-tree`, `--namespace`,
+# `--config-env` and `--attr-source`: the loop skips both words of each. Every
+# other word that starts with `-` stands alone, as in `--git-dir=<path>`. If a
+# later Git adds a global option with a separate value, it needs an entry in
+# the first pattern: until then the loop takes the value for the subcommand,
+# and the command passes `diff` and `log` to Git without the two options.
 
 args=("$@")
 index=0
 while [ "$index" -lt "${#args[@]}" ]; do
   case ${args[$index]} in
-  -C | -c) index=$((index + 2)) ;;
+  -C | -c | --git-dir | --work-tree | --namespace | --config-env | --attr-source)
+    index=$((index + 2))
+    ;;
   -*) index=$((index + 1)) ;;
   *) break ;;
   esac

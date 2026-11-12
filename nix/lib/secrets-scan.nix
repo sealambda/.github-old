@@ -30,13 +30,19 @@
 
     `scanner`
     : The package of the scanner. It must have `meta.mainProgram` and take
-    the `git` command with the flags `--staged`, `--config`, `--redact`,
-    `--verbose`, `--no-banner` and `--no-color`, and it must read the
-    `.gitleaksignore` file. It must run Git as the command `git` that it finds
-    on PATH, because the command `secrets-scan` puts a `git` first on PATH that
-    adds `--text` to `git diff` and `git log`. The default is gitleaks of the
-    hub's nixpkgs. `betterleaks` is an alternative that the hub's tests also
-    run.
+    the `git` command with the flags `--staged`, `--log-opts` (the options of
+    `git log` that replace its own defaults, which carry the guards of the
+    history scan), `--config`, `--redact`, `--verbose`, `--no-banner` and
+    `--no-color`, and it must read the `.gitleaksignore` file. It must run Git
+    as the command `git` that it finds on PATH, because the command
+    `secrets-scan` puts a `git` first on PATH that adds `--text` and
+    `--no-renames` to `git diff` and `git log`. The `git` command of the scanner
+    may start with the global options `-C`, `-c`, `--git-dir`, `--work-tree`,
+    `--namespace`, `--config-env` and `--attr-source`, and with options that
+    have their value after an equals sign. The default is gitleaks of the hub's
+    nixpkgs. `betterleaks` is an alternative that the hub's tests also run, and
+    it finds no secret in a deflated zip file that it finds without the
+    `--text` flag: see `docs/reference/secrets-scan.md`.
 
     # Type
 
@@ -65,6 +71,9 @@
     in
     hub.writeShellApplication {
       name = "secrets-scan";
+      # The `git` command of the scan, for the tests of its parsing of global
+      # options: `nix/tests/secrets-scan.sh` runs it on its own.
+      passthru = { inherit gitWithText; };
       runtimeInputs = [ hub.git ];
       runtimeEnv = {
         SECRETS_SCAN_SCANNER = lib.getExe scanner;

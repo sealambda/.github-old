@@ -7,6 +7,10 @@
 #
 # With case names, the file runs only those cases.
 #
+# The case that tests the `git` command of the scan on its own needs the
+# variable SECRETS_SCAN_TEST_GIT, the path of that command. The flake checks
+# set it from the `gitWithText` attribute of the package.
+#
 # The command `secrets-scan` and `git` must be on PATH. The variable names the
 # scanner that the command runs: only the cases of the ignore files and markers
 # that belong to one scanner read it. The flake checks
@@ -966,6 +970,42 @@ case_driver_names_with_quote_characters_are_pinned() {
   reset_user_git_config
 }
 
+# The `git` command of the scan finds the subcommand after the global options of
+# Git, and adds `--text` after it. A global option that takes its value as the
+# next word must not be taken for the subcommand: the command would then pass
+# `log` to Git unchanged, and a file with the attribute `-diff` would hide a
+# secret again. The case runs the command on its own, with each such option
+# that Git 2.56 has, against a file that plain Git prints as binary. The check
+# of the setup shows that plain Git hides the file.
+case_the_text_git_finds_the_subcommand_after_each_global_option() {
+  local shim=${SECRETS_SCAN_TEST_GIT:?set it to the git command of the scan}
+  new_repository shim-options
+  printf '*.txt -diff\n' >.gitattributes
+  git add .gitattributes
+  git commit --quiet --message "Add the attributes"
+  commit_secret notes.txt
+  local plain
+  plain=$(git log -p -U0 --format= -- notes.txt)
+  [[ $plain == *"Binary files"* ]] || fail "plain Git prints the file as text"
+
+  export SHIM_CASE_QUOTEPATH=true
+  local spec output
+  local -a options
+  for spec in \
+    "-C $REPO" \
+    "-c core.abbrev=7" \
+    "--git-dir $REPO/.git" \
+    "--work-tree $REPO" \
+    "--namespace n" \
+    "--config-env core.quotepath=SHIM_CASE_QUOTEPATH" \
+    "--attr-source HEAD"; do
+    read -r -a options <<<"$spec"
+    output=$(cd "$REPO" && "$shim" "${options[@]}" log -p -U0 --format= -- notes.txt) ||
+      fail "the command failed with the options: $spec"
+    [[ $output == *"$(secret)"* ]] || fail "no text after the options: $spec"
+  done
+}
+
 # Git warns on standard error, and still prints the whole diff, when a change
 # has more renamed files than `diff.renameLimit`. The `git` of the command turns
 # rename detection off, so Git prints no warning during the scan, and the scan
@@ -1215,6 +1255,7 @@ main() {
     case_a_diff_that_git_cannot_produce_is_refused
     case_diff_driver_binary_and_big_file_threshold_do_not_hide_a_secret
     case_driver_names_with_quote_characters_are_pinned
+    case_the_text_git_finds_the_subcommand_after_each_global_option
     case_rename_limit_warning_does_not_stop_the_scan
     case_history_finds_a_secret_in_a_conflict_resolution
     case_history_does_not_report_a_merged_branch_again
