@@ -1,55 +1,24 @@
 """Check the steps that install Nix in the workflows and actions of a tree."""
 
 from collections.abc import Iterator
-from dataclasses import dataclass
-from pathlib import Path, PurePosixPath
-
-import yaml
-from yaml.nodes import Node
+from pathlib import Path
 
 from decisions.findings import Finding
-from decisions.walk import list_files
-from decisions.yamlio import describe_error, line_of, parse_yaml
+from decisions.workflow_files import ActionsFile, Location, read_actions_files
 from versions.installers import is_other_installer_action, script_installer_fragment
 
 INSTALL_ACTION = "cachix/install-nix-action"
 """The installer action whose `install_url` input pins the Nix version."""
 
-_WORKFLOW_FOLDER_PARTS = (".github", "workflows")
-# The folder of the starter workflows of an organization, at the root of its
-# `.github` repository:
-# https://docs.github.com/en/actions/how-tos/reuse-automations/create-workflow-templates
-_TEMPLATE_FOLDER_PARTS = ("workflow-templates",)
-_WORKFLOW_SUFFIXES = frozenset({".yml", ".yaml"})
-_ACTION_NAMES = frozenset({"action.yml", "action.yaml"})
-
-type Location = list[str | int]
-"""The keys and indexes that lead from the root of a document to a value."""
-
-
-@dataclass(frozen=True)
-class _Source:
-    """The file of a step, for its findings.
-
-    Attributes:
-        path: The file, relative to the checked root, with `/` separators.
-        root: The node tree of the file, which holds the lines.
-    """
-
-    path: str
-    root: Node | None
-
-    def finding(self, location: Location, message: str) -> Finding:
-        """Return a finding at the line of the value at `location`."""
-        return Finding(self.path, line_of(self.root, location), message)
-
 
 def check_workflows(root: Path, expected_url: str | None) -> list[Finding]:
     """Check every installer step of the workflows and actions of a tree.
 
-    The files are `.github/workflows/*.yml` and `*.yaml` at any depth of the
-    tree, for example `templates/x/.github/workflows/ci.yml`, the starter
-    workflows `workflow-templates/*.yml` and `*.yaml` at the root, and every
+    `decisions.workflow_files.read_actions_files` selects and reads the files
+    with `include_actions`: the workflows `.github/workflows/*.yml` and
+    `*.yaml` at any depth of the tree, for example
+    `templates/x/.github/workflows/ci.yml`, the starter workflows
+    `workflow-templates/*.yml` and `*.yaml` at the root, and every
     `action.yml` and `action.yaml` below `root`. A file that isn't valid YAML
     is a finding, because it could hide a step.
 
@@ -66,54 +35,22 @@ def check_workflows(root: Path, expected_url: str | None) -> list[Finding]:
     Raises:
         OSError: A file can't be listed or read.
     """
-    findings: list[Finding] = []
-    for relative in list_files(root):
-        file = root / relative
-        if _is_candidate(relative) and file.is_file() and not file.is_symlink():
-            findings.extend(_check_file(file, relative.as_posix(), expected_url))
+    files, findings = read_actions_files(root, include_actions=True)
+    for file in files:
+        findings.extend(_check_file(file, expected_url))
     return findings
 
 
-def _is_candidate(relative: PurePosixPath) -> bool:
-    """Tell whether a path is a workflow, a starter workflow or an action file.
-
-    A workflow is a `.yml` or `.yaml` file directly in a folder `workflows`
-    whose parent is a folder `.github`, wherever that folder sits. A file in a
-    subfolder of `workflows` isn't a workflow: GitHub doesn't read it. A
-    starter workflow is the same kind of file directly in the folder
-    `workflow-templates` at the root of the tree, where GitHub reads the
-    templates of an organization. The `.properties.json` files and the icons
-    of that folder aren't YAML, so they have no candidate suffix.
-    """
-    if relative.name in _ACTION_NAMES:
-        return True
-    parent = relative.parent.parts
-    in_workflow_folder = (
-        parent[-2:] == _WORKFLOW_FOLDER_PARTS or parent == _TEMPLATE_FOLDER_PARTS
-    )
-    return in_workflow_folder and relative.suffix in _WORKFLOW_SUFFIXES
-
-
-def _check_file(file: Path, path: str, expected_url: str | None) -> list[Finding]:
+def _check_file(file: ActionsFile, expected_url: str | None) -> list[Finding]:
     """Check the steps of one workflow or action file.
 
     A YAML anchor can make two `steps` lists one node, so two steps then have
     the same line and message. The result holds each finding once, in the order
     of the steps.
     """
-    try:
-        text = file.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        return [Finding(path, 1, "the file isn't UTF-8 text")]
-    try:
-        document = parse_yaml(text)
-    except yaml.YAMLError as error:
-        line, problem = describe_error(error)
-        return [Finding(path, line, f"the file isn't valid YAML: {problem}")]
-    source = _Source(path, document.root)
     findings = []
-    for location, step in _iter_steps(document.data):
-        finding = _check_step(source, location, step, expected_url)
+    for location, step in _iter_steps(file.document.data):
+        finding = _check_step(file, location, step, expected_url)
         if finding is not None:
             findings.append(finding)
     return list(dict.fromkeys(findings))
@@ -156,7 +93,7 @@ def _iter_list(
 
 
 def _check_step(
-    source: _Source,
+    source: ActionsFile,
     location: Location,
     step: dict[object, object],
     expected_url: str | None,
@@ -171,7 +108,9 @@ def _check_step(
     return _check_action(source, location, step, expected_url)
 
 
-def _check_script(source: _Source, location: Location, script: str) -> Finding | None:
+def _check_script(
+    source: ActionsFile, location: Location, script: str
+) -> Finding | None:
     """Return a finding when a `run` script holds an address or name of an installer."""
     fragment = script_installer_fragment(script)
     if fragment is None:
@@ -184,7 +123,7 @@ def _check_script(source: _Source, location: Location, script: str) -> Finding |
 
 
 def _check_action(
-    source: _Source,
+    source: ActionsFile,
     location: Location,
     step: dict[object, object],
     expected_url: str | None,
@@ -211,7 +150,7 @@ def _check_action(
 
 
 def _check_install_url(
-    source: _Source,
+    source: ActionsFile,
     location: Location,
     step: dict[object, object],
     expected_url: str | None,
