@@ -3,7 +3,9 @@
 import unittest
 
 from release.tags import (
+    ACTIONS_PREFIX,
     FIRST_VERSION,
+    HUB_PREFIX,
     Version,
     highest_release,
     lowest_release,
@@ -109,3 +111,66 @@ class NextVersionTest(unittest.TestCase):
     def test_unchanged_rules_raise_patch(self) -> None:
         """`v1.2.5` with unchanged rules gives `v1.2.6`."""
         self.assertEqual(next_version(Version(1, 2, 5), False), Version(1, 2, 6))
+
+
+class ActionsSeriesTest(unittest.TestCase):
+    """The actions series has the form `actions-v<number>.<number>.<number>`."""
+
+    def test_actions_tag_gives_its_numbers_with_the_actions_prefix(self) -> None:
+        """A strict actions tag parses to its three numbers."""
+        self.assertEqual(
+            parse_tag("actions-v1.12.3", ACTIONS_PREFIX), Version(1, 12, 3)
+        )
+
+    def test_other_names_are_not_actions_tags(self) -> None:
+        """Each name that differs from the strict form gives `None`."""
+        for name in (
+            "actions-v1.2",
+            "actions-v01.2.3",
+            "actions-v1.2.3-rc1",
+            "actions-v1.2.3\n",
+            "actions-1.2.3",
+            "Actions-v1.2.3",
+            "actions-v1.2.3.4",
+            "xactions-v1.2.3",
+            "v1.2.3",
+            "",
+        ):
+            with self.subTest(name=name):
+                self.assertIsNone(parse_tag(name, ACTIONS_PREFIX))
+
+    def test_a_hub_tag_is_never_an_actions_tag_and_the_reverse(self) -> None:
+        """`v1.2.3` and `actions-v1.2.3` belong to one series each."""
+        self.assertEqual(parse_tag("v1.2.3", HUB_PREFIX), Version(1, 2, 3))
+        self.assertIsNone(parse_tag("actions-v1.2.3", HUB_PREFIX))
+        self.assertIsNone(parse_tag("v1.2.3", ACTIONS_PREFIX))
+        self.assertEqual(parse_tag("v1.2.3"), parse_tag("v1.2.3", HUB_PREFIX))
+        self.assertIsNone(parse_tag("actions-v1.2.3"))
+
+    def test_a_name_that_only_ends_like_a_hub_tag_is_not_one(self) -> None:
+        """The prefix `v` must start the name: `myv1.2.3` and `x-v1.2.3` are none."""
+        for name in ("myv1.2.3", "x-v1.2.3", "actions-v1.2.3-v1.2.3"):
+            with self.subTest(name=name):
+                self.assertIsNone(parse_tag(name))
+
+    def test_mixed_tags_each_series_reads_only_its_own(self) -> None:
+        """The highest and the lowest release of a series ignore the other."""
+        names = ["v1.0.0", "actions-v1.0.0", "v1.7.0", "actions-v2.1.0", "latest"]
+        self.assertEqual(highest_release(names), Version(1, 7, 0))
+        self.assertEqual(lowest_release(names), Version(1, 0, 0))
+        self.assertEqual(highest_release(names, ACTIONS_PREFIX), Version(2, 1, 0))
+        self.assertEqual(lowest_release(names, ACTIONS_PREFIX), Version(1, 0, 0))
+
+    def test_a_list_without_a_tag_of_the_series_has_no_release(self) -> None:
+        """Only the other series is present: the answer is `None`."""
+        self.assertIsNone(highest_release(["actions-v1.0.0"]))
+        self.assertIsNone(lowest_release(["v1.0.0"], ACTIONS_PREFIX))
+
+    def test_tag_with_prefix_round_trips(self) -> None:
+        """The tag of a version parses back to the same version in each series."""
+        version = Version(1, 20, 300)
+        self.assertEqual(version.tag_with(ACTIONS_PREFIX), "actions-v1.20.300")
+        self.assertEqual(
+            parse_tag(version.tag_with(ACTIONS_PREFIX), ACTIONS_PREFIX), version
+        )
+        self.assertEqual(version.tag, version.tag_with(HUB_PREFIX))
