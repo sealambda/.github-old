@@ -24,9 +24,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The longest of the last 10 runs took 53 seconds. The limit is about 34
+  # times that, so a slow cache or a cold build still passes and a hung job
+  # fails in half an hour, not in the six hours of GitHub's default.
   flake-check:
     name: nix flake check
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -91,19 +95,27 @@ jobs:
   # flake check does both. The treefmt module runs actionlint and zizmor, and
   # the `docs` check runs markdownlint-cli2, lychee and Vale. The secrets scan
   # stays a workflow because gitleaks needs the Git history, and the flake
-  # check sees none.
+  # check sees none. The scan of the hub took about 24 seconds in the last 10
+  # runs. A limit of 10 minutes is about 25 times that, so a slower runner
+  # still passes and a hung scan fails soon. A job that calls a reusable
+  # workflow can't set `timeout-minutes`, so the call passes the input.
   secrets:
     uses: ./.github/workflows/secrets.yml # zizmor: ignore[self-repository]
     permissions:
       contents: read
+    with:
+      timeout-minutes: 10
 
   # The one required status check. It fails unless every job it needs
-  # succeeded, so a skipped or cancelled job can't pass by omission.
+  # succeeded, so a skipped or cancelled job can't pass by omission. The job
+  # runs one `jq` command and took 4 seconds in each of the last 10 runs, so
+  # 5 minutes is more than 70 times that.
   ci:
     name: ci
     if: always()
     needs: [flake-check, consumer, secrets]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions: {}
     steps:
       - name: Require every needed job to succeed
