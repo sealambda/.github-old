@@ -7,7 +7,23 @@
 # `secrets.yml` is independent of this file, and the checks of the hub only test
 # the command against repositories that the tests build.
 { lib, hubPackagesFor }:
+let
+  /**
+    The scanner that `mkSecretsScan` runs when the caller names none: gitleaks
+    of the hub's nixpkgs. `mkHooks` and `mkStandards` take their default from
+    here, so the default has one definition.
+
+    # Type
+
+    ```
+    defaultScanner :: AttrSet -> Derivation
+    ```
+  */
+  defaultScanner = pkgs: (hubPackagesFor pkgs).gitleaks;
+in
 {
+  inherit defaultScanner;
+
   /**
     Builds the `secrets-scan` command: `secrets-scan history` scans the whole
     Git history of the current repository, and `secrets-scan staged` scans the
@@ -55,7 +71,7 @@
   mkSecretsScan =
     {
       pkgs,
-      scanner ? (hubPackagesFor pkgs).gitleaks,
+      scanner ? defaultScanner pkgs,
     }:
     let
       hub = hubPackagesFor pkgs;

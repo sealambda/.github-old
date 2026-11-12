@@ -77,6 +77,7 @@
           inherit hubPackagesFor;
         })
         mkSecretsScan
+        defaultScanner
         ;
       inherit
         (import ./nix/lib/hooks.nix {
@@ -87,11 +88,31 @@
             mkTreefmt
             mkDocsTools
             mkSecretsScan
+            defaultScanner
             mkGitPolicyTool
             tools
             ;
         })
         mkHooks
+        ;
+      inherit
+        (import ./nix/lib/standards.nix {
+          inherit (nixpkgs) lib;
+          inherit
+            hubPackagesFor
+            mkTreefmt
+            mkDocsTools
+            mkDocsCheck
+            mkDecisionsCheck
+            mkWorkflowsCheck
+            mkGitPolicyTool
+            mkSecretsScan
+            defaultScanner
+            mkHooks
+            tools
+            ;
+        })
+        mkStandards
         ;
 
       treefmtFor = eachSystem (pkgs: mkTreefmt pkgs [ ]);
@@ -180,6 +201,7 @@
           mkGitPolicyTool
           mkSecretsScan
           mkHooks
+          mkStandards
           ;
       };
 

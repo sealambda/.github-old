@@ -63,7 +63,8 @@ let
     Builds the documentation tools from one package set: the three wrapped
     tools of the `docs` dev shell and of `mkDocsCheck`, and the `check-docs`
     command that runs them. The wrappers are commands named `vale`,
-    `markdownlint-cli2` and `lychee`. Each one starts the tool of `pkgs` with
+    `markdownlint-cli2` and `lychee`. The result holds each one under its
+    name, and `tools` lists the three. Each one starts the tool of `pkgs` with
     the hub's base configuration and the repository's own file on top, as
     `docs/reference/wrapped-tools.md` states. The Vale of these tools has the
     styles Microsoft and Readability from nixpkgs and the hub's own style
@@ -78,7 +79,13 @@ let
     # Type
 
     ```
-    mkDocsTools :: AttrSet -> { checkDocs :: Derivation; tools :: [Derivation]; }
+    mkDocsTools :: AttrSet -> {
+      checkDocs :: Derivation;
+      tools :: [Derivation];
+      vale :: Derivation;
+      markdownlint-cli2 :: Derivation;
+      lychee :: Derivation;
+    }
     ```
   */
   mkDocsTools =
@@ -172,7 +179,13 @@ let
       };
     in
     {
-      inherit checkDocs tools;
+      inherit
+        checkDocs
+        tools
+        vale
+        markdownlint-cli2
+        lychee
+        ;
     };
 in
 {

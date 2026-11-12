@@ -111,6 +111,10 @@ checks.pre-commit = hooks;
 Add `.pre-commit-config.yaml` to the `.gitignore` of the repository. The
 installer writes a link with that name.
 
+A repository that calls [`lib.mkStandards`](standards-contract.md) gets the same
+result as `standards.hooks` and installs it the same way. The function installs
+nothing by itself.
+
 Put the `shellHook` in a shell that no other shell includes with `inputsFrom`.
 `mkShell` runs the shell hooks of the shells that it includes, so a hook in an
 included shell installs the hooks in every repository that builds on it. The
@@ -284,6 +288,7 @@ failure to CI.
 | `src` | The source tree, normally the `self` of the flake. The check `pre-commit` runs on it. | Required. |
 | `treefmt` | The evaluation that `lib.mkTreefmt` returns, with the modules of the repository. | `mkTreefmt pkgs [ ]` |
 | `extraHooks` | Hooks of the repository, in the format of git-hooks.nix. They add to the hub's hooks. | `{ }` |
+| `scanner` | The package of the secret scanner that the hook `secrets-scan` runs. [Secrets scan](secrets-scan.md) lists what it must support. | gitleaks of the hub's nixpkgs |
 
 A name in `extraHooks` that a hub hook uses is an evaluation error that lists the
 names. A repository can't replace a hub hook or switch it off in a call. It
@@ -327,11 +332,12 @@ the ones that a repository uses:
   is assembled when the test runs, so no file holds it.
 - The flake check `dev-shells` fails when a dev shell other than `hooks`
   carries a shell hook, or when `default` isn't `base`.
-- The flake check `lib-functions` has two cases for `extraHooks`.
-- The `consumer` job of the CI builds the check `pre-commit` of the layered
-  synthetic consumer, so a change that a consumer can't build fails the job.
-  The legacy consumer doesn't call `mkHooks`, so the hooks change nothing for a
-  repository that doesn't opt in.
+- The flake check `lib-functions` has two cases for `extraHooks` and two for
+  `scanner`.
+- The `consumer` job of the CI builds the check `pre-commit` of the layered and
+  the standards synthetic consumers, so a change that a consumer can't build
+  fails the job. The legacy consumer doesn't call `mkHooks`, so the hooks change
+  nothing for a repository that doesn't opt in.
 
 ## Limits
 

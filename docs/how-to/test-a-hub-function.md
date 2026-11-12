@@ -32,7 +32,9 @@ pass fails with the log of the check itself.
 ## Add a case
 
 Each function has a case file in `nix/tests/lib`, named like its `nix/lib`
-file: `docs.nix`, `decisions.nix`, `config.nix` and `treefmt.nix`.
+file, such as `docs.nix`, `decisions.nix` and `treefmt.nix`. The file
+`standards.nix` holds the cases of `mkStandards`, which composes the other
+functions.
 
 1. Open the case file of the function. The case file holds a function from
    `pkgs`, `hub` (the `lib` of the flake) and `harness` to an attribute set of
@@ -68,6 +70,25 @@ file: `docs.nix`, `decisions.nix`, `config.nix` and `treefmt.nix`.
    comparison and a dropped list entry turn a case red.
 
 5. Run the cases, as in the section above.
+
+An evaluation error can't be a case with `expectedLog`, because that reads the
+log of a failed build, and an error of the evaluation leaves no log. Decide
+such a case in Nix instead. Test the text of a message on the pure function
+that builds it, and test that a call fails with `builtins.tryEval`. Pass the
+result to `harness.mustHold`, which builds when its condition is true and
+fails the evaluation with your message when it's false. Pair a call that must
+fail with a call that must work, so the failure comes from the part under test.
+`nix/tests/lib/standards.nix` shows both forms. To read the hooks of an
+evaluation of `lib.mkHooks`, call `harness.hookIds` and `harness.hookEntry`.
+They hold the shape of its configuration in one place.
+
+```nix
+standards-unknown-argument-stops-the-evaluation = {
+  check = mustHold "A call with the argument foo was accepted, or a valid call failed." (
+    evaluates (standards { }) && !evaluates (standards { foo = 1; })
+  );
+};
+```
 
 The hub's own `decisions` check reads the case files. A fixture that holds a
 citation of a record or a path of a page must build the text from parts, as

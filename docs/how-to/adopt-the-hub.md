@@ -70,6 +70,93 @@ every repository evaluates one nixpkgs revision.
 The repository's `flake.lock` pins the hub. To take a newer hub revision, run
 `nix flake update hub`. Renovate opens the same update as a pull request.
 
+## Take the standards in one call
+
+`lib.mkStandards` gives the checks `formatting`, `docs`, `decisions`,
+`workflows` and `pre-commit`, the formatter and the hub's commands from one
+call. It replaces the calls that the sections below add one by one, and it
+returns what those calls return. Use it when the repository takes all the
+standards and holds no synced copy of the tool configuration. The separate
+functions stay valid: a repository that keeps the synced copies, or that wants
+only some checks, follows the sections below.
+[Standards contract](../reference/standards-contract.md) defines the arguments
+and the result. The synthetic consumer `nix/tests/consumers/standards` has this
+shape.
+
+1. Add the hub input, as [Add the toolchain](#add-the-toolchain) shows, and
+   call the function once for each system. Set `name` to the name of the
+   repository on GitHub, without the owner.
+
+   ```nix
+   {
+     inputs = {
+       hub.url = "github:sealambda/.github";
+       nixpkgs.follows = "hub/nixpkgs";
+     };
+
+     outputs =
+       {
+         self,
+         nixpkgs,
+         hub,
+         ...
+       }:
+       let
+         systems = [
+           "x86_64-linux"
+           "aarch64-linux"
+           "aarch64-darwin"
+         ];
+         forAllSystems =
+           f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
+         standardsFor = forAllSystems (
+           pkgs:
+           hub.lib.mkStandards {
+             inherit pkgs;
+             src = self;
+             name = "<repo>";
+           }
+         );
+       in
+       {
+         formatter = forAllSystems (pkgs: standardsFor.${pkgs.stdenv.hostPlatform.system}.formatter);
+         checks = forAllSystems (pkgs: standardsFor.${pkgs.stdenv.hostPlatform.system}.checks);
+       };
+   }
+   ```
+
+2. Run `nix flake lock`, then `nix flake check`. Fix the findings of the first
+   run, as the sections [Gate the documentation](#gate-the-documentation),
+   [Gate the decision records](#gate-the-decision-records) and
+   [Gate the workflows](#gate-the-workflows) say for each check.
+3. Optional: add the commands to a dev shell with
+   `packages = builtins.attrValues standardsFor.<system>.packages;`.
+4. Optional: install the Git hooks. The function installs nothing. To opt in,
+   put the `shellHook` of the result in a dev shell of its own that no other
+   shell includes, and add `.pre-commit-config.yaml` to the `.gitignore`, as
+   [Install the Git hooks](#install-the-git-hooks) explains:
+
+   ```nix
+   devShells.hooks = pkgs.mkShell {
+     inherit (standardsFor.${pkgs.stdenv.hostPlatform.system}.hooks) shellHook;
+   };
+   ```
+
+To add to the rules, pass the optional arguments. `treefmtModules` adds the
+repository's treefmt-nix modules. `decisions.exclude` lists the paths that the
+citation scan skips. `extraHooks` adds hooks of the repository, and `scanner`
+replaces the secret scanner. The repository's own `.vale.ini`,
+`.markdownlint-cli2.yaml` or `lychee.toml` layers over the hub's base, as
+[Layer your own configuration](#layer-your-own-configuration) says.
+
+`mkStandards.checks` has no secrets gate. The check `pre-commit` runs the hook
+`secrets-scan` on a tree with nothing staged, so it scans nothing. The argument
+`scanner` reaches the hook and the command `secrets-scan`, and it doesn't reach
+the reusable workflow `secrets.yml`. To gate secrets in CI, follow
+[Call the reusable workflow](#call-the-reusable-workflow), or run
+`secrets-scan history` in a CI step as
+[Scan the staged changes](#scan-the-staged-changes) describes.
+
 ## Run a hub app
 
 The hub offers the apps `sync-config` and `decisions`. Run an app in the
@@ -479,7 +566,9 @@ at each stage and what the installer does.
    hub for a commit that a hook refuses.
 
 Pass `extraHooks` to `mkHooks` to add a hook of the repository. A name that a
-hub hook uses is an error.
+hub hook uses is an error. A repository that
+[takes the standards in one call](#take-the-standards-in-one-call) already has
+the hooks as `standards.hooks` and passes the extra hooks as `extraHooks`.
 
 ## Call the reusable workflow
 
