@@ -33,8 +33,10 @@ EXIT_FINDINGS = 1
 EXIT_USAGE = 2
 EXIT_INTERNAL = 3
 
-_ORGANIZATION = re.compile(r"^[A-Za-z0-9-]+$")
-_NAME = re.compile(r"^[A-Za-z0-9._-]+$")
+# Both patterns are used with `fullmatch`: `$` would also accept a trailing
+# newline, and a name with a newline makes every rule that reads it find nothing.
+_ORGANIZATION = re.compile(r"[A-Za-z0-9-]+")
+_NAME = re.compile(r"[A-Za-z0-9._-]+")
 
 
 class UsageError(Exception):
@@ -113,7 +115,7 @@ def _names(label: str, values: Sequence[str]) -> frozenset[str]:
         UsageError: A value is not a GitHub name.
     """
     for value in values:
-        if not _NAME.match(value):
+        if not _NAME.fullmatch(value):
             raise UsageError(f"{label} is not a name: {value}")
     return frozenset(value.lower() for value in values)
 
@@ -126,7 +128,7 @@ def _parse(argv: Sequence[str]) -> Args:
             directory.
     """
     args = _build_parser().parse_args(argv)
-    if not _ORGANIZATION.match(args.organization):
+    if not _ORGANIZATION.fullmatch(args.organization):
         raise UsageError(f"--organization is not a GitHub login: {args.organization}")
     try:
         excludes = [parse_exclude(prefix) for prefix in args.exclude]

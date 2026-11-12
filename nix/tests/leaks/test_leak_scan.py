@@ -141,6 +141,8 @@ class UsageTest(ScanTestCase):
         for options in (
             ["--public-repository", "a/b"],
             ["--public-team", "a b"],
+            ["--public-team", "maintainers\n"],
+            ["--public-repository", "hub\n"],
             ["--exclude", "../x"],
         ):
             with self.subTest(options=options):
@@ -150,10 +152,11 @@ class UsageTest(ScanTestCase):
             status = main(["--organization", "acme", str(self.root / "missing")])
         self.assertEqual(status, EXIT_USAGE)
         self.assertIn("not a directory", stderr.getvalue())
-        with contextlib.redirect_stderr(io.StringIO()):
-            self.assertEqual(
-                main(["--organization", "a/b", str(self.root)]), EXIT_USAGE
-            )
+        for organization in ("a/b", "acme\n"):
+            with self.subTest(organization=organization):
+                with contextlib.redirect_stderr(io.StringIO()):
+                    status = main(["--organization", organization, str(self.root)])
+                self.assertEqual(status, EXIT_USAGE)
 
 
 if __name__ == "__main__":
