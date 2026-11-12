@@ -92,20 +92,43 @@ class _Parser(argparse.ArgumentParser):
 
 
 @dataclass(frozen=True)
-class Args:
-    """The validated arguments.
+class CommitMsgArgs:
+    """The validated arguments of `commit-msg`.
 
     Attributes:
-        command: `commit-msg`, `range` or `branch`.
-        target: The file, the range or the branch name. It is `None` for
-            `branch` without a name, which means the checked-out branch. An
-            empty string is a name that was given, and a bad one.
-        allow_autosquash: Whether `commit-msg` lets an autosquash header pass.
+        path: The message file.
+        allow_autosquash: Whether an autosquash header passes.
     """
 
-    command: str
-    target: str | None
+    path: Path
     allow_autosquash: bool
+
+
+@dataclass(frozen=True)
+class RangeArgs:
+    """The validated arguments of `range`.
+
+    Attributes:
+        revision_range: A range of the form `A..B`, checked by `_require_range`.
+    """
+
+    revision_range: str
+
+
+@dataclass(frozen=True)
+class BranchArgs:
+    """The validated arguments of `branch`.
+
+    Attributes:
+        name: The branch name. It is `None` when no name was given, which means
+            the checked-out branch. An empty string is a name that was given,
+            and a bad one.
+    """
+
+    name: str | None
+
+
+Args = CommitMsgArgs | RangeArgs | BranchArgs
 
 
 def _parse(argv: Sequence[str]) -> Args:
@@ -142,11 +165,12 @@ def _parse(argv: Sequence[str]) -> Args:
         help="the branch name (default: the checked-out branch)",
     )
     parsed = parser.parse_args(argv)
+    if parsed.command == "commit-msg":
+        return CommitMsgArgs(Path(parsed.target), parsed.allow_autosquash)
     if parsed.command == "range":
         _require_range(parsed.target)
-    return Args(
-        parsed.command, parsed.target, getattr(parsed, "allow_autosquash", False)
-    )
+        return RangeArgs(parsed.target)
+    return BranchArgs(parsed.target)
 
 
 def _require_range(target: str) -> None:
@@ -273,12 +297,13 @@ def _run(args: Args, git: Runner) -> list[str]:
         OSError: The message file cannot be read.
         CommandError: A git command failed.
     """
-    if args.command == "branch":
-        return _check_branch(git, args.target)
-    target = args.target or ""  # `commit-msg` and `range` always have a target
-    if args.command == "commit-msg":
-        return _check_file(git, Path(target), allow_autosquash=args.allow_autosquash)
-    return _check_range(git, target)
+    match args:
+        case CommitMsgArgs(path, allow_autosquash):
+            return _check_file(git, path, allow_autosquash=allow_autosquash)
+        case RangeArgs(revision_range):
+            return _check_range(git, revision_range)
+        case BranchArgs(name):
+            return _check_branch(git, name)
 
 
 def main(argv: Sequence[str] | None = None, *, git: Runner | None = None) -> int:
