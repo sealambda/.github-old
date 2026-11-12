@@ -1,7 +1,9 @@
-# Cases for SentenceLength.yml: a sentence of more than 25 words is flagged. The
-# count skips code, and a period inside an abbreviation doesn't end a sentence.
-# The cases use `contains` because the flake check loads the style under a name
-# that has a store hash.
+# Cases for SentenceLength.yml: a sentence of more than 25 words is flagged, in
+# prose, in a list item and in a table cell. The count skips code, and a period
+# inside an abbreviation doesn't end a sentence. A file name at the end of a
+# sentence doesn't end it either, unless it is in a code span. The cases use
+# `contains` because the flake check loads the style under a name that has a
+# store hash.
 - name: sentence-of-26-words-is-flagged
   rule: SentenceLength.yml
   input: |
@@ -33,6 +35,30 @@
       fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone
       twentytwo twentythree twentyfour twentyfive twentysix.
   contains: "Sealambda.SentenceLength:This sentence has more than 25 words. Shorten it or split it."
+
+- name: long-sentence-in-a-table-cell-is-flagged
+  rule: SentenceLength.yml
+  input: |
+    | Column | Other |
+    | ------ | ----- |
+    | One two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone twentytwo twentythree twentyfour twentyfive twentysix | Short |
+  contains: "Sealambda.SentenceLength:This sentence has more than 25 words. Shorten it or split it."
+
+- name: file-name-at-the-end-of-a-sentence-joins-the-next-sentence
+  rule: SentenceLength.yml
+  input: |
+    Read the rules in CONTRIBUTING.md. One two three four five six seven eight
+    nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen
+    nineteen twenty twentyone twentytwo.
+  contains: "Sealambda.SentenceLength:This sentence has more than 25 words. Shorten it or split it."
+
+- name: file-name-in-a-code-span-does-not-join-the-next-sentence
+  rule: SentenceLength.yml
+  input: |
+    Read the rules in `CONTRIBUTING.md`. One two three four five six seven eight
+    nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen
+    nineteen twenty twentyone twentytwo.
+  want: ""
 
 - name: abbreviation-does-not-split-a-sentence
   rule: SentenceLength.yml

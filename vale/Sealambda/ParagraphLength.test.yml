@@ -52,6 +52,22 @@
     - Seven.
   want: ""
 
+- name: loose-list-item-of-many-sentences-is-clean
+  rule: ParagraphLength.yml
+  input: |
+    - One. Two. Three. Four. Five. Six. Seven. Eight.
+
+    - Other.
+  want: ""
+
+- name: table-cell-of-many-sentences-is-clean
+  rule: ParagraphLength.yml
+  input: |
+    | One | Two |
+    | --- | --- |
+    | One. Two. Three. Four. Five. Six. Seven. Eight. | Other |
+  want: ""
+
 - name: code-block-is-clean
   rule: ParagraphLength.yml
   input: |

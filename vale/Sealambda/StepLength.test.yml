@@ -43,6 +43,18 @@
     2. Short.
   want: ""
 
+- name: second-paragraph-of-a-step-is-not-counted
+  rule: StepLength.yml
+  input: |
+    1. Open the file.
+
+       One two three four five six seven eight nine ten eleven twelve
+       thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty
+       twentyone.
+
+    2. Short.
+  want: ""
+
 - name: long-bullet-is-clean
   rule: StepLength.yml
   input: |
