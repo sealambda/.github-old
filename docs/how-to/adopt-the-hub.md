@@ -338,7 +338,7 @@ flake must expose.
 A job that calls a reusable workflow can't set `timeout-minutes`, so the
 workflow sets the limit of its own job from the input `timeout-minutes`. The
 default is 360 minutes, the limit that GitHub gives a job that sets none, so a
-caller that passes nothing keeps that limit. Pass a limit of several times
+caller that passes nothing gets that limit. Pass a limit of several times
 the longest scan of the repository, as [Gate the workflows](#gate-the-workflows)
 advises for a job.
 
