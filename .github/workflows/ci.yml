@@ -47,8 +47,8 @@ jobs:
   # Builds the checks of the synthetic consumers `nix/tests/consumers/legacy`,
   # `nix/tests/consumers/layered` and `nix/tests/consumers/standards` against
   # this revision of the hub: a change that turns a consumer red turns this job
-  # red. The job uses no secret
-  # and holds a read-only token, so a pull request from a fork can run it.
+  # red. The job uses no secret and holds a read-only token, so a pull request
+  # from a fork can run it.
   consumer:
     name: synthetic consumer
     runs-on: ubuntu-latest
