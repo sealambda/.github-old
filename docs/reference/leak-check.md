@@ -5,6 +5,10 @@ check `leaks` scans every text file of the hub and fails when a rule finds
 one. It runs with `nix flake check`, locally and in CI, and it needs no
 network.
 
+The check enforces the rules of
+[ADR 0002](../decisions/0002-public-hub-repository.md). The reviewer of a pull
+request still checks them: the check finds only the shapes that it describes.
+
 The rules match the shape of a fact, never its value. The hub lists only the
 names that are public, in `publicNames` in `flake.nix`, so the list of private
 names isn't in the hub.
@@ -173,20 +177,24 @@ is a finding, except for the three public accounts `github-actions`,
 
 ## Public names
 
-| List | Names |
-| ---- | ----- |
-| Repositories | `.github`, `chironium`, `quints` |
-| Teams | `maintainers` |
+`publicNames` in `flake.nix` is the only list of the public repositories and
+teams. This page doesn't copy it, so the list can't go stale.
 
-To add a name, change `publicNames` in `flake.nix` in a pull request. Add a
-repository only when it's public on GitHub.
+To add a name, change `publicNames` in a pull request. Add a repository only
+when it's public on GitHub.
 
 ## Paths that the check skips
 
-| Path | Reason |
-| ---- | ------ |
-| `nix/scripts/leaks/rules.py` | The patterns hold the prefixes that they search for. |
-| `nix/tests/leaks` | The fixtures are leaks on purpose, with false identifiers. |
+The `--exclude` flags of the check `leaks` in `flake.nix` are the only list of
+the skipped paths. Three files are on it, for these reasons:
+
+- `nix/scripts/leaks/rules.py`: the patterns hold the prefixes that they search
+  for.
+- `nix/tests/leaks/test_leak_rules.py` and `nix/tests/leaks/test_leak_scan.py`:
+  the fixtures are leaks on purpose, with false identifiers.
+
+The check names the two test files, not their folder, so it scans a new file of
+that folder.
 
 The check skips a file with a NUL byte in its first 8 KiB, because it's binary,
 and it doesn't follow a symbolic link. It reads every other file, lock files
@@ -202,9 +210,22 @@ four characters and at most a third of the value. The log of a build in a
 public repository stays readable after the value leaves the tree, so the log
 never holds the whole value. The path and the line locate it.
 
-To fix a finding, describe the thing without its name or identifier. The rules
-are broad on purpose: when a rule matches a text that isn't a private fact,
-reword the text.
+A finding means that the fact is already public: the hub is public, so the
+branch and the pull request show the text that the check read. Rewording the
+line in a new commit isn't enough, because the pull request lands by rebase
+and the first commit lands with it. To fix a finding:
+
+1. Describe the thing without its name or identifier.
+2. Remove the fact from the history of the branch (amend or rebase, then
+   force-push the branch) before the merge.
+3. When the fact is real, treat it as disclosed: rotate the secret or rename
+   the resource.
+
+This check reads the files of one commit. The `secrets` job of the workflow
+`ci` reads the Git history, with gitleaks.
+
+The rules are broad on purpose: when a rule matches a text that isn't a
+private fact, reword the text.
 
 ## Limits
 
@@ -218,6 +239,16 @@ reword the text.
 - A flow list that goes on over more than 20 lines isn't read to its end, and
   a `runs-on` mapping key other than `group` and `labels` isn't read.
 - A word after `--bucket` is a finding, also in prose.
+- A function call after a bucket key is read as a bucket name: the check reports
+  the name of the function. Reword it.
+- A quoted string of a `runs-on` expression that isn't a label, as `'push'` in
+  `${{ github.event_name == 'push' && 'self-hosted' || 'ubuntu-latest' }}`, is
+  read as a label.
+- A property access in code whose last word is a private suffix, such as
+  `internal` or `local`, is read as a host name.
+- The `bucket` rule reads the name of the organization in lower case only:
+  `acme-hq` is a finding and `Acme-hq` isn't. The rule targets bucket names,
+  which are lower case. Review a pull request for the other letter cases.
 - A runner label that a matrix or an input supplies isn't read: in
   `runs-on: ${{ matrix.os }}` the label is in the matrix, and the check reads
   only the text of the `runs-on` key.
@@ -242,7 +273,10 @@ reword the text.
 ## Run it
 
 ```console
-nix build .#checks.x86_64-linux.leaks -L
+nix build .#checks.<system>.leaks -L
 ```
+
+Replace `<system>` with the system of the machine, such as `x86_64-linux` or
+`aarch64-darwin`.
 
 The tests of the rules are the check `check-leaks-tests`.
