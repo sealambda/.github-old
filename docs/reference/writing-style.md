@@ -22,6 +22,7 @@ shows. A repository can switch a rule off in its own `.vale.ini`, as
 | `Sealambda.OneSpelling` | warning | The unused spelling of a word pair. |
 | `Sealambda.FillerWords` | warning | A word that adds no fact. |
 | `Sealambda.HeadingCase` | warning | A heading that isn't in sentence case. |
+| `Sealambda.HowToTitle` | warning | A page title that isn't a task. |
 
 The `docs` check runs Vale with `--minAlertLevel=error`. A finding of level
 error fails the check. A finding of level warning or suggestion doesn't fail
@@ -231,6 +232,38 @@ A heading that quotes a title needs a Vale comment with the reason before it:
 <!-- vale Sealambda.HeadingCase = NO -->
 ## The Open Source Definition
 <!-- vale Sealambda.HeadingCase = YES -->
+```
+
+## How-to titles
+
+`Sealambda.HowToTitle` flags a page title that starts with a label, a question
+or a gerund. The title of a how-to page starts with an imperative verb that
+names the task, such as `Adopt the hub`. These openers are flagged:
+
+- `How to`, `How do`, `How does`, `How can` and `How should`
+- `Guide to`, `Introduction to` and `Tutorial`
+- `Adding`, `Configuring`, `Creating`, `Deploying`, `Installing`, `Migrating`,
+  `Running`, `Setting up` and `Using`
+
+A reader scans a list of titles for the task to do, and a verb at the start
+says what the page does.
+
+### What the rule can't tell
+
+Vale can't limit a rule to a folder. Only a section of the `.vale.ini` can do
+that, and the hub's base file, `config/vale.ini`, has no section for
+`docs/how-to/`. So the rule checks the title of every page. It flags an opener
+that no title needs, and it doesn't check that the first word is a verb. The
+list of gerunds leaves out a word that's also a noun, such as `Writing` in
+`Writing style`.
+
+A reference or explanation page whose title starts with a listed gerund has two
+choices. Rename the title to a noun phrase, or turn the rule off for it:
+
+```markdown
+<!-- vale Sealambda.HowToTitle = NO -->
+# Using the hub
+<!-- vale Sealambda.HowToTitle = YES -->
 ```
 
 ## Test the rules
