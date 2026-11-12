@@ -99,7 +99,7 @@ sections above holds for version 2, except the changes below.
 | `:approveMajorUpdates` | A major version waits on the Dependency Dashboard. | Dropped. A major version opens as a pull request with the label `major`. |
 | `matchIsBreaking` | No rule. | A breaking version opens as a pull request with the label `breaking`. [Labels of a breaking update](#labels-of-a-breaking-update) lists the versioning schemes that report it. |
 | Minor of a `0.x` version | No rule. | A minor update of a current version `0.x` opens with the label `breaking`. The rule covers the versioning schemes that don't report it. |
-| `rebaseWhen` | The Renovate default. | `conflicted`: Renovate rebases a pull request only when it conflicts. |
+| `rebaseWhen` | The Renovate default. | `conflicted`: Renovate rebases a pull request only when it conflicts. A pull request that merges by itself is the exception: it rebases when it falls behind its base branch, as [Rebase](#rebase) says. |
 | `lockFileMaintenance` | `* 0-9 1 * *`: the first day of the month, before 10:00. | `* 0-9 * * 1`: Monday before 10:00. |
 | `mise` | The Renovate default. | `enabled` is `true`, stated in the file. |
 
@@ -117,7 +117,7 @@ tags of both series. Three package rules keep the series apart:
 | ---- | ------- | ------ |
 | Hub pin | The package `sealambda/.github` with a current value that starts with `v` and a digit | The `regex` versioning reads only tags of the form `v1.2.3`. The pull request opens on any day, in the group `Hub preset pin`. |
 | Actions series | The package `sealambda/.github` with a current value that starts with `actions-v` | The `regex` versioning reads only tags of the form `actions-v1.2.3`. The pull request opens on any day, and Renovate never merges it, because the update changes a workflow. |
-| Hub input | The Nix manager, the dependency named `hub` and the update types `digest`, `patch` and `minor` | The update changes only `flake.lock`. It opens on any day and merges when the checks pass. |
+| Hub input | The Nix manager, the dependency named `hub`, the package `https://github.com/sealambda/.github` and the update types `digest`, `patch` and `minor` | The update changes only `flake.lock`. It opens on any day and merges when the checks pass. |
 
 Without the `regex` versioning, a coercing versioning could read
 `actions-v1.0.0` as the version `1.0.0` and offer it as an update of the pin.
@@ -138,6 +138,37 @@ Renovate 44.181.0 reports a new revision as `digest` or `patch` and never as
 `major`. The hub input rule lists `minor` too, though the manager doesn't report
 it, and leaves `major` out. If a major update ever appears, it follows the
 schedule and waits for a person.
+
+The hub input merges with no wait and no person, so it's the one route to the
+code of the hub that has neither. It relies on the review rules of the hub
+repository, which are meant to let a commit reach the ref that the input
+follows only through a reviewed pull request. The preset can't check that. The
+rule matches the
+package as well as the name `hub`, so an input of that name that points to
+another repository gets no automatic merge. The Nix manager names the package
+`https://github.com/<owner>/<repo>` for an input of the type `github`. An input
+of another type, such as a `git` URL, doesn't match, and its update waits for a
+person.
+
+A repository whose merge of `flake.lock` deploys, or that doesn't trust the
+review rules of the hub, keeps the update for a person. It sets `automerge` to
+`false` in a package rule of its own that matches the dependency `hub`.
+
+### Rebase
+
+`rebaseWhen` is `conflicted` for every update. A rebase dismisses an approval
+in a repository that dismisses a stale review, so Renovate rebases a pull
+request that a person reviews only when it conflicts.
+
+A pull request that Renovate merges by itself has no approval to keep, and
+`conflicted` would stall it: a repository that requires an up-to-date branch
+refuses the merge, and Renovate never brings the branch up to date. Two package
+rules set `rebaseWhen` to `behind-base-branch` for these pull requests: the hub
+input rule, and a rule that repeats the matcher of the security rule that
+merges a fix inside the declared range. The security rule comes from
+`default.json` and version 2 may not change it, so the second rule sits beside
+it. Renovate reads `rebaseWhen` in a package rule, and the validator accepts it
+there.
 
 ### Labels of a breaking update
 
@@ -206,22 +237,30 @@ each of these problems in `v2.json`:
   `:approveMajorUpdates`.
 - `lockFileMaintenance.schedule` isn't a list with at least one entry, or
   `lockFileMaintenance.enabled` is `false`.
+- `schedule` isn't a list with at least one entry.
 - `rebaseWhen` isn't `"conflicted"`.
-- `enabled` is `false` at the top level, or `ignorePresets` is set.
+- A rule that sets `automerge` to `true` has no rule with the same matchers
+  that sets `rebaseWhen` to `"behind-base-branch"`. The rule can be that rule
+  itself.
+- `enabled` is `false` at the top level, or `ignorePresets` is set, or the
+  `enabled` key of `nix` or `mise` is `false`.
 - A rule that version 2 adds sets `enabled` to `false`, or sets
   `minimumReleaseAge` below 7 days, to `null` or to a value that the tool can't
-  read. The tool keeps an allow-list of rules that may do so, each with a
-  reason. The list is empty.
+  read.
+- A rule that version 2 adds sets `automerge` to `true` without a
+  `matchUpdateTypes` list, or with a list that holds `major`.
 - No rule adds the label `breaking` where `matchIsBreaking` is true, or no rule
   adds it to a minor update of a `0.x` version through a `matchCurrentVersion`
   in the form `/regex/`, or either rule has another matcher. A regex of the
   second rule must match `0.1.0` and `v0.1.0`, and not `1.0.0` or `10.0.0`.
-- A rule that sets `automerge` to `true` for the dependency `hub` has no
-  `matchUpdateTypes`, or the list holds `major`.
+- A rule that sets `automerge` to `true` for the dependency `hub` doesn't match
+  the package `https://github.com/sealambda/.github`.
 - The tag `v1.2.3` and the tag `actions-v1.2.3` don't each match exactly one
   rule for `sealambda/.github`, through its `matchCurrentValue` in the form
   `/regex/`. Or the `versioning` of that rule isn't a `regex:` value that reads
-  its own tag and not the tag of the other series.
+  its own tag and not the tag of the other series. Or the regex holds a
+  look-ahead, a look-behind or a back reference, which the RE2 engine of
+  Renovate rejects.
 
 The command prints each problem as `path:line: message`, with line 1, because a
 problem is about the file. The exit status is 0 when every invariant holds, 1
@@ -233,8 +272,8 @@ above. It doesn't prove how Renovate behaves. The tool doesn't run Renovate, so
 it needs no network. It doesn't evaluate the package rules in the order in which
 Renovate applies them, so a later rule can still override an earlier one. It
 looks at the keys of one rule at a time. It checks the switches that the list
-above names, not every `enabled` key: the `enabled` key of a manager, such as
-`nix` or `mise`, isn't read. The code of that list is
+above names, not every `enabled` key: the `enabled` key of a manager other than
+`nix` and `mise` isn't read. The code of that list is
 `nix/scripts/presetcompat/guards.py`. It doesn't read the presets that `v2.json`
 extends, so it can't tell what `config:best-practices` sets.
 
@@ -253,7 +292,7 @@ real repository, and the validator checks the form of the file, not what the
 rules do:
 
 1. The flake input named `hub` is a convention. The rule matches the name
-   `hub`, and no repository has run it.
+   `hub` and the package of the hub, and no repository has run it.
 2. The pin and the actions series assume that Renovate reads the tag of the
    `extends` entry, and the comment of a pinned workflow, as the current value
    of the package `sealambda/.github`. The Renovate source gives that name and
@@ -262,8 +301,11 @@ rules do:
    reference, which is why the file holds every rule and doesn't extend another
    file.
 3. The mise manager is on (`enabled` is `true`), and no test runs it.
-4. `rebaseWhen` is `conflicted`, and no test runs it. The value comes from the
-   Renovate documentation.
+4. `rebaseWhen` is `conflicted`, with `behind-base-branch` for the two rules
+   that merge by themselves, and no test runs it. The values come from the
+   Renovate documentation, and the reading of the two rules from the Renovate
+   44.181.0 source, where `conflicted` stops the rebase of a branch that's only
+   behind its base.
 5. The rule that removes the wait for a flake input follows from the source of
    the Nix manager, which reads a Git ref and so has no release date. No test
    runs a flake input through the age check.
@@ -279,6 +321,11 @@ Other limits:
 - Lock file maintenance runs every week in version 2, so each repository that
   moves gets a pull request that often when the lock files change.
 - `presetcompat` finds the rules for the hub tags by their `matchCurrentValue`
-  in the form `/regex/`. A glob or a negated value counts as no match.
+  in the form `/regex/`. A glob, a negated value and a regex with flags, such as
+  `/^v/i`, count as no match.
+- `presetcompat` reads a regex with the Python engine, and Renovate reads it
+  with RE2 or JavaScript. The tool refuses the forms that RE2 rejects in the
+  `versioning` of the two series. It doesn't compile the other regexes with
+  RE2, so a form that only RE2 rejects can still pass elsewhere.
 - `presetcompat` reads each added rule alone. It doesn't tell whether an
   earlier rule already removes the wait for the same package.

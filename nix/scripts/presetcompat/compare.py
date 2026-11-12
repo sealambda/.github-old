@@ -19,13 +19,15 @@ from dataclasses import dataclass
 
 from decisions.findings import Finding
 from presetcompat import guards
-from presetcompat.values import as_list, as_mapping, describe_rule, matches_regex
-
-Preset = Mapping[str, object]
-"""A preset file, as parsed JSON."""
-
-REQUIRED_RELEASE_AGE = "7 days"
-"""The wait that every preset keeps before Renovate proposes a release."""
+from presetcompat.values import (
+    HUB_PACKAGE,
+    REQUIRED_RELEASE_AGE,
+    Preset,
+    as_list,
+    as_mapping,
+    describe_rule,
+    matches_regex,
+)
 
 ALLOWED_REMOVALS = frozenset({":approveMajorUpdates"})
 """The `extends` items of version 1 that version 2 drops on purpose.
@@ -33,9 +35,6 @@ ALLOWED_REMOVALS = frozenset({":approveMajorUpdates"})
 Version 2 replaces the Dashboard approval of a major update with a pull request
 that carries the label `major`.
 """
-
-HUB_PACKAGE = "sealambda/.github"
-"""The package name under which Renovate sees the tags of the hub."""
 
 VERSIONING_PREFIX = "regex:"
 """The start of a `versioning` value that names the regex versioning."""
@@ -188,6 +187,13 @@ def _check_versioning(
         )
         return [Finding(path, 1, message)]
     pattern = versioning.removeprefix(VERSIONING_PREFIX)
+    unsupported = _re2_unsupported(pattern)
+    if unsupported:
+        message = (
+            f"the versioning of the {series.name} uses {unsupported}, "
+            "which the RE2 engine of Renovate rejects"
+        )
+        return [Finding(path, 1, message)]
     try:
         regex = re.compile(_to_python_syntax(pattern))
     except re.error as error:
@@ -208,10 +214,27 @@ def _check_versioning(
     return findings
 
 
+_RE2_UNSUPPORTED = re.compile(r"\(\?<?[=!]|\\[1-9]|\\k<")
+"""A look-ahead, a look-behind or a back reference: forms that RE2 rejects."""
+
+
+def _re2_unsupported(pattern: str) -> str | None:
+    """Return the first form of `pattern` that RE2 rejects, or None.
+
+    Renovate compiles the regex of a versioning with RE2 when the engine is
+    available, as it is in the Renovate package of the hub, and RE2 has no
+    look-ahead, no look-behind and no back reference. Python accepts them, so
+    without this check the tool would pass a value that Renovate refuses.
+    """
+    found = _RE2_UNSUPPORTED.search(pattern)
+    return found.group() if found else None
+
+
 def _to_python_syntax(pattern: str) -> str:
-    """Return a JavaScript regex as a Python regex, for the one form that differs.
+    """Return a Renovate regex as a Python regex, for the one form that differs.
 
     Renovate names a group `(?<name>...)`, and Python names it `(?P<name>...)`.
-    The look-behind forms `(?<=` and `(?<!` stay as they are.
+    The forms that RE2 rejects never get here: `_re2_unsupported` refuses them
+    first.
     """
     return re.sub(r"\(\?<([A-Za-z_]\w*)>", r"(?P<\1>", pattern)

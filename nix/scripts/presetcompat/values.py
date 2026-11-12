@@ -9,8 +9,22 @@ import json
 import re
 from collections.abc import Mapping
 
+Preset = Mapping[str, object]
+"""A preset file, as parsed JSON."""
+
 Rule = Mapping[str, object]
 """A package rule, as parsed JSON."""
+
+REQUIRED_RELEASE_AGE = "7 days"
+"""The wait that every preset keeps before Renovate proposes a release.
+
+This is the one place that names the wait. `presetcompat.compare` demands it at
+the top level, and `presetcompat.guards` derives from it the shortest wait that
+a rule of version 2 may set.
+"""
+
+HUB_PACKAGE = "sealambda/.github"
+"""The package name under which Renovate sees the tags of the hub."""
 
 
 def as_list(value: object) -> list[object]:
@@ -37,6 +51,13 @@ def matches_regex(rule: Rule, key: str, text: str) -> bool:
     The match is a search, as Renovate does it. A rule that lacks the key, a
     value that isn't of the form `/regex/` and an invalid regex all return
     false.
+
+    The tool reads the regex with the Python engine, and Renovate reads it with
+    JavaScript or RE2, so the two differ at the edges. A value with flags, such
+    as `/^v/i`, isn't of the form `/regex/` here and returns false, so a
+    check that needs the rule reports a finding and never passes by mistake.
+    Python's `$` also matches before a final newline and JavaScript's doesn't,
+    which no tag of the hub has.
     """
     pattern = rule.get(key)
     if not isinstance(pattern, str) or not re.fullmatch(r"/.+/", pattern):

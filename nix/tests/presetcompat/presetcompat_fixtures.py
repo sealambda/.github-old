@@ -68,12 +68,33 @@ def minor_zero_rule() -> Preset:
 
 
 def hub_input_rule() -> Preset:
-    """Return the rule that merges the flake input `hub`, but not a major."""
+    """Return the rule that merges the flake input `hub`, but not a major.
+
+    The rule names the source of the hub and rebases when it is behind.
+    """
     return {
         "matchManagers": ["nix"],
         "matchDepNames": ["hub"],
+        "matchPackageNames": ["https://github.com/sealambda/.github"],
         "matchUpdateTypes": ["digest", "patch", "minor"],
+        "rebaseWhen": "behind-base-branch",
         "automerge": True,
+    }
+
+
+def security_rule() -> Preset:
+    """Return a rule of version 1 that merges by itself and covers every type."""
+    return {
+        "matchJsonata": ["isVulnerabilityAlert = true and newValue = currentValue"],
+        "automerge": True,
+    }
+
+
+def security_rebase_rule() -> Preset:
+    """Return the rule of version 2 that rebases what `security_rule` merges."""
+    return {
+        "matchJsonata": ["isVulnerabilityAlert = true and newValue = currentValue"],
+        "rebaseWhen": "behind-base-branch",
     }
 
 
@@ -83,6 +104,7 @@ def old_preset() -> Preset:
         "extends": ["config:best-practices", ":approveMajorUpdates"],
         "minimumReleaseAge": "7 days",
         "osvVulnerabilityAlerts": True,
+        "schedule": ["* 0-9 * * 1"],
         "lockFileMaintenance": {"schedule": ["* 0-9 1 * *"]},
         "packageRules": [
             {"matchManagers": ["nix"], "minimumReleaseAge": None},
@@ -97,6 +119,7 @@ def new_preset() -> Preset:
         "extends": ["config:best-practices"],
         "minimumReleaseAge": "7 days",
         "osvVulnerabilityAlerts": True,
+        "schedule": ["* 0-9 * * 1"],
         "rebaseWhen": "conflicted",
         "lockFileMaintenance": {"schedule": ["* 0-9 * * 1"]},
         "packageRules": [

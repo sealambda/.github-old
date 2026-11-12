@@ -13,14 +13,16 @@ an internal error. Each finding is printed to standard output as
 What a clean run proves: NEW, read as JSON, keeps the values and the rules that
 `presetcompat.compare` and `presetcompat.guards` list. It keeps every package
 rule of OLD unchanged, the 7 day release age, the OSV alerts, the schedule of
-the lock file maintenance, `rebaseWhen`, the rules for the tags of the hub, the
-two rules that add the label `breaking`, and the merge rule of the hub input.
-It adds no rule that disables a package or shortens the age, and sets no
-`ignorePresets`. It checks a fixed list of switches, not every setting: the
-top-level `enabled`, `lockFileMaintenance.enabled`, `ignorePresets`, and
-`enabled` in a rule that NEW adds. The list is in `presetcompat.guards`,
-`_check_switches` and `_added_rule_problems`. A switch that the list doesn't
-name, such as the `enabled` key of a manager, isn't read.
+the lock file maintenance, the top-level `schedule`, `rebaseWhen`, the rebase of
+a rule that merges by itself, the rules for the tags of the hub, the two rules
+that add the label `breaking`, and the merge rule of the hub input with its
+source. It adds no rule that disables a package, shortens the age or merges a
+major update, and sets no `ignorePresets`. It checks a fixed list of switches,
+not every setting: the top-level `enabled`, `lockFileMaintenance.enabled`,
+`nix.enabled`, `mise.enabled`, `ignorePresets`, and `enabled` in a rule that NEW
+adds. The list is in `presetcompat.guards`, `_check_switches` and
+`_added_rule_problems`. A switch that the list doesn't name, such as the
+`enabled` key of another manager, isn't read.
 
 What it does not prove: the tool doesn't run Renovate and doesn't evaluate the
 package rules in the order in which Renovate applies them. A later rule can
@@ -41,7 +43,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import NoReturn
 
-from presetcompat.compare import Preset, compare
+from presetcompat.compare import compare
+from presetcompat.values import Preset
 
 EXIT_CLEAN = 0
 EXIT_FINDINGS = 1

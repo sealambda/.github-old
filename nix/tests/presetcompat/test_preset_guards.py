@@ -5,9 +5,7 @@ pair of presets and checks that the comparison reports it and nothing else.
 """
 
 import unittest
-from unittest import mock
 
-from presetcompat import guards
 from presetcompat_fixtures import (
     Preset,
     breaking_rule,
@@ -16,6 +14,8 @@ from presetcompat_fixtures import (
     minor_zero_rule,
     new_preset,
     old_preset,
+    security_rebase_rule,
+    security_rule,
 )
 
 
@@ -60,6 +60,39 @@ class SwitchesTest(unittest.TestCase):
             ["lockFileMaintenance.enabled must not be false"],
         )
 
+    def test_a_missing_or_empty_schedule_is_a_finding(self) -> None:
+        """Without a schedule, Renovate runs on every day."""
+        schedules: tuple[object, ...] = (None, [], "* 0-9 * * 1")
+        for schedule in schedules:
+            with self.subTest(schedule=schedule):
+                new = new_preset()
+                if schedule is None:
+                    del new["schedule"]
+                else:
+                    new["schedule"] = schedule
+                self.assertEqual(
+                    messages_of(old_preset(), new),
+                    ["schedule must be a list with at least one entry"],
+                )
+
+    def test_a_disabled_manager_is_a_finding(self) -> None:
+        """`nix` and `mise` are the managers that version 2 turns on."""
+        for manager in ("nix", "mise"):
+            with self.subTest(manager=manager):
+                new = new_preset()
+                new[manager] = {"enabled": False}
+                self.assertEqual(
+                    messages_of(old_preset(), new),
+                    [f"{manager}.enabled must not be false"],
+                )
+
+    def test_an_enabled_manager_is_no_finding(self) -> None:
+        """Only the value false is a problem."""
+        new = new_preset()
+        new["nix"] = {"enabled": True}
+        new["mise"] = {"enabled": True}
+        self.assertEqual(messages_of(old_preset(), new), [])
+
 
 class RebaseWhenTest(unittest.TestCase):
     """Renovate rebases a pull request only when it conflicts."""
@@ -81,6 +114,45 @@ class RebaseWhenTest(unittest.TestCase):
             messages_of(old_preset(), new),
             ['rebaseWhen must be "conflicted", got None'],
         )
+
+
+class AutomergeRebaseTest(unittest.TestCase):
+    """A pull request that merges by itself rebases when it falls behind."""
+
+    def test_an_automerge_rule_without_a_rebase_is_a_finding(self) -> None:
+        """With `conflicted`, a rule that merges by itself stays behind its base."""
+        new = new_preset()
+        del rule_like(new, hub_input_rule())["rebaseWhen"]
+        messages = messages_of(old_preset(), new)
+        self.assertEqual(len(messages), 1)
+        self.assertIn('sets rebaseWhen to "behind-base-branch"', messages[0])
+
+    def test_another_rebase_value_is_a_finding(self) -> None:
+        """Only `behind-base-branch` rebases a branch that is behind."""
+        new = new_preset()
+        rule_like(new, hub_input_rule())["rebaseWhen"] = "conflicted"
+        self.assertEqual(len(messages_of(old_preset(), new)), 1)
+
+    def test_a_rule_of_version_1_needs_a_rule_with_its_matchers(self) -> None:
+        """Version 2 can't change the rule, so a second rule repeats its matchers."""
+        old = old_preset()
+        old["packageRules"].append(security_rule())
+        new = new_preset()
+        new["packageRules"].append(security_rule())
+        self.assertEqual(len(messages_of(old, new)), 1)
+        new["packageRules"].append(security_rebase_rule())
+        self.assertEqual(messages_of(old, new), [])
+
+    def test_a_rule_that_repeats_other_matchers_is_no_cover(self) -> None:
+        """The matchers of the second rule must equal those of the first."""
+        old = old_preset()
+        old["packageRules"].append(security_rule())
+        new = new_preset()
+        new["packageRules"].append(security_rule())
+        other = security_rebase_rule()
+        other["matchManagers"] = ["npm"]
+        new["packageRules"].append(other)
+        self.assertEqual(len(messages_of(old, new)), 1)
 
 
 class AddedRulesTest(unittest.TestCase):
@@ -152,14 +224,37 @@ class AddedRulesTest(unittest.TestCase):
         )
         self.assertEqual(messages_of(old_preset(), new_preset()), [])
 
-    def test_a_rule_on_the_allow_list_is_no_finding(self) -> None:
-        """The allow-list names a rule by its description."""
-        rule = {"description": "Allowed", "enabled": False}
+    def test_an_added_rule_that_may_merge_a_major_is_a_finding(self) -> None:
+        """A rule that merges by itself lists its update types, without `major`."""
+        broad = {"matchManagers": ["npm"], "automerge": True}
+        with_major = {
+            "matchManagers": ["npm"],
+            "matchUpdateTypes": ["major"],
+            "automerge": True,
+        }
+        for rule in (broad, with_major):
+            with self.subTest(rule=rule):
+                new = new_preset()
+                rebase = {
+                    key: value for key, value in rule.items() if key != "automerge"
+                }
+                rebase["rebaseWhen"] = "behind-base-branch"
+                new["packageRules"].extend([rule, rebase])
+                messages = messages_of(old_preset(), new)
+                self.assertEqual(len(messages), 1)
+                self.assertIn("leaves out major", messages[0])
+
+    def test_an_added_rule_that_merges_a_patch_is_no_finding(self) -> None:
+        """A list without `major` is what the invariant asks for."""
+        rule = {
+            "matchManagers": ["npm"],
+            "matchUpdateTypes": ["patch"],
+            "rebaseWhen": "behind-base-branch",
+            "automerge": True,
+        }
         new = new_preset()
         new["packageRules"].append(rule)
-        with mock.patch.object(guards, "ALLOWED_ADDED_RULES", {"Allowed": "a reason"}):
-            self.assertEqual(messages_of(old_preset(), new), [])
-        self.assertEqual(len(messages_of(old_preset(), new)), 1)
+        self.assertEqual(messages_of(old_preset(), new), [])
 
 
 class BreakingLabelsTest(unittest.TestCase):
@@ -180,6 +275,26 @@ class BreakingLabelsTest(unittest.TestCase):
         messages = messages_of(old_preset(), new)
         self.assertEqual(len(messages), 1)
         self.assertIn("a minor update of a version 0.x", messages[0])
+
+    def test_a_narrowed_is_breaking_rule_is_a_finding(self) -> None:
+        """A second matcher makes the rule skip some packages."""
+        new = new_preset()
+        rule_like(new, breaking_rule())["matchManagers"] = ["npm"]
+        messages = messages_of(old_preset(), new)
+        self.assertEqual(len(messages), 1)
+        self.assertIn("where matchIsBreaking is true", messages[0])
+
+    def test_an_is_breaking_rule_without_the_label_is_a_finding(self) -> None:
+        """The rule must add the label `breaking`."""
+        new = new_preset()
+        del rule_like(new, breaking_rule())["addLabels"]
+        self.assertEqual(len(messages_of(old_preset(), new)), 1)
+
+    def test_an_is_breaking_rule_for_false_is_a_finding(self) -> None:
+        """`matchIsBreaking: false` labels the updates that aren't breaking."""
+        new = new_preset()
+        rule_like(new, breaking_rule())["matchIsBreaking"] = False
+        self.assertEqual(len(messages_of(old_preset(), new)), 1)
 
     def test_a_narrowed_minor_zero_rule_is_a_finding(self) -> None:
         """A second matcher makes the rule skip some packages."""
@@ -213,7 +328,7 @@ class BreakingLabelsTest(unittest.TestCase):
 
 
 class HubInputMergeTest(unittest.TestCase):
-    """The hub input never merges a major update by itself."""
+    """The hub input never merges a major update, and only from the hub."""
 
     def test_the_baseline_rule_is_no_finding(self) -> None:
         """The rule of the fixture lists `digest`, `patch` and `minor`."""
@@ -227,7 +342,7 @@ class HubInputMergeTest(unittest.TestCase):
         rule["matchUpdateTypes"].append("major")
         messages = messages_of(old_preset(), new)
         self.assertEqual(len(messages), 1)
-        self.assertIn("without major", messages[0])
+        self.assertIn("leaves out major", messages[0])
 
     def test_no_list_is_a_finding(self) -> None:
         """A rule without `matchUpdateTypes` covers every update type."""
@@ -236,11 +351,33 @@ class HubInputMergeTest(unittest.TestCase):
         del rule["matchUpdateTypes"]
         self.assertEqual(len(messages_of(old_preset(), new)), 1)
 
-    def test_another_input_may_merge_every_type(self) -> None:
-        """The invariant is about the input named `hub` only."""
+    def test_a_rule_without_the_source_is_a_finding(self) -> None:
+        """The name `hub` alone would match an unrelated input of that name."""
+        new = new_preset()
+        rule = rule_like(new, hub_input_rule())
+        del rule["matchPackageNames"]
+        messages = messages_of(old_preset(), new)
+        self.assertEqual(len(messages), 1)
+        self.assertIn("must match the package", messages[0])
+
+    def test_another_source_is_a_finding(self) -> None:
+        """The package must be the hub, not another repository."""
+        new = new_preset()
+        rule = rule_like(new, hub_input_rule())
+        rule["matchPackageNames"] = ["https://github.com/other/hub"]
+        self.assertEqual(len(messages_of(old_preset(), new)), 1)
+
+    def test_another_input_needs_no_source(self) -> None:
+        """The source is required for the input named `hub` only."""
         new = new_preset()
         new["packageRules"].append(
-            {"matchManagers": ["nix"], "matchDepNames": ["other"], "automerge": True}
+            {
+                "matchManagers": ["nix"],
+                "matchDepNames": ["other"],
+                "matchUpdateTypes": ["patch"],
+                "rebaseWhen": "behind-base-branch",
+                "automerge": True,
+            }
         )
         self.assertEqual(messages_of(old_preset(), new), [])
 

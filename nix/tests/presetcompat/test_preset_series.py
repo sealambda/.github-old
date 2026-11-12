@@ -125,14 +125,18 @@ class VersioningTest(unittest.TestCase):
         self.assertEqual(len(messages), 1)
         self.assertIn("the versioning of the hub pin is not a regex", messages[0])
 
-    def test_the_look_behind_syntax_is_not_rewritten(self) -> None:
-        """Only `(?<name>` becomes `(?P<name>`: `(?<=` stays a look-behind."""
-        new = new_preset()
-        new["packageRules"][-2] = hub_rule(
-            "/^v\\d/",
-            "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>(?<=\\.)\\d+)$",
-        )
-        self.assertEqual(messages_of(old_preset(), new), [])
+    def test_a_form_that_re2_rejects_is_a_finding(self) -> None:
+        """Renovate compiles the regex with RE2, which has no look-around."""
+        for form in ("(?<=\\.)", "(?<!\\.)", "(?=\\d)", "(?!x)", "(\\d)\\1"):
+            with self.subTest(form=form):
+                new = new_preset()
+                new["packageRules"][-2] = hub_rule(
+                    "/^v\\d/",
+                    f"regex:^v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>{form}\\d+)$",
+                )
+                messages = messages_of(old_preset(), new)
+                self.assertEqual(len(messages), 1)
+                self.assertIn("which the RE2 engine of Renovate rejects", messages[0])
 
 
 if __name__ == "__main__":

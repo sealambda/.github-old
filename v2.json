@@ -3,8 +3,8 @@
   "description": [
     "Sealambda dependency update policy, version 2. A repository extends it with github>sealambda/.github:v2#<tag>, where the tag is a release of the hub. The file holds every rule of default.json, so it does not extend that file.",
     "It builds on config:best-practices, which pins GitHub Actions and Docker images by digest, and sets the commit type to build and the label to dependencies.",
-    "A release waits 7 days before Renovate proposes it. The Renovate schedule and the lock file maintenance run on Monday mornings, in UTC. A major version and a breaking version open as pull requests with a label, and a person reviews them. Renovate rebases a pull request only when it conflicts.",
-    "A security fix, the hub pin and the hub flake input open on any day. Any day means the schedule only: the 7 day wait still applies to the hub pin and the actions series, and the flake input has none, because it follows a Git ref.",
+    "A release waits 7 days before Renovate proposes it. The Renovate schedule and the lock file maintenance run on Monday mornings, in UTC. A major version and a breaking version open as pull requests with a label, and a person reviews them. Renovate rebases a pull request only when it conflicts, so a rebase doesn't dismiss an approval, except for a pull request that merges by itself: it rebases when it falls behind its base branch.",
+    "A security fix, the hub pin and the hub flake input open on any day. Any day means the schedule only: the 7 day wait still applies to the hub pin and the actions series, and the flake input has none, because it follows a Git ref. The hub flake input merges by itself when the checks pass, so it relies on the review rules of the hub repository.",
     "The Nix manager and the mise manager are on."
   ],
   "extends": [
@@ -130,9 +130,16 @@
       "description": "The flake input named hub is the hub itself. A repository that follows the convention names the input hub. An update of it changes only flake.lock, so it opens on any day and merges automatically when the checks pass. The Nix manager reads the input with the git versioning, which reports a new revision as a digest or patch update, never as a major one, so the update types listed are the ones that occur. A major update is not listed and never merges without a person.",
       "matchManagers": ["nix"],
       "matchDepNames": ["hub"],
+      "matchPackageNames": ["https://github.com/sealambda/.github"],
       "matchUpdateTypes": ["digest", "patch", "minor"],
       "schedule": [],
+      "rebaseWhen": "behind-base-branch",
       "automerge": true
+    },
+    {
+      "description": "A security fix that merges by itself rebases when it falls behind its base branch, so a repository that requires an up-to-date branch never keeps it open. Version 2 may not change the security rule of default.json, so this rule repeats its matcher.",
+      "matchJsonata": ["isVulnerabilityAlert = true and newValue = currentValue"],
+      "rebaseWhen": "behind-base-branch"
     }
   ]
 }
