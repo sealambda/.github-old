@@ -16,13 +16,16 @@ fails when a copy differs. Each repository holds a copy of every rule, and a
 change of a rule is a change in every repository.
 
 Can the hub pass its own file to each tool and still let a repository add to it?
-The hub checked this with the versions in its locked nixpkgs: Vale 3.25.1,
-markdownlint-cli2 0.24.0 (markdownlint 0.42.0) and lychee 0.24.2. The tools
-differ in how they take a second file:
+The hub checked this with the tool versions that its `flake.lock` pins, and
+[Versions](../reference/versions.md) lists the tools. The tools differ in how
+they take a second file:
 
 - Vale reads a global configuration from `$XDG_CONFIG_HOME/vale/.vale.ini` and
   merges the project's `.vale.ini` over it. The option `--config` and the
-  variable `VALE_CONFIG_PATH` name one file and don't merge.
+  variable `VALE_CONFIG_PATH` replace the project file that Vale finds from the
+  working directory upward, and the global file stays under the named file. A
+  wrapper that sets either one would have to find the repository's `.vale.ini`
+  itself and pass it, which repeats Vale's own lookup.
 - markdownlint-cli2 takes a base file with `--config` and merges the
   `.markdownlint-cli2.yaml` files of the directories over it.
 - lychee takes `--config` more than once, merges the files in order, and the
@@ -77,6 +80,21 @@ synthetic consumers `legacy` and `layered` build them.
 [Wrapped documentation tools](../reference/wrapped-tools.md) states, for each
 tool, what a repository can add and what it can't change.
 
+This record amends two earlier records for the three documentation tools:
+
+- [ADR 0001](0001-hub-as-single-source-of-standards.md) lists markdownlint-cli2,
+  lychee and Vale among the tools that read only a file in the repository, and
+  says that a consumer can't edit a synced file. The tools read the hub's base
+  from the Nix store, and a repository adds to it in its own file. `sync-config`
+  and `config-in-sync` stay for a repository that keeps the copies.
+- [ADR 0003](0003-gate-documentation-with-a-flake-check.md) states that every
+  tool reads its configuration from the checked repository, and that the Vale of
+  the dev shell differs from the gate when a developer has a personal global
+  configuration. The gate reads the hub's base from the Nix store and the
+  repository's files on top. The `docs` dev shell runs the same wrappers, so a
+  personal global configuration in `$XDG_CONFIG_HOME` has no effect on it. The
+  two Vale sources in the consequences below can still differ from the gate.
+
 ### Consequences
 
 - Good, because a repository with no configuration file gets the hub's rules,
@@ -88,11 +106,10 @@ tool, what a repository can add and what it can't change.
   markdownlint file that ignores every file and a lychee exclusion of every link
   all work. The review of the repository's file in its pull request is the
   control. The reference lists the settings.
-- Bad, because Vale reads a `.vale.ini` in the home folder or in a folder above
-  the repository when the repository has none. The wrapper removes
-  `VALE_CONFIG_PATH` from the environment and can't remove those two sources.
-  The flake check runs in the Nix sandbox, where neither exists, so the gate of
-  record doesn't change.
+- Bad, because two sources of Vale configuration stay outside the wrapper, and
+  a run outside the Nix sandbox can differ from the flake check, which runs in
+  the sandbox. [Wrapped documentation tools](../reference/wrapped-tools.md)
+  states both sources.
 - Bad, because the hub's markdownlint option `noInlineConfig` holds only while
   no repository file sets it, and a file named `.markdownlint.*` replaces the
   hub's `config` map for its directory.
@@ -106,11 +123,12 @@ tool, what a repository can add and what it can't change.
 
 The flake check `check-docs-tests` runs a project with no configuration file, a
 local vocabulary, a local Vale section and style, root and nested markdownlint
-files, lychee exclusions and the legacy copies, in the Nix sandbox on Linux and
-on macOS. One case compares the findings of a project with the copies and of a
-project without them. Further cases cover the unset `VALE_CONFIG_PATH`, the Vale
-files in the home folder and above the project, and the settings that switch a
-gate off. The check `lib-functions` runs the layers through `lib.mkDocsCheck`.
+files, lychee exclusions and the legacy copies, in the Nix sandbox on Linux CI
+and on macOS where the sandbox is enabled. One case compares the findings of a
+project with the copies and of a project without them. Further cases cover the
+unset `VALE_CONFIG_PATH`, the Vale files in the home folder and above the
+project, and the settings that switch a gate off. The check `lib-functions`
+runs the layers through `lib.mkDocsCheck`.
 The job `consumer` of the hub's `ci` workflow builds the checks of the legacy
 fixture, which keeps the synced copies, and of the layered fixture, which holds
 its own configuration files and no copy.
