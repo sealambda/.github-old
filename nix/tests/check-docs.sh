@@ -546,6 +546,47 @@ BasedOnStyles = Project"
   assert_output_contains "Microsoft.Contractions"
 }
 
+# A section for a folder that sets `BasedOnStyles` replaces the hub's list for
+# that folder: Vale adds the entries only for a section with the same glob as
+# the hub's `[*.md]`. The page in `docs/` gets the finding of the project's rule
+# and none of the hub's rules, until the section repeats the hub's list. A page
+# outside the folder keeps the hub's rules. The wrapped-tools page states this.
+case_local_vale_style_in_a_folder_section_replaces_the_hub_styles() {
+  new_bare_project vale-style-section
+  write_page docs/guide.md "The wobble is a word that this project forbids. It does not work."
+  write_file .vale/styles/Project/Wobble.yml "extends: existence
+message: \"Don't use '%s'.\"
+level: error
+tokens:
+  - wobble"
+  write_file .vale.ini "StylesPath = .vale/styles
+
+[docs/**/*.md]
+BasedOnStyles = Project"
+
+  run_check "$PROJECT"
+  assert_status 1
+  assert_output_contains "Project.Wobble"
+  assert_output_lacks "Microsoft.Contractions"
+
+  write_file .vale.ini "StylesPath = .vale/styles
+
+[docs/**/*.md]
+BasedOnStyles = Vale, Microsoft, Readability, Sealambda, Project"
+
+  run_check "$PROJECT"
+  assert_status 1
+  assert_output_contains "Project.Wobble"
+  assert_output_contains "Microsoft.Contractions"
+
+  add_vale_error
+
+  run_check "$PROJECT"
+  assert_status 1
+  assert_output_contains "vale.md"
+  assert_output_contains "Microsoft.Contractions"
+}
+
 # The hub doesn't prevent a project from switching off a rule of the hub: a
 # `[*.md]` section with `Sealambda.CurrentState = NO` makes the page pass. The
 # wrapped-tools page states this, and the review of the file is the control.
@@ -961,6 +1002,7 @@ main() {
     case_local_vale_vocabulary_is_accepted
     case_local_vale_section_applies_to_its_folder
     case_local_vale_style_is_added
+    case_local_vale_style_in_a_folder_section_replaces_the_hub_styles
     case_local_vale_can_switch_a_hub_rule_off
     case_vale_config_path_variable_is_ignored
     case_vale_min_alert_level_cannot_lower_the_check_level

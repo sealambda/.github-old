@@ -85,8 +85,12 @@ A repository can add these in its `.vale.ini`:
   level. `[docs/**/*.md]` with `Microsoft.Contractions = NO` changes only the
   pages of `docs/`.
 - A style of its own. A folder `.vale/styles/Project` with rule files, and
-  `BasedOnStyles = Project` in a section, run next to the styles of the hub.
-  The entries of `BasedOnStyles` add to the hub's entries.
+  `BasedOnStyles = Project` in the section `[*.md]`, run next to the styles of
+  the hub: the entries of `BasedOnStyles` add to the hub's entries only in a
+  section with the same glob as the hub's. A section for another glob, such as
+  `[docs/**/*.md]`, replaces the list for the files that it matches, so the
+  hub's styles stop running there. That section must repeat the hub's list,
+  `Vale, Microsoft, Readability, Sealambda`, and add the style of its own.
 
 A repository can't change these:
 
