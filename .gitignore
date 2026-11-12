@@ -6,3 +6,7 @@
 
 # Cache of lychee.
 .lycheecache
+
+# The dev shell links the Git hook configuration here. The link points into
+# the Nix store, and the shell writes it again when the configuration changes.
+.pre-commit-config.yaml

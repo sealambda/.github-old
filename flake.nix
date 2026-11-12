@@ -78,8 +78,35 @@
         })
         mkSecretsScan
         ;
+      inherit
+        (import ./nix/lib/hooks.nix {
+          inherit (nixpkgs) lib;
+          inherit
+            git-hooks
+            hubPackagesFor
+            mkTreefmt
+            mkDocsTools
+            mkSecretsScan
+            mkGitPolicyTool
+            tools
+            ;
+        })
+        mkHooks
+        ;
 
       treefmtFor = eachSystem (pkgs: mkTreefmt pkgs [ ]);
+
+      # The hooks of the hub's own repository: the hub's formatter and no hook
+      # of its own. The `default` dev shell installs them, and the check
+      # `pre-commit` runs their `pre-commit` stage.
+      hooksFor = eachSystem (
+        pkgs:
+        mkHooks {
+          inherit pkgs;
+          src = self;
+          treefmt = treefmtFor.${pkgs.stdenv.hostPlatform.system};
+        }
+      );
 
       docsToolsFor = eachSystem mkDocsTools;
 
@@ -152,6 +179,7 @@
           mkWorkflowsCheck
           mkGitPolicyTool
           mkSecretsScan
+          mkHooks
           ;
       };
 
@@ -245,6 +273,14 @@
         config-in-sync = mkConfigCheck pkgs self;
         docs = mkDocsCheck pkgs self;
         formatting = treefmtFor.${pkgs.stdenv.hostPlatform.system}.config.build.check self;
+
+        # Runs the `pre-commit` stage of the hub's own hooks on every file of
+        # the source: the formatter, the documentation check and the workflow
+        # check. It runs the hook `secrets-scan` too, but the scratch repository
+        # commits the source first, so nothing is staged and that hook scans
+        # nothing: the check doesn't gate secrets. The hooks of the other
+        # stages need a commit message and a push, so `hooks-tests` covers them.
+        pre-commit = hooksFor.${pkgs.stdenv.hostPlatform.system};
 
         # Runs the tests of `nix/tests/check-docs.sh`. The tests need a
         # writable HOME and the commands `check-docs`, `sync-config` and the
