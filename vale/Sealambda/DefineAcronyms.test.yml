@@ -1,0 +1,68 @@
+# Cases for DefineAcronyms.yml: an acronym needs its full name in parentheses
+# earlier on the page, unless it is on the list of well-known acronyms. The
+# match is case-sensitive and skips code.
+- name: undefined-acronym-is-flagged
+  rule: DefineAcronyms.yml
+  input: |
+    The SBOM lists every component.
+  contains: "Sealambda.DefineAcronyms:'SBOM' has no definition."
+
+- name: defined-acronym-is-clean
+  rule: DefineAcronyms.yml
+  input: |
+    A software bill of materials (SBOM) lists every component. The SBOM is
+    short.
+  want: ""
+
+- name: definition-covers-a-later-paragraph
+  rule: DefineAcronyms.yml
+  input: |
+    A software bill of materials (SBOM) lists every component.
+
+    The SBOM is short.
+  want: ""
+
+- name: use-before-the-definition-is-flagged
+  rule: DefineAcronyms.yml
+  input: |
+    The SBOM is short.
+
+    A software bill of materials (SBOM) lists every component.
+  contains: "Sealambda.DefineAcronyms:'SBOM' has no definition."
+
+- name: definition-of-another-acronym-does-not-cover
+  rule: DefineAcronyms.yml
+  input: |
+    A software bill of materials (SBOM) lists every component.
+
+    The SLA is short.
+  contains: "Sealambda.DefineAcronyms:'SLA' has no definition."
+
+- name: well-known-acronyms-are-clean
+  rule: DefineAcronyms.yml
+  input: |
+    Send JSON over HTTPS to the API. The CI job runs in a PR. Read the README.
+  want: ""
+
+- name: plural-and-mixed-case-names-are-clean
+  rule: DefineAcronyms.yml
+  input: |
+    The SBOMs and NixOS and GitHub are names, not acronyms.
+  want: ""
+
+- name: lowercase-and-long-capitals-are-clean
+  rule: DefineAcronyms.yml
+  input: |
+    The sbom is lowercase. The word ABCDEFGH has eight letters. A single X is
+    a letter.
+  want: ""
+
+- name: acronym-in-code-is-clean
+  rule: DefineAcronyms.yml
+  input: |
+    Run `SBOM --all` and read the file.
+
+    ```text
+    The SBOM is in a code block.
+    ```
+  want: ""

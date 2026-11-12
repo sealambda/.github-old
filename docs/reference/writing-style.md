@@ -18,13 +18,19 @@ shows. A repository can switch a rule off in its own `.vale.ini`, as
 | ---- | ----- | ------------- |
 | `Sealambda.CurrentState` | error | A word of a plan or a gap. |
 | `Sealambda.History` | suggestion | A word of a history. |
+| `Sealambda.DefineAcronyms` | warning | An acronym with no definition. |
 
 The `docs` check runs Vale with `--minAlertLevel=error`. A finding of level
-error fails the check. A finding of level suggestion shows in an editor that
-runs Vale, and in a run of Vale without that flag.
+error fails the check. A finding of level warning or suggestion doesn't fail
+it, and the check doesn't print it. It shows in an editor that runs Vale, and
+in a run of Vale without that flag. A rule of level warning tells you what to
+change, and it blocks no merge.
 
-Both rules match whole words in any letter case. They skip code spans and code
-blocks, so a flag or a command in code font never matches.
+No rule of this page checks code. A code span and a code block never match, so
+a flag or a command in code font stays silent.
+
+`Sealambda.CurrentState` and `Sealambda.History` match whole words in any
+letter case.
 
 ## Current state
 
@@ -84,6 +90,42 @@ decision records, and a page states the current rationale. The level is
 suggestion, because a word of the list can have a true present meaning. An
 example is the sentence `The script is used to run the tests`. Change a
 flagged sentence when it tells a history. Leave it when it states a fact.
+
+## Define acronyms
+
+`Sealambda.DefineAcronyms` flags an acronym that has no definition earlier on
+the page. An acronym is two to six capital letters as a whole word, such as
+`SBOM`.
+
+A reader can't look up an acronym that a page doesn't explain. Write the full
+name at the first use, and the acronym after it in parentheses, as in
+`software bill of materials (SBOM)`. The definition covers the rest of the
+page. A plural such as `SBOMs` and a name in mixed case such as `NixOS` aren't
+acronyms, and the rule is case-sensitive.
+
+The rule skips these acronyms:
+
+- The well-known ones that its file lists in the key `exceptions`, such as
+  `API`, `CI`, `JSON` and `URL`.
+- The terms of the Vale vocabularies. A repository adds an acronym of its own
+  to its `Repository` vocabulary, and the hub adds its acronyms to the
+  `Sealambda` vocabulary.
+
+Microsoft's style has a rule of the same purpose, `Microsoft.Acronyms`, with
+the level suggestion. It needs a definition whose words start with capital
+letters. Both rules report an undefined acronym.
+
+### A true use of an undefined acronym
+
+An acronym that a page can't define, for example in a quotation, needs a Vale
+comment with the reason before it:
+
+```markdown
+<!-- This section quotes the wording of the standard. -->
+<!-- vale Sealambda.DefineAcronyms = NO -->
+The standard names the SBOM as the output.
+<!-- vale Sealambda.DefineAcronyms = YES -->
+```
 
 ## Test the rules
 
