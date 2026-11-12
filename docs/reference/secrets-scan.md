@@ -51,8 +51,13 @@ takes 0.34 s, and gitleaks alone takes 0.17 s with the same options. On the
 history of the hub, with 52 commits and 5650 objects, it takes 0.18 s against
 0.13 s. The measurements ran on one machine with Apple silicon, Git 2.56.0 and
 gitleaks 8.30.1, and each time is the median of seven runs. The check reads the
-history once more, so the cost grows with the size of the history. A repository
-with no commit has no history, so `history` passes.
+history once more, so the cost grows with the size of the history. With `--text`
+a history of large binary files makes a long diff: the `git log -p` of the check
+takes 0.25 s on 5 commits with 37.7 MiB of random binary files, a diff of 40 MB,
+on the same machine. The scan of such a history takes 250 s with gitleaks, as the
+section about binary files says, so the scanner is the cost there and the check
+adds 0.1 percent. A repository with no commit has no history, so `history`
+passes.
 
 ### Exit status
 
@@ -405,6 +410,7 @@ gave these results:
 | A `gitleaks:allow` comment | Suppresses the finding on that line. | The same. |
 | `[allowlist]` (`paths`, `regexes`) or `[extend] path` in `.gitleaks.toml` | No effect. The command passes `--config`, so the scanner reads no other file. | Suppresses what the allowlist names. The workflow passes no `--config`, and gitleaks reads `.gitleaks.toml` at the top of the repository. |
 | `.betterleaksignore` and `betterleaks:allow` | Suppress findings with `betterleaks` only. | No effect: the workflow runs gitleaks. |
+| A file with a name that the default rules of the scanner skip, such as `token.png` or `package-lock.json` | The scan skips the file. | The same. |
 | A change to the workflow call, to the hook configuration or to the CI step that runs the command | The scan doesn't run. | The scan doesn't run. |
 
 A hook is local and `git commit --no-verify` skips it, so a scan of the history
@@ -459,7 +465,10 @@ and the command doesn't filter the output:
   - A file whose path the default rules of the scanner allow. Both scanners skip
     the extensions of binary formats, such as `.png`, `.bin` and `.exe`, even
     when the file is text. They also skip `node_modules/`, lock files such as
-    `package-lock.json`, and files with `gitleaks.toml` in the name.
+    `package-lock.json`, and files with `gitleaks.toml` in the name. A person
+    who can commit chooses the path, so naming a file `token.png` hides its
+    secret as the attribute `-diff` did before the command read such files.
+    Review of file names is the control.
   - A file in an encoding that the scanner can't read, such as UTF-16, and a
     secret in an encoded form, such as base64.
   - A compressed archive, such as a gzip or a deflated zip file.
