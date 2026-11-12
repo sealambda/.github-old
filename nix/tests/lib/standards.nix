@@ -251,16 +251,20 @@ in
         );
   };
 
-  # Requirement: the formatter is the treefmt wrapper, and `hooks` is the
-  # check `pre-commit`. The same value serves the check and the `shellHook`.
+  # Requirement: the formatter is the treefmt wrapper, and `hooks` holds the
+  # text that a repository puts in its `shellHook`, which is what a consumer
+  # reads from it. The check `pre-commit` is not compared with `hooks`:
+  # `standards.nix` binds both to one value, so that comparison can't fail.
+  # The cases of the check `pre-commit` below run it.
   standards-formatter-and-hooks-are-the-parts = {
     check =
       let
         result = standards { };
       in
-      mustHold "The formatter is not the treefmt wrapper, or hooks is not the check pre-commit." (
+      mustHold "The formatter is not the treefmt wrapper, or hooks has no shellHook text." (
         result.formatter.meta.mainProgram == "treefmt"
-        && result.hooks.outPath == result.checks.pre-commit.outPath
+        && lib.isString result.hooks.shellHook
+        && result.hooks.shellHook != ""
       );
   };
 
