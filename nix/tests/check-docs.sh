@@ -167,7 +167,8 @@ add_every_hub_finding() {
 }
 
 # The rules of the style `Sealambda` that have the level warning. Each one has
-# a finding in the page that `add_every_warning` writes.
+# a finding in the page that `add_every_warning` writes. The list is kept by
+# hand: a new rule of the level warning goes into this list and into the page.
 readonly WARNING_RULES=(
   DefineAcronyms
   OneSpelling
@@ -195,6 +196,8 @@ readonly WARNINGS_PAGE=docs/how-to/warnings.md
 #   a sentence of 30 words (SentenceLength);
 # - the bulleted list has 1 item (ListLength);
 # - the first numbered step has 27 words (StepLength).
+# The word `previously` has a finding of the level suggestion (History), which
+# `assert_warnings_leave_the_gate_unchanged` uses to tell the two levels apart.
 add_every_warning() {
   mkdir -p "$PROJECT/$(dirname -- "$WARNINGS_PAGE")"
   cat >"$PROJECT/$WARNINGS_PAGE" <<'EOF'
@@ -207,6 +210,8 @@ Read the page. Read the page. Read the page.
 
 This sentence has many words in it so that a reader must keep the whole thing
 in mind before the full stop arrives at the end of the line here.
+
+The page was previously longer.
 
 - One item
 
@@ -396,11 +401,24 @@ run_vale_plain() {
   (cd "$PROJECT" && vale --output=line "$@") >"$OUT" 2>&1 || STATUS=$?
 }
 
+# Runs `vale` like `run_vale_plain`, with `--minAlertLevel` set to the level $1
+# (`suggestion`, `warning` or `error`). The files are $2 and later.
+run_vale_at_level() {
+  local level=$1
+  shift
+  STATUS=0
+  (cd "$PROJECT" && vale --output=line --minAlertLevel="$level" "$@") >"$OUT" 2>&1 || STATUS=$?
+}
+
 # Asserts, in the project that holds the page of `add_every_warning`, that the
-# findings of level warning don't change the gate. The check passes and prints
-# no finding of the style `Sealambda`. A Vale run without the level flag, which
-# is what an editor runs, passes too and reports each rule of WARNING_RULES: the
-# check passes because of the level, and not because a rule is missing.
+# findings of level warning don't change the gate, and that the rules have that
+# level and not another. The check passes and prints no finding of the style
+# `Sealambda`. A Vale run without the level flag, which is what an editor runs,
+# passes too and reports each rule of WARNING_RULES and the suggestion
+# `Sealambda.History`: the check passes because of the level, and not because a
+# rule is missing. A run at the level warning reports each rule of
+# WARNING_RULES and not `Sealambda.History`: a rule that dropped to the level
+# suggestion would be missing, and the first run could not tell.
 assert_warnings_leave_the_gate_unchanged() {
   local rule
 
@@ -412,6 +430,15 @@ assert_warnings_leave_the_gate_unchanged() {
   run_vale_plain "$WARNINGS_PAGE"
 
   assert_status 0
+  assert_output_contains "Sealambda.History"
+  for rule in "${WARNING_RULES[@]}"; do
+    assert_output_contains "Sealambda.$rule"
+  done
+
+  run_vale_at_level warning "$WARNINGS_PAGE"
+
+  assert_status 0
+  assert_output_lacks "Sealambda.History"
   for rule in "${WARNING_RULES[@]}"; do
     assert_output_contains "Sealambda.$rule"
   done
