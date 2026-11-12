@@ -9,10 +9,12 @@ needs no network.
 
 ## Files
 
-The check reads the 13 files of this table at the root of the source tree, in
-the order of the list that Renovate keeps in its package. Renovate reads the
-first file that it finds. The check validates every file that exists, so a file
-that Renovate would ignore is validated too.
+The check reads the files of this table at the root of the source tree, in the
+order of the list that Renovate keeps in its package. The array `config_files`
+of `nix/scripts/renovate-config.sh` is the one list of the names in the hub, and
+this table groups it. Renovate reads the first file that it finds. The check
+validates every file that exists, so a file that Renovate would ignore is
+validated too.
 
 | File | Renovate reads it |
 | ---- | ----------------- |
@@ -22,7 +24,7 @@ that Renovate would ignore is validated too.
 | `.renovaterc` | On every platform. |
 | `.renovaterc.json`, `.renovaterc.jsonc`, `.renovaterc.json5` | On every platform. |
 
-Renovate has a 14th name, `package.json`, which it reads for the key
+Renovate has one more name, `package.json`, which it reads for the key
 `renovate`. The check fails when `package.json` holds that key, as
 [Limits](#limits) says. A tree that holds none of these files passes, so a
 repository that doesn't use Renovate keeps its checks. A function call can also

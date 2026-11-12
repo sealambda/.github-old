@@ -7,7 +7,7 @@
 {
   /**
     Builds a check that fails when a Renovate configuration file of a source
-    tree is not valid. The files are the 13 names that Renovate reads at the
+    tree is not valid. The files are the names that Renovate reads at the
     root, such as `renovate.json`, `.github/renovate.jsonc` and
     `.renovaterc.json5`, and each path in `presets`. A tree with none of them
     passes. The check runs `renovate-config-validator --strict --no-global` on
