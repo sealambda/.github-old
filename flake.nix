@@ -63,10 +63,40 @@
         })
         mkGitPolicyTool
         ;
+      inherit
+        (import ./nix/lib/secrets-scan.nix {
+          inherit (nixpkgs) lib;
+          inherit hubPackagesFor;
+        })
+        mkSecretsScan
+        ;
 
       treefmtFor = eachSystem (pkgs: mkTreefmt pkgs [ ]);
 
       docsToolsFor = eachSystem mkDocsTools;
+
+      # The check that runs `nix/tests/secrets-scan.sh` with the scanner
+      # `scanner`, a package of `pkgs`. `name` goes into the name of the check.
+      # The tests also run the `git` command of the scan on its own, so the
+      # check passes its path in `SECRETS_SCAN_TEST_GIT`.
+      mkSecretsScanTests =
+        pkgs: name: scanner:
+        let
+          secretsScan = mkSecretsScan { inherit pkgs scanner; };
+        in
+        pkgs.runCommand "secrets-scan-tests-${name}"
+          {
+            nativeBuildInputs = [
+              secretsScan
+              pkgs.git
+            ];
+          }
+          ''
+            HOME="$TMPDIR" SECRETS_SCAN_TEST_SCANNER=${name} \
+              SECRETS_SCAN_TEST_GIT=${nixpkgs.lib.getExe secretsScan.gitWithText} \
+              bash ${./nix/tests/secrets-scan.sh}
+            touch "$out"
+          '';
 
       # What `python-quality` reads: the package, its tests and the ruff and mypy
       # settings. A change to any other file of the hub does not rerun the check.
@@ -113,11 +143,14 @@
           mkDecisionsCheck
           mkWorkflowsCheck
           mkGitPolicyTool
+          mkSecretsScan
           ;
       };
 
       # The `gitpolicy` command, for a Git hook or a CI step that runs
-      # `nix run .#gitpolicy` or builds it with `nix build .#gitpolicy`.
+      # `nix run .#gitpolicy` or builds it with `nix build .#gitpolicy`. The
+      # `secrets-scan` command has the same use: `secrets-scan history` for
+      # CI and `secrets-scan staged` for a pre-commit hook.
       #
       # The `release` command for the releases of this repository. It is not a
       # tool for consumers: it reads the changed paths against the rules of the
@@ -128,6 +161,7 @@
       packages = eachSystem (pkgs: {
         gitpolicy = mkGitPolicyTool pkgs;
         release = tools.release.mkTool pkgs;
+        secrets-scan = mkSecretsScan { inherit pkgs; };
       });
 
       apps = eachSystem (pkgs: {
@@ -155,12 +189,16 @@
       # below. To move to a new major version, change the attribute name.
       devShells = eachSystem (pkgs: rec {
         # Included in every other shell: git and the workflow and secret linters.
+        # `secrets-scan` is the command that runs the secret scanner with the
+        # hub's base configuration, and `gitleaks` stays for the reusable
+        # workflow `secrets.yml`, which calls it by name.
         base = pkgs.mkShell {
           packages = with pkgs; [
             actionlint
             git
             gitleaks
             zizmor
+            (mkSecretsScan { inherit pkgs; })
           ];
         };
         default = base;
@@ -441,6 +479,15 @@
               python -m unittest discover -v -s ${./nix/tests/ci}
               touch "$out"
             '';
+
+        # Run the cases of `nix/tests/secrets-scan.sh` against the
+        # `secrets-scan` command with each scanner. The cases build their
+        # Git repositories when they run, so the check scans no history of the
+        # hub. The scan of the hub's own history is the job `secrets` of the
+        # CI, because a flake check sees no Git history. The tests need
+        # `git`, and they reach no network.
+        secrets-scan-tests-gitleaks = mkSecretsScanTests pkgs "gitleaks" pkgs.gitleaks;
+        secrets-scan-tests-betterleaks = mkSecretsScanTests pkgs "betterleaks" pkgs.betterleaks;
 
         # Runs the unit tests of `nix/scripts/gitpolicy`: the rules for commit
         # messages and branch names as tables, and the range, branch and hook

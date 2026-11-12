@@ -452,3 +452,33 @@ advises for a job.
 The input accepts any number that a caller passes, a value above 360 included.
 The 1 to 360 rule of the `workflows` check covers the workflows of the checked
 repository only, so it doesn't judge the value of the input.
+
+## Scan the staged changes
+
+The workflow scans the history in CI. To catch a secret before the commit, run
+the hub's `secrets-scan` command in a hook.
+
+1. Get the command from the hub. The `base` dev shell of the hub holds it, and
+   a flake can build it with `hub.lib.mkSecretsScan { inherit pkgs; }`.
+2. Run `secrets-scan staged` in a `pre-commit` hook. It exits with status 1
+   when a staged change holds a secret, and it prints the rule, the file and the
+   line without the secret.
+3. To suppress a finding that isn't a secret, add its fingerprint on its own
+   line to `.gitleaksignore`, or put `gitleaks:allow` in a comment on the line.
+   The hub's base configuration is the only one, so a `.gitleaks.toml` in the
+   repository has no effect on the command. The workflow reads that file, so
+   before the hook goes live, move each `[allowlist]` entry that you still need
+   to fingerprints in `.gitleaksignore`, which both the workflow and the
+   command read. Otherwise the hook reports a finding that the workflow
+   accepts.
+
+A repository can also run `secrets-scan history` in its own CI step. The
+workflow runs gitleaks alone, so a secret in a file with the attribute `-diff`
+or a NUL byte, in a merge commit, or in a history that Git can't read passes
+the workflow, and the command stops it.
+[Secrets scan](../reference/secrets-scan.md#the-workflow-and-the-command) lists
+each case and shows the step. That scan needs the whole history, so the
+checkout step sets `fetch-depth: 0`. The
+[exit statuses](../reference/secrets-scan.md#exit-status) say what each result
+of the command means, and the page lists the limits and how to replace the
+scanner.

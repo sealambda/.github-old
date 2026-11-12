@@ -58,7 +58,10 @@ and keeps its own facts.
   Conventional Commit and that a branch name is `<type>/<slug>`. It runs in CI
   and in a Git hook that a repository adds, because a flake check sees no
   history
-  ([Git policy](docs/reference/git-policy.md)).
+  ([Git policy](docs/reference/git-policy.md)). The command `secrets-scan`, as
+  `lib.mkSecretsScan`, scans the history or the staged changes with a secret
+  scanner, gitleaks by default, and the hub's base configuration
+  ([Secrets scan](docs/reference/secrets-scan.md)).
 
 ## Documentation
 
@@ -81,6 +84,7 @@ The pages follow [Diátaxis](https://diataxis.fr/).
   [workflow checks](docs/reference/workflow-checks.md), the
   [Git policy](docs/reference/git-policy.md),
   [wrapped documentation tools](docs/reference/wrapped-tools.md),
+  [secrets scan](docs/reference/secrets-scan.md),
   [licensing](docs/reference/licensing.md),
   [CI of the hub](docs/reference/hub-ci.md) and
   [hub releases](docs/reference/hub-releases.md).
