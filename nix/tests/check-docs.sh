@@ -497,6 +497,43 @@ case_how_to_rules_apply_only_in_how_to_pages_of_a_bare_project() {
   assert_how_to_rules_follow_the_folder
 }
 
+# The rules `Sealambda.HeadingCase` and `Sealambda.DefineAcronyms` read the
+# vocabularies, and the heading `Third-party content` stays clean in a run that
+# has a vocabulary. The rule test run of `vale-style-tests` has no vocabulary,
+# so it can't show either. The first run has a `Repository` vocabulary with the
+# name `Zorblax` and the acronym `ZZZ`, and it has no finding of the two rules.
+# The second run empties the vocabulary, and both rules flag the same page: the
+# vocabulary, and not a missing rule, made the first run clean. The second run
+# has the Vale errors of the spelling rule, so its exit status isn't asserted.
+# Mutation: removing `(?-i)` from the acronym exception of `HeadingCase.yml`
+# makes the first run flag `Third-party content`.
+case_heading_and_acronym_rules_read_the_vocabularies() {
+  new_project rule-vocabularies
+  write_file .vale/styles/config/vocabularies/Repository/accept.txt "Zorblax
+ZZZ"
+  write_file guide.md "# Guide
+
+## Third-party content
+
+## Install the Zorblax
+
+The ZZZ runs fast."
+
+  run_vale_plain guide.md
+
+  assert_status 0
+  assert_output_lacks "Sealambda.HeadingCase"
+  assert_output_lacks "Sealambda.DefineAcronyms"
+
+  : >"$PROJECT/.vale/styles/config/vocabularies/Repository/accept.txt"
+
+  run_vale_plain guide.md
+
+  assert_output_contains "Sealambda.HeadingCase:Write 'Install the Zorblax' in sentence case."
+  assert_output_contains "Sealambda.DefineAcronyms:'ZZZ' has no definition."
+  assert_output_lacks "Third-party content"
+}
+
 # The rule `Sealambda.CurrentState` is off for the decision records and the
 # specs, also under another folder, and on for any other page. The first run
 # lists a page of each off folder, and passes. The second run adds a page with
@@ -1157,6 +1194,7 @@ main() {
     case_warning_rules_do_not_fail_a_bare_project
     case_how_to_rules_apply_only_in_how_to_pages_of_a_legacy_project
     case_how_to_rules_apply_only_in_how_to_pages_of_a_bare_project
+    case_heading_and_acronym_rules_read_the_vocabularies
     case_current_state_is_off_for_decisions_and_specs
     case_local_anchors_are_checked
     case_no_local_file_applies_the_hub_rules

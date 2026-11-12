@@ -21,8 +21,10 @@
 # The colon in `indicators` makes the word after a colon start a sentence, as
 # in `Microsoft.Headings`.
 # The acronym pattern starts with `(?-i)`. Without it, Vale 3.25 flags correct
-# headings such as "Third-party content" in a run that has a vocabulary, and
-# the rule's own test run, which has none, can't show that.
+# headings such as "Third-party content" in a run that has a vocabulary. The
+# rule's own test run has none, so the case
+# `case_heading_and_acronym_rules_read_the_vocabularies` in
+# `nix/tests/check-docs.sh` holds that behavior.
 # Each exception is a fixed string or a bounded character class, so the
 # matcher can't backtrack without limit.
 # Level: warning. Tests: HeadingCase.test.yml.
