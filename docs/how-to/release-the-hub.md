@@ -14,9 +14,15 @@ rule for `rules changed`.
 3. The job creates the tag and the release at the merge commit with one
    `gh release create` call. The release note starts with `rules changed: yes`
    or `rules changed: no`.
+4. The job then runs `release publish --series actions` for the same commit.
+   The merge gets an actions release when it changes a workflow or action file
+   that consumers call, or `versions.json`
+   ([Actions series](../reference/hub-releases.md#actions-series)). The step
+   prints `no release` and exits 0 for any other merge.
 
 A commit that already has a release tag gets no second tag. A commit that a
-later release contains gets no tag either: that release covers it.
+later release contains gets no tag either: that release covers it. Each series
+decides this for its own tags.
 
 ## Read a release
 
@@ -34,6 +40,13 @@ gh release view <tag> --repo sealambda/.github
 - The bullets list the subject of each commit since the previous release. A
   very long list ends with `older commits omitted: <count>`.
 
+A tag that starts with `actions-v` belongs to the actions series. Its first
+line is `workflow or action files changed: yes` or `workflow or action files
+changed: no`: `yes` means at least one workflow or action file changed, and
+`no` means `versions.json` alone changed, so the patch number rose. The
+release isn't marked as the latest release of the repository, so the "latest"
+label stays on the hub release.
+
 To see the answer for a commit before it merges, run `release plan` in a
 checkout of the branch. It prints the tag, the previous release and the notes,
 and it changes nothing:
@@ -41,6 +54,9 @@ and it changes nothing:
 ```console
 nix run .#release -- plan
 ```
+
+Add `--series actions` to see the answer for the actions series. A branch
+that changes no path of that series prints `no release`.
 
 The previous release is the highest release tag that the branch contains. A
 branch that's behind `main` doesn't contain the newest tags, so it shows an
@@ -55,7 +71,8 @@ without a release until a re-run or the next release. The next release covers
 its commits, because the answer and the notes come from the previous tag.
 
 1. Open the failed run in the Actions tab and read the log of the step
-   `Publish the release`.
+   `Publish the release` or `Publish the actions release`. Both steps run, so
+   the log can show a failure in each.
 2. Fix a cause outside the repository, such as an outage of GitHub, and re-run
    the failed job. The command is safe to repeat. GitHub doesn't document what
    a failed `gh release create` call leaves behind, so the command checks
