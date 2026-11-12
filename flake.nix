@@ -442,7 +442,9 @@
         # commands against temporary Git repositories. The rules themselves
         # run in the hooks and in the CI job `git-policy`, because a flake
         # check sees no history. The tests need `git` and a writable HOME,
-        # and they reach no network.
+        # and they reach no network. A test also reads `CONTRIBUTING.md` and
+        # the reference page of the tool, to keep the list of types and the
+        # header limit that they state equal to the code.
         check-gitpolicy-tests =
           pkgs.runCommand "check-gitpolicy-tests"
             {
@@ -450,7 +452,10 @@
                 pkgs.python3
                 pkgs.git
               ];
-              env = tools.gitpolicy.env;
+              env = tools.gitpolicy.env // {
+                CONTRIBUTING_MD = "${./CONTRIBUTING.md}";
+                GIT_POLICY_MD = "${./docs/reference/git-policy.md}";
+              };
             }
             ''
               export HOME="$TMPDIR"

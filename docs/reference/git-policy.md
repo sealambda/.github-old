@@ -250,7 +250,9 @@ The function takes the package set of one system and builds the tool from the
 hub's own nixpkgs, whatever nixpkgs the repository follows. The tests of the
 tool are the check `check-gitpolicy-tests`. They cover the rules as tables and
 the `range`, `branch` and hook commands against temporary Git repositories,
-including a real `commit-msg` hook.
+including a real `commit-msg` hook. They also read `CONTRIBUTING.md` and this
+page, and they fail when the list of types or the header limit that a page
+states differs from the code.
 
 ## Limits
 
