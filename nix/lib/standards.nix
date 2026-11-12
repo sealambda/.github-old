@@ -4,8 +4,8 @@
 # `mkTreefmt`, `mkDocsCheck`, `mkDecisionsCheck`, `mkWorkflowsCheck`,
 # `mkSecretsScan`, `mkGitPolicyTool` and `mkHooks`. It holds no rule and no
 # tool of its own, so a rule changes in one place. The arguments, the result
-# and the limits are in the reference page on the standards contract. The
-# check of the arguments is `standards-arguments.nix`.
+# and the limits are in `docs/reference/standards-contract.md`. The check of
+# the arguments is `standards-arguments.nix`.
 {
   lib,
   hubPackagesFor,
@@ -80,8 +80,8 @@ in
     checks, the formatter and the commands that the hub offers, from one call.
     A consumer calls it once for each system and puts the parts of the result
     into its outputs. The result is the same as the one that a call of each
-    function by hand gives, and the reference page on the standards contract
-    lists the parts and what each one does.
+    function by hand gives, and `docs/reference/standards-contract.md` lists
+    the parts and what each one does.
 
     The result has these attributes:
 

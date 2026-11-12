@@ -68,6 +68,10 @@ and keeps its own facts.
   shell installs them (`nix develop .#hooks`), and the flake check `pre-commit`
   runs them. The `default` shell installs nothing. A person can skip a hook, so
   CI stays the gate ([Git hooks](docs/reference/hooks.md)).
+- **Standards in one call.** The function `lib.mkStandards` returns the five
+  flake checks, the formatter and the hub's commands for one repository from one
+  call, and installs no hook until the repository opts in
+  ([Standards contract](docs/reference/standards-contract.md)).
 
 ## Documentation
 
@@ -89,7 +93,8 @@ The pages follow [Diátaxis](https://diataxis.fr/).
   [leak check](docs/reference/leak-check.md),
   [workflow checks](docs/reference/workflow-checks.md), the
   [Git policy](docs/reference/git-policy.md), the
-  [Git hooks](docs/reference/hooks.md),
+  [Git hooks](docs/reference/hooks.md), the
+  [standards contract](docs/reference/standards-contract.md),
   [wrapped documentation tools](docs/reference/wrapped-tools.md),
   [secrets scan](docs/reference/secrets-scan.md),
   [licensing](docs/reference/licensing.md),
