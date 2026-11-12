@@ -7,7 +7,7 @@
 # a true present meaning. That is why the level is suggestion. The docs check
 # runs Vale with `--minAlertLevel=error`, so this rule shows only in an editor
 # or in a run of Vale without that flag.
-# Level: suggestion. Tests: History.test.yml.
+# Level: suggestion.
 extends: existence
 message: "'%s' may describe history. State what is true now, and keep the history in git or in a decision record."
 link: https://github.com/sealambda/.github/blob/main/docs/reference/writing-style.md#history

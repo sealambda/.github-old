@@ -83,10 +83,3 @@ decision records, and a page states the current rationale. The level is
 suggestion, because a word of the list can have a true present meaning. An
 example is the sentence `The script is used to run the tests`. Change a
 flagged sentence when it tells a history. Leave it when it states a fact.
-
-## Test the rules
-
-The cases of each rule are in the file `vale/Sealambda/<Rule>.test.yml`. The
-hub's flake check `vale-style-tests` runs them with `vale test --coverage`, so a
-rule without a case fails the check. To run one rule against a text, add a case
-to its file.

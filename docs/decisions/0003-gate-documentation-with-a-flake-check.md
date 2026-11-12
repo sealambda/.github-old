@@ -1,6 +1,6 @@
 ---
 status: accepted
-date: 2026-11-08
+date: 2026-11-12
 decision-makers: Sealambda maintainers
 ---
 
@@ -41,8 +41,7 @@ has no user configuration, so Vale needs no `--no-global` and no link step, and
 the same derivation runs locally and in CI.
 
 The hub exports `lib.mkDocsCheck pkgs src`. It builds a derivation that runs
-`nix/scripts/check-docs.sh` on `src`: markdownlint-cli2, lychee and Vale, with
-every flag in that one script. A repository adds
+markdownlint-cli2, lychee and Vale on `src`. A repository adds
 `checks.<system>.docs = hub.lib.mkDocsCheck pkgs self;` to its flake. The hub
 does the same, and removes the `docs.yml` workflow and the `docs` job of its
 `ci` workflow. This amends ADR 0001 for documentation only: `secrets.yml` stays
@@ -70,15 +69,6 @@ The `docs` dev shell stays for interactive runs and editors.
 - Bad, because the Vale in the dev shell differs from the gate when a developer
   has a personal global configuration. The gate is the reference result.
 - Bad, because Vale in an editor outside `nix develop` finds no styles.
-
-### Confirmation
-
-The flake check `check-docs-tests` runs `nix/tests/check-docs.sh`. It generates
-a project at run time and asserts that a clean page passes, and that a Vale
-error, a markdownlint error and a broken relative link each fail the check. It
-also asserts that the check reads the project's own Vale vocabulary and nested
-markdownlint configuration. The hub's `flake-check` job runs it, and the `docs`
-check lints the hub's own pages.
 
 ## Pros and Cons of the Options
 
