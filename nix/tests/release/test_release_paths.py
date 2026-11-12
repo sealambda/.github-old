@@ -5,12 +5,17 @@ in `release.paths`. A consumer reads the hub through its flake, its reusable
 workflow, the Renovate preset and the default community files that GitHub
 applies to every repository of the organization (`docs/reference/hub-releases.md`
 gives the reasons). Each path below is a file of the hub, and each value names
-the reader, or says that nobody reads the file.
+the reader, or says that nobody reads the file. The last class compares the
+list of patterns with the table of the page.
 """
 
+import os
+import re
 import unittest
+from pathlib import Path
 
-from release.paths import is_rule_free, rules_changed
+from release.notes import MAX_NOTES_BYTES
+from release.paths import RULE_FREE_PATTERNS, is_rule_free, rules_changed
 
 # Files that no consumer reads.
 UNREAD_BY_CONSUMERS: dict[str, str] = {
@@ -205,3 +210,47 @@ class RulesChangedTest(unittest.TestCase):
     def test_no_path_means_nothing_changed(self) -> None:
         """An empty set of paths gives `False`."""
         self.assertFalse(rules_changed([]))
+
+
+def reference_page() -> str:
+    """Return the text of `docs/reference/hub-releases.md`.
+
+    The environment variable `HUB_RELEASES_DOC` names the file. The flake check
+    sets it, because the check sees only the test folder. Without the variable,
+    the function reads the page from the repository that holds this file.
+    """
+    named = os.environ.get("HUB_RELEASES_DOC")
+    if named is not None:
+        return Path(named).read_text(encoding="utf-8")
+    root = Path(__file__).resolve().parents[3]
+    return (root / "docs" / "reference" / "hub-releases.md").read_text(encoding="utf-8")
+
+
+def documented_patterns(page: str) -> set[str]:
+    """Return the patterns in the first column of the table of free paths.
+
+    The table starts at the header row `| Pattern |` and ends at the first line
+    that is not a table row. A row can hold several patterns, each in backticks.
+    """
+    rows = page.split("| Pattern |", maxsplit=1)[1].splitlines()[1:]
+    patterns: set[str] = set()
+    for row in rows:
+        if not row.startswith("|"):
+            break
+        first_column = row.split("|")[1]
+        patterns.update(re.findall(r"`([^`]+)`", first_column))
+    return patterns
+
+
+class ReferencePageTest(unittest.TestCase):
+    """The reference page and the code state the same classification."""
+
+    def test_the_table_of_free_paths_lists_exactly_the_patterns_of_the_code(
+        self,
+    ) -> None:
+        """A pattern that only one of the two holds is a wrong answer for readers."""
+        self.assertEqual(documented_patterns(reference_page()), set(RULE_FREE_PATTERNS))
+
+    def test_the_page_states_the_bound_on_the_notes_that_the_code_uses(self) -> None:
+        """The page names the bound in bytes, and it is the constant of the code."""
+        self.assertIn(f"at most {MAX_NOTES_BYTES} bytes", reference_page())

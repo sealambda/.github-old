@@ -41,7 +41,7 @@ https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contr
 and
 https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/creating-a-pull-request-template-for-your-repository.
 `docs/reference/hub-releases.md` gives the reason for each pattern: change both
-together.
+together. A test compares the patterns of that table with this tuple.
 """
 
 

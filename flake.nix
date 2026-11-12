@@ -741,7 +741,9 @@
         # Runs the unit tests of `nix/scripts/release`: the rules for the tag
         # series and the changed paths, and the plan of a release against
         # temporary Git repositories with a fake `gh`. The tests need `git` and
-        # a writable HOME, and they reach no network.
+        # a writable HOME, and they reach no network. They compare the list of
+        # patterns with the table of the reference page, which the variable
+        # `HUB_RELEASES_DOC` names, because the test folder holds no page.
         check-release-tests =
           pkgs.runCommand "check-release-tests"
             {
@@ -749,7 +751,9 @@
                 pkgs.python3
                 pkgs.git
               ];
-              env = releaseEnv;
+              env = releaseEnv // {
+                HUB_RELEASES_DOC = "${./docs/reference/hub-releases.md}";
+              };
             }
             ''
               export HOME="$TMPDIR"

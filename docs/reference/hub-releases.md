@@ -108,8 +108,9 @@ that makes them rules:
 The list is `RULE_FREE_PATTERNS` in `nix/scripts/release/paths.py`. The
 patterns follow `PurePosixPath.full_match`: `*` stays inside one path
 component and `**` crosses components. To change the list, change that file and
-the first table together. A new tracked path starts as `yes`. Add it to the
-list only after finding that none of the four readers reads it.
+the first table together: a test of `check-release-tests` fails when the
+patterns of the table and the list differ. A new tracked path starts as `yes`.
+Add it to the list only after finding that none of the four readers reads it.
 
 The sources for the `docs/` rows are
 [Creating a default community health file][community-files] and
