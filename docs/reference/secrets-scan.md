@@ -54,6 +54,17 @@ gitleaks 8.30.1, and each time is the median of seven runs. The check reads the
 history once more, so the cost grows with the size of the history. A repository
 with no commit has no history, so `history` passes.
 
+### Exit status
+
+| Exit status | Meaning |
+| ----------- | ------- |
+| 0 | No finding. |
+| 1 | A finding, or a failure of the scanner. The scanner uses 1 for both, and the output says which. |
+| 2 | A usage error. |
+| 3 | `history` on a shallow clone. Nothing is scanned. |
+| 4 | Git can't produce the diff that the scan reads: a history with a missing or damaged object, or a setting that makes Git fail or warn. Also `history` on a history with a merge commit of three or more parents. Nothing is scanned. |
+| Other | A failure of `git`, such as 128 outside a work tree. |
+
 ### The Git output that the scan reads
 
 A scanner runs `git log -p` for `history` and `git diff --staged` for `staged`,
@@ -220,15 +231,6 @@ prefix `b/`, and its fingerprint has the prefix, as in
 `<commit>:b/<file>:<rule>:<line>`. Git prints a line `remerge CONFLICT` in the
 diff header of such a file, and both scanners then take the path from another
 line.
-
-| Exit status | Meaning |
-| ----------- | ------- |
-| 0 | No finding. |
-| 1 | A finding, or a failure of the scanner. The scanner uses 1 for both, and the output says which. |
-| 2 | A usage error. |
-| 3 | `history` on a shallow clone. Nothing is scanned. |
-| 4 | Git can't produce the diff that the scan reads: a history with a missing or damaged object, or a setting that makes Git fail or warn. Also `history` on a history with a merge commit of three or more parents. Nothing is scanned. |
-| Other | A failure of `git`, such as 128 outside a work tree. |
 
 ## Where the scan runs
 

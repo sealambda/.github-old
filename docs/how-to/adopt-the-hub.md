@@ -466,7 +466,11 @@ the hub's `secrets-scan` command in a hook.
 3. To suppress a finding that isn't a secret, add its fingerprint on its own
    line to `.gitleaksignore`, or put `gitleaks:allow` in a comment on the line.
    The hub's base configuration is the only one, so a `.gitleaks.toml` in the
-   repository has no effect.
+   repository has no effect on the command. The workflow reads that file, so
+   before the hook goes live, move each `[allowlist]` entry that you still need
+   to fingerprints in `.gitleaksignore`, which both the workflow and the
+   command read. Otherwise the hook reports a finding that the workflow
+   accepts.
 
 A repository can also run `secrets-scan history` in its own CI step. The
 workflow runs gitleaks alone, so a secret in a file with the attribute `-diff`
@@ -474,18 +478,7 @@ or a NUL byte, in a merge commit, or in a history that Git can't read passes
 the workflow, and the command stops it.
 [Secrets scan](../reference/secrets-scan.md#the-workflow-and-the-command) lists
 each case and shows the step. That scan needs the whole history, so the
-checkout step sets `fetch-depth: 0`. On a shallow clone the command scans
-nothing and exits with status 3. It exits with status 4 when Git can't produce
-the diff that the scan reads, in `history` and in `staged`. The command ends
-with one of these statuses:
-
-| Exit status | Meaning |
-| ----------- | ------- |
-| 0 | No finding. |
-| 1 | A finding, or a failure of the scanner. |
-| 2 | A usage error. |
-| 3 | `history` on a shallow clone. Nothing is scanned. |
-| 4 | `history` or `staged` when Git can't produce the diff that the scan reads. Nothing is scanned. |
-
-[Secrets scan](../reference/secrets-scan.md) lists the commands, the exit
-statuses and the limits, and it shows how to replace the scanner.
+checkout step sets `fetch-depth: 0`. The
+[exit statuses](../reference/secrets-scan.md#exit-status) say what each result
+of the command means, and the page lists the limits and how to replace the
+scanner.
