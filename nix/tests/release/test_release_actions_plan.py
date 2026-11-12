@@ -43,7 +43,7 @@ class ActionsPlanTest(RepoTestCase):
         self.assertFalse(plan.make_latest)
         self.assertEqual(
             plan.notes,
-            f"{LABEL_YES}\n\n- docs: add a page\n- feat: add action\n",
+            f"{LABEL_YES}\n\n- `docs: add a page`\n- `feat: add action`\n",
         )
 
     def test_the_first_release_ignores_the_hub_tags(self) -> None:
@@ -71,7 +71,7 @@ class ActionsPlanTest(RepoTestCase):
         )
         self.assertIs(plan.bump, Bump.MINOR)
         self.assertEqual(
-            plan.notes, f"{LABEL_YES}\n\n- feat: add action\n- feat: add pins\n"
+            plan.notes, f"{LABEL_YES}\n\n- `feat: add action`\n- `feat: add pins`\n"
         )
 
     def test_a_tree_without_an_actions_path_has_no_release(self) -> None:
@@ -99,7 +99,7 @@ class ActionsPlanTest(RepoTestCase):
         plan = self.planned()
         self.assertEqual(plan.tag, "actions-v1.1.1")
         self.assertIs(plan.bump, Bump.PATCH)
-        self.assertEqual(plan.notes, f"{LABEL_NO}\n\n- chore: bump the pin\n")
+        self.assertEqual(plan.notes, f"{LABEL_NO}\n\n- `chore: bump the pin`\n")
 
     def test_versions_json_with_an_action_file_raises_the_minor(self) -> None:
         """The higher kind wins when both change in the range."""
@@ -143,7 +143,7 @@ class ActionsPlanTest(RepoTestCase):
         )
         self.assertEqual(
             actions.notes,
-            f"{LABEL_YES}\n\n- fix: change action\n- fix: hub rule\n",
+            f"{LABEL_YES}\n\n- `fix: change action`\n- `fix: hub rule`\n",
         )
         hub = plan_release(self.git, "HEAD", HUB)
         assert isinstance(hub, Plan), hub
@@ -249,7 +249,7 @@ class ActionsExistingTagTest(RepoTestCase):
         self.assertIs(plan.bump, Bump.MINOR)
         self.assertFalse(plan.make_latest)
         self.assertEqual(
-            plan.notes, f"{LABEL_YES}\n\n- fix: change action\n- feat: hub\n"
+            plan.notes, f"{LABEL_YES}\n\n- `fix: change action`\n- `feat: hub`\n"
         )
 
     def test_the_first_actions_tag_reads_the_tree(self) -> None:
@@ -261,7 +261,7 @@ class ActionsExistingTagTest(RepoTestCase):
         )
         self.assertIsNone(plan.previous)
         self.assertIs(plan.bump, Bump.NONE)
-        self.assertEqual(plan.notes, f"{LABEL_NO}\n\n- feat: add pins\n")
+        self.assertEqual(plan.notes, f"{LABEL_NO}\n\n- `feat: add pins`\n")
 
     def test_the_first_actions_tag_on_an_action_file_says_yes(self) -> None:
         """A manual first tag on a tree with an action file gets `yes`."""
@@ -271,7 +271,7 @@ class ActionsExistingTagTest(RepoTestCase):
             self.git, AlreadyReleased(head, "actions-v1.0.0"), ACTIONS
         )
         self.assertIs(plan.bump, Bump.MINOR)
-        self.assertEqual(plan.notes, f"{LABEL_YES}\n\n- feat: add action\n")
+        self.assertEqual(plan.notes, f"{LABEL_YES}\n\n- `feat: add action`\n")
 
     def test_a_tag_on_a_docs_only_commit_gets_no_and_no_latest_label(self) -> None:
         """A tag after the previous one with no workflow file in the range.
@@ -291,4 +291,4 @@ class ActionsExistingTagTest(RepoTestCase):
         )
         self.assertIs(plan.bump, Bump.NONE)
         self.assertFalse(plan.make_latest)
-        self.assertEqual(plan.notes, f"{LABEL_NO}\n\n- docs: add a page\n")
+        self.assertEqual(plan.notes, f"{LABEL_NO}\n\n- `docs: add a page`\n")

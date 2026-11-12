@@ -49,7 +49,7 @@ class ActionsPlanCommandTest(RepoTestCase):
         self.assertEqual(
             result.stdout,
             f"tag: actions-v1.0.0\ncommit: {head}\nprevious release: none\n"
-            "--- notes ---\nworkflow or action files changed: yes\n\n- feat: add\n",
+            "--- notes ---\nworkflow or action files changed: yes\n\n- `feat: add`\n",
         )
         self.assertEqual(self.gh.calls, [])
 
@@ -155,8 +155,9 @@ class ActionsPublishCommandTest(RepoTestCase):
                         "-",
                         "--latest=false",
                     ],
-                    "workflow or action files changed: yes\n\n- feat: add action\n",
-                )
+                    "workflow or action files changed: yes\n\n- `feat: add action`\n",
+                ),
+                (["api", "repos/{owner}/{repo}/git/ref/tags/actions-v1.0.0"], None),
             ],
         )
 
@@ -165,8 +166,8 @@ class ActionsPublishCommandTest(RepoTestCase):
         self.commit({"flake.nix": "{}\n"}, "feat: add the flake")
         self.tag("actions-v1.0.0")
         self.run_cli("publish")
-        call, _ = self.gh.calls[-1]
-        self.assertEqual(call[2], "v1.0.0")
+        call, _ = self.gh.calls[0]
+        self.assertEqual(call[:3], ["release", "create", "v1.0.0"])
         self.assertFalse([argument for argument in call if "latest" in argument])
 
     def test_a_rerun_after_a_tag_without_a_release_keeps_latest_false(self) -> None:
@@ -199,7 +200,7 @@ class ActionsPublishCommandTest(RepoTestCase):
                         "-",
                         "--latest=false",
                     ],
-                    "workflow or action files changed: yes\n\n- fix: change action\n",
+                    "workflow or action files changed: yes\n\n- `fix: change action`\n",
                 ),
             ],
         )
