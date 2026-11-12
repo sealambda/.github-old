@@ -7,7 +7,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from versions.cli import EXIT_CLEAN, EXIT_FINDINGS, EXIT_INTERNAL, EXIT_USAGE, main
+from decisions.cli_common import EXIT_CLEAN, EXIT_FINDINGS, EXIT_INTERNAL, EXIT_USAGE
+from versions.cli import main
 from versions_fixtures import (
     INSTALL_URL,
     MANIFEST,
