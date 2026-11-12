@@ -69,13 +69,21 @@ jobs:
           --override-input hub "path:$PWD"
           "path:$PWD/nix/tests/consumers/legacy"
       # The `sync-config` app of this checkout writes the synced files into the
-      # fixture. A tracked file that changes means that the copies in the
-      # fixture and the app disagree.
+      # fixture. A tracked file that changes, or a file that the app adds,
+      # means that the copies in the fixture and the app disagree. `git diff`
+      # doesn't show an untracked file, so the step reads `git status`. The step
+      # overlaps the check `config-in-sync` above: it also runs the app as a
+      # consumer does.
       - name: Sync the configuration files and require no change
         working-directory: nix/tests/consumers/legacy
         run: |
           nix run "path:$GITHUB_WORKSPACE#sync-config"
-          git diff --exit-code
+          changes="$(git status --porcelain -- .)"
+          if [ -n "$changes" ]; then
+            echo "The app changed the fixture:" >&2
+            echo "$changes" >&2
+            exit 1
+          fi
 
   # The hub runs its own reusable workflow, as a consumer does. The `./`
   # form stays because actionlint doesn't yet accept the `$/` form that

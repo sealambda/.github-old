@@ -45,16 +45,18 @@ lists, and Nix builds only the checks of your own system. The exit status is 0
 when every check builds.
 
 To run the `sync-config` app of your work tree in the fixture, and to see
-whether a tracked file changes, run these commands:
+whether a file changes or appears, run these commands:
 
 ```console
 cd nix/tests/consumers/legacy
 nix run "path:$(git rev-parse --show-toplevel)#sync-config"
-git diff --exit-code .
+git status --short .
 ```
 
-The exit status of the last command is 0 when the copies in the fixture and the
-app agree.
+The last command prints nothing when the copies in the fixture and the app
+agree. It lists a file that the app changed or added. `git diff` would miss an
+added file, which is untracked. The step overlaps the check `config-in-sync`,
+and it also runs the app as a consumer does.
 
 The CI job `consumer` runs both steps on a hosted runner. It uses no secret and
 holds a read-only token. The job is in the `needs` of the job `ci`, so a red
