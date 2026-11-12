@@ -108,8 +108,9 @@ nix build .#checks.x86_64-linux.renovate-config -L
 ```
 
 A repository adds the check with `lib.mkRenovateConfigCheck`, as
-[Adopt the hub in a repository](../how-to/adopt-the-hub.md) shows. The function
-takes the package set, the source tree and a set that lists the presets:
+[Gate the Renovate configuration](../how-to/adopt-the-hub.md#gate-the-renovate-configuration)
+shows. The function takes the package set, the source tree and a set that lists
+the presets:
 
 ```nix
 renovate-config = hub.lib.mkRenovateConfigCheck pkgs self { presets = [ "default.json" ]; };

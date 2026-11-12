@@ -475,6 +475,35 @@ doesn't cover an expression, because the check doesn't read its value, and it
 doesn't cover the jobs of a called workflow. [Call the reusable
 workflow](#call-the-reusable-workflow) says what that means for `secrets.yml`.
 
+## Gate the Renovate configuration
+
+The `renovate-config` check fails when a Renovate file of the repository has an
+option that Renovate doesn't know, a value of the wrong type or a setting that
+Renovate would migrate. [Renovate configuration check](../reference/renovate-config-check.md)
+defines the rules. A repository that follows
+[Take the standards in one call](#take-the-standards-in-one-call) has the check
+already.
+
+1. Add the check to the set that `checks` defines through `forAllSystems` in the
+   repository's `flake.nix`. Pass `self`, because the check reads the files at
+   the root of the tree. The third argument lists each shared preset that the
+   repository publishes for other repositories to extend. A repository that
+   publishes none passes an empty set.
+
+   ```nix
+   renovate-config = hub.lib.mkRenovateConfigCheck pkgs self { presets = [ "default.json" ]; };
+   ```
+
+2. Run `nix build .#checks.<system>.renovate-config -L`. The validator prints
+   each problem with the name of the file. CI needs no separate job: the job
+   that runs `nix flake check` runs this check too.
+3. Fix the findings of the first run. A name that Renovate renames, such as
+   `config:base`, fails the check: use the new name.
+
+The check doesn't resolve `extends`, so a preset name that doesn't exist passes.
+It builds its tool from the hub's own nixpkgs, whatever nixpkgs the repository
+follows, so every repository runs the same version of Renovate.
+
 ## Gate the commits and branches
 
 The `gitpolicy` tool checks that each commit header is a Conventional Commit and
