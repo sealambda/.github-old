@@ -94,10 +94,11 @@ and use one term for one concept.
   for what remains, and deletes the spec. Code cites the current pages, never a
   spec.
 - The Vale rule `Sealambda.CurrentState` fails the `docs` check. The rule
-  `Sealambda.History` shows only in an editor that runs Vale, because the check
-  runs Vale with `--minAlertLevel=error`.
+  `Sealambda.History` and the rules of the level warning, such as
+  `Sealambda.SentenceLength`, show only in an editor that runs Vale, because the
+  check runs Vale with `--minAlertLevel=error`.
   [Writing style](https://github.com/sealambda/.github/blob/main/docs/reference/writing-style.md)
-  defines both.
+  defines them all.
 
 ### Decision records
 
