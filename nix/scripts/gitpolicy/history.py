@@ -52,13 +52,17 @@ def _read_message(git: Runner, sha: str) -> str | None:
     """Return the stored message of a commit, `None` if it is not UTF-8 text.
 
     Git re-encodes a message that declares another encoding to UTF-8, so only
-    a message with no valid encoding fails to decode.
+    a message with no valid encoding fails to decode. Two options make the text
+    the same on every machine. `--no-show-signature` keeps the signature check
+    that `log.showSignature` adds out of the output, and `--encoding=UTF-8`
+    keeps `i18n.logOutputEncoding` from choosing another encoding.
 
     Raises:
         CommandError: Git cannot read the commit.
     """
+    command = ["log", "-1", "--format=%B", "--no-show-signature", "--encoding=UTF-8"]
     try:
-        return git(["log", "-1", "--format=%B", "--end-of-options", sha]).rstrip("\n")
+        return git([*command, "--end-of-options", sha]).rstrip("\n")
     except UnicodeDecodeError:
         return None
 

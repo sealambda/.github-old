@@ -127,6 +127,38 @@ class RangeTest(RepoTestCase):
         result = self.run_cli("range", f"{base}..HEAD")
         self.assertEqual((0, ""), (result.code, result.stdout), result.stderr)
 
+    def test_the_signature_setting_of_the_reader_does_not_change_the_message(
+        self,
+    ) -> None:
+        """`log.showSignature` adds a line to `git log`, and not to the message.
+
+        Without `--no-show-signature` the result of the check is the first line
+        of the text that `range` reads, and every signed commit fails.
+        """
+        base = self.commit("chore: start")
+        self.commit_bytes(b"feat: signed\n", signature=True)
+        self.use_stub_verifier()
+        shown = self.git(["log", "-1", "--format=%B"])
+        self.assertTrue(shown.startswith("gpg: Good signature"), shown)
+        result = self.run_cli("range", f"{base}..HEAD")
+        self.assertEqual((0, ""), (result.code, result.stdout), result.stderr)
+
+    def test_the_output_encoding_of_the_reader_does_not_change_the_message(
+        self,
+    ) -> None:
+        """`i18n.logOutputEncoding` re-encodes `git log`, and not the message.
+
+        Without `--encoding=UTF-8` the header below reaches the tool as Latin-1
+        bytes and the commit gets the problem "not valid UTF-8".
+        """
+        base = self.commit("chore: start")
+        self.commit("feat: café")
+        self.git(["config", "i18n.logOutputEncoding", "ISO-8859-1"])
+        with self.assertRaises(UnicodeDecodeError):
+            self.git(["log", "-1", "--format=%B"])
+        result = self.run_cli("range", f"{base}..HEAD")
+        self.assertEqual((0, ""), (result.code, result.stdout), result.stderr)
+
     def test_commit_with_an_empty_message_is_a_problem(self) -> None:
         """A commit with no message has no header, and the check reports it."""
         base = self.commit("chore: start")

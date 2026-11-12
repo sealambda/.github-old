@@ -98,7 +98,13 @@ class RepoTestCase(unittest.TestCase):
         self.git(["commit", "--quiet", "--allow-empty", "--message", message])
         return self.git(["rev-parse", "HEAD"]).strip()
 
-    def commit_bytes(self, message: bytes, *, encoding: str | None = None) -> str:
+    def commit_bytes(
+        self,
+        message: bytes,
+        *,
+        encoding: str | None = None,
+        signature: bool = False,
+    ) -> str:
         """Record an empty commit with a message of raw bytes, return its hash.
 
         `git commit` and `git commit-tree` convert a message that is not UTF-8
@@ -110,6 +116,9 @@ class RepoTestCase(unittest.TestCase):
         Args:
             message: The bytes of the message, stored as they are.
             encoding: The value of an `encoding` header, or `None` for none.
+            signature: Whether the commit carries a `gpgsig` header. The
+                signature is a placeholder: only a verifier that accepts it,
+                as `use_stub_verifier` installs, makes Git print a result.
         """
         parent = self.git(["rev-parse", "HEAD"]).strip()
         tree = self.git(["rev-parse", "HEAD^{tree}"]).strip()
@@ -118,6 +127,13 @@ class RepoTestCase(unittest.TestCase):
         headers += [f"author {person}", f"committer {person}"]
         if encoding:
             headers.append(f"encoding {encoding}")
+        if signature:
+            headers += [
+                "gpgsig -----BEGIN PGP SIGNATURE-----",
+                " ",
+                " placeholder",
+                " -----END PGP SIGNATURE-----",
+            ]
         completed = subprocess.run(
             ["git", "-C", str(self.root), "hash-object", "-t", "commit", "-w"]
             + ["--stdin"],
@@ -128,6 +144,28 @@ class RepoTestCase(unittest.TestCase):
         sha = completed.stdout.decode().strip()
         self.git(["update-ref", "HEAD", sha])
         return sha
+
+    def use_stub_verifier(self) -> None:
+        """Make `git log` print a signature result, as `log.showSignature` does.
+
+        The repository gets `log.showSignature=true` and a `gpg.program` that
+        accepts every signature and prints one line of result. The stub speaks
+        the status protocol of GnuPG, so no key and no GnuPG are needed.
+        """
+        stub = self.scratch / "verifier"
+        fingerprint = "0" * 40
+        validsig = f"[GNUPG:] VALIDSIG {fingerprint} 2023-11-14 1700000000 0 4 0 1 8 00"
+        stub.write_text(
+            "#!/bin/sh\n"
+            "echo '[GNUPG:] GOODSIG 0000000000000000 Stub Signer'\n"
+            f"echo '{validsig} {fingerprint}'\n"
+            "echo '[GNUPG:] TRUST_ULTIMATE 0 pgp'\n"
+            "echo 'gpg: Good signature from \"Stub Signer\"' >&2\n",
+            encoding="utf-8",
+        )
+        stub.chmod(0o755)
+        self.git(["config", "gpg.program", str(stub)])
+        self.git(["config", "log.showSignature", "true"])
 
     def run_cli(self, *args: str) -> CliResult:
         """Run `gitpolicy.cli.main` on the repository and capture its output."""
