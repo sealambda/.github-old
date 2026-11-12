@@ -115,6 +115,12 @@ and it chooses whether the shell that people already enter is that shell.
   with status 1. A warning would let the shell go on, and a missing hook
   doesn't show until a bad commit passes. The reference page shows how to
   repair it.
+- Bad, because the flake check `pre-commit` repeats the work of the checks
+  `formatting`, `docs` and `workflows`: it runs the same tools over the same
+  source in a second derivation, because the inputs of the two derivations
+  differ and the Nix store doesn't share them. The hub accepts this cost: the
+  check is the one place where the hook configuration is evaluated and run in
+  the sandbox. The cost grows with the size of the documentation.
 - Bad, because the hub's contributors enter a second shell,
   `nix develop .#hooks`, and a clone that only enters `default` has no hooks.
   That's the price of leaving the shell that people already enter untouched.
