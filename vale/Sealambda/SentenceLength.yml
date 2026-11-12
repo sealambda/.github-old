@@ -1,0 +1,16 @@
+# A sentence has at most 25 words, so a reader holds it in mind
+# (docs/reference/writing-style.md#sentence-length).
+#
+# `metric` counts the words of each sentence and reports the sentence when the
+# count passes the limit. Code spans and code blocks aren't counted. The rule
+# keeps its own limit and level; Microsoft.SentenceLength is a suggestion at 30
+# words. The message has no count: Vale prints a metric value with two
+# decimals, as in "26.00".
+# Level: warning. Tests: SentenceLength.test.yml.
+extends: metric
+message: "This sentence has more than 25 words. Shorten it or split it."
+link: https://github.com/sealambda/.github/blob/main/docs/reference/writing-style.md#sentence-length
+level: warning
+scope: sentence
+formula: words
+condition: "> 25"

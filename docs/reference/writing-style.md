@@ -23,6 +23,8 @@ shows. A repository can switch a rule off in its own `.vale.ini`, as
 | `Sealambda.FillerWords` | warning | A word that adds no fact. |
 | `Sealambda.HeadingCase` | warning | A heading that isn't in sentence case. |
 | `Sealambda.HowToTitle` | warning | A page title that isn't a task. |
+| `Sealambda.SentenceLength` | warning | A sentence of more than 25 words. |
+| `Sealambda.ParagraphLength` | warning | A paragraph of more than 6 sentences. |
 
 The `docs` check runs Vale with `--minAlertLevel=error`. A finding of level
 error fails the check. A finding of level warning or suggestion doesn't fail
@@ -264,6 +266,60 @@ choices. Rename the title to a noun phrase, or turn the rule off for it:
 <!-- vale Sealambda.HowToTitle = NO -->
 # Using the hub
 <!-- vale Sealambda.HowToTitle = YES -->
+```
+
+## Sentence length
+
+`Sealambda.SentenceLength` flags a sentence of more than 25 words. A long
+sentence holds several ideas, and a reader must keep them all in mind to reach
+the end. Cut the sentence in two, or delete the words that carry no fact.
+
+The rule counts words in prose, in list items and in table cells. It doesn't
+count code spans and code blocks. The Microsoft style has a rule of the same
+purpose, `Microsoft.SentenceLength`, with the level suggestion and the limit of
+30 words.
+
+Vale finds the end of a sentence with a heuristic. A period inside an
+abbreviation such as `e.g.` doesn't end a sentence. A sentence that ends with a
+file name such as `CONTRIBUTING.md` joins the next sentence, and the rule can
+report the pair as one long sentence. Put the file name in a code span, or end
+the sentence with another word.
+
+### A true use of a long sentence
+
+A long sentence can be right, for example a quotation or a legal clause that
+must keep its wording. Turn the rule off for the passage, with the reason in a
+comment before it:
+
+```markdown
+<!-- This sentence quotes a clause of the licence word for word. -->
+<!-- vale Sealambda.SentenceLength = NO -->
+The clause states that the licence grants to each recipient a worldwide,
+royalty-free, non-exclusive and irrevocable right to use the work.
+<!-- vale Sealambda.SentenceLength = YES -->
+```
+
+## Paragraph length
+
+`Sealambda.ParagraphLength` flags a paragraph of more than 6 sentences. A long
+paragraph hides where one idea ends and the next begins. Split it where the
+idea changes, or turn a series of parallel facts into a list.
+
+The rule counts the sentences of a paragraph of prose. A list, a table and a
+code block aren't paragraphs, so the rule doesn't check them. A paragraph of
+many lines that holds one sentence is clean. The rule finds sentences with the
+heuristic that the section on sentence length describes.
+
+### A true use of a long paragraph
+
+Turn the rule off for a paragraph that must stay whole, for example a quotation,
+with the reason in a comment before it:
+
+```markdown
+<!-- This paragraph quotes the abstract of a paper. -->
+<!-- vale Sealambda.ParagraphLength = NO -->
+One. Two. Three. Four. Five. Six. Seven.
+<!-- vale Sealambda.ParagraphLength = YES -->
 ```
 
 ## Test the rules

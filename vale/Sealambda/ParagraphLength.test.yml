@@ -1,0 +1,61 @@
+# Cases for ParagraphLength.yml: a paragraph of more than 6 sentences is
+# flagged. A list, a table and a code block aren't paragraphs. The cases use
+# `contains` because the flake check loads the style under a name that has a
+# store hash.
+- name: paragraph-of-7-sentences-is-flagged
+  rule: ParagraphLength.yml
+  input: |
+    One. Two. Three. Four. Five. Six. Seven.
+  contains: "Sealambda.ParagraphLength:This paragraph has more than 6 sentences. Split it into two."
+
+- name: paragraph-of-6-sentences-is-clean
+  rule: ParagraphLength.yml
+  input: |
+    One. Two. Three. Four. Five. Six.
+  want: ""
+
+- name: paragraph-of-7-lines-with-one-sentence-is-clean
+  rule: ParagraphLength.yml
+  input: |
+    One two
+    three four
+    five six
+    seven eight
+    nine ten
+    eleven twelve
+    thirteen fourteen.
+  want: ""
+
+- name: second-long-paragraph-is-flagged
+  rule: ParagraphLength.yml
+  input: |
+    One. Two.
+
+    One. Two. Three. Four. Five. Six. Seven. Eight.
+  contains: "Sealambda.ParagraphLength:This paragraph has more than 6 sentences. Split it into two."
+
+- name: abbreviation-does-not-add-a-sentence
+  rule: ParagraphLength.yml
+  input: |
+    One, e.g. two. Three, i.e. four. Five vs. six. Seven. Eight. Nine.
+  want: ""
+
+- name: list-of-many-items-is-clean
+  rule: ParagraphLength.yml
+  input: |
+    - One.
+    - Two.
+    - Three.
+    - Four.
+    - Five.
+    - Six.
+    - Seven.
+  want: ""
+
+- name: code-block-is-clean
+  rule: ParagraphLength.yml
+  input: |
+    ```text
+    One. Two. Three. Four. Five. Six. Seven. Eight.
+    ```
+  want: ""

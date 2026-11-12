@@ -1,0 +1,15 @@
+# A paragraph has at most 6 sentences, so a reader finds where one idea ends
+# (docs/reference/writing-style.md#paragraph-length).
+#
+# `metric` counts the sentences of each paragraph and reports the paragraph
+# when the count passes the limit. A list, a table and a code block aren't
+# paragraphs. The message has no count: Vale prints a metric value with two
+# decimals, as in "7.00".
+# Level: warning. Tests: ParagraphLength.test.yml.
+extends: metric
+message: "This paragraph has more than 6 sentences. Split it into two."
+link: https://github.com/sealambda/.github/blob/main/docs/reference/writing-style.md#paragraph-length
+level: warning
+scope: paragraph
+formula: sentences
+condition: "> 6"

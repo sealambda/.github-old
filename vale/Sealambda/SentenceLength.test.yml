@@ -1,0 +1,61 @@
+# Cases for SentenceLength.yml: a sentence of more than 25 words is flagged. The
+# count skips code, and a period inside an abbreviation doesn't end a sentence.
+# The cases use `contains` because the flake check loads the style under a name
+# that has a store hash.
+- name: sentence-of-26-words-is-flagged
+  rule: SentenceLength.yml
+  input: |
+    One two three four five six seven eight nine ten eleven twelve thirteen
+    fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone
+    twentytwo twentythree twentyfour twentyfive twentysix.
+  contains: "Sealambda.SentenceLength:This sentence has more than 25 words. Shorten it or split it."
+
+- name: sentence-of-25-words-is-clean
+  rule: SentenceLength.yml
+  input: |
+    One two three four five six seven eight nine ten eleven twelve thirteen
+    fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone
+    twentytwo twentythree twentyfour twentyfive.
+  want: ""
+
+- name: long-text-in-short-sentences-is-clean
+  rule: SentenceLength.yml
+  input: |
+    One two three four five six seven eight nine ten eleven twelve. One two
+    three four five six seven eight nine ten eleven twelve. One two three four
+    five six seven eight nine ten eleven twelve.
+  want: ""
+
+- name: long-sentence-in-a-list-item-is-flagged
+  rule: SentenceLength.yml
+  input: |
+    - One two three four five six seven eight nine ten eleven twelve thirteen
+      fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone
+      twentytwo twentythree twentyfour twentyfive twentysix.
+  contains: "Sealambda.SentenceLength:This sentence has more than 25 words. Shorten it or split it."
+
+- name: abbreviation-does-not-split-a-sentence
+  rule: SentenceLength.yml
+  input: |
+    One two three four five six seven eight nine ten, e.g. eleven twelve
+    thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty
+    twentyone twentytwo twentythree twentyfour.
+  contains: "Sealambda.SentenceLength:This sentence has more than 25 words. Shorten it or split it."
+
+- name: code-span-is-not-counted
+  rule: SentenceLength.yml
+  input: |
+    One two three four five six seven eight nine ten eleven twelve thirteen
+    fourteen fifteen sixteen seventeen eighteen nineteen twenty `one two three
+    four five six seven eight nine ten` twentyone.
+  want: ""
+
+- name: code-block-is-clean
+  rule: SentenceLength.yml
+  input: |
+    ```text
+    One two three four five six seven eight nine ten eleven twelve thirteen
+    fourteen fifteen sixteen seventeen eighteen nineteen twenty twentyone
+    twentytwo twentythree twentyfour twentyfive twentysix twentyseven.
+    ```
+  want: ""
