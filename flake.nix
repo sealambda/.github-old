@@ -275,8 +275,10 @@
         ];
       };
 
-      # The Python package `leaks`, and the package `decisions` whose file
-      # listing it imports. Both use only the standard library.
+      # The Python package `leaks`, and the package `decisions`. `leaks`
+      # imports only `decisions.walk` and `decisions.findings`, which use only
+      # the standard library: this environment has no `pyyaml` or
+      # `jsonschema`, which the other modules of `decisions` need.
       leaksSource = nixpkgs.lib.fileset.toSource {
         root = ./nix/scripts;
         fileset = nixpkgs.lib.fileset.unions [
@@ -550,10 +552,12 @@
         # label of a self-hosted runner, an internal host, a GitHub App
         # identifier, or the name of a repository or team that `publicNames`
         # does not list. The rules are in `nix/scripts/leaks/rules.py` and the
-        # reference is `docs/reference/leak-check.md`. Two paths are not
-        # scanned: the rules, whose patterns hold the prefixes that they
-        # search for, and the tests, whose fixtures are leaks on purpose with
-        # false identifiers.
+        # reference is `docs/reference/leak-check.md`. The `--exclude` flags
+        # below are the only list of the paths that are not scanned, and the
+        # reference points here for it: the rules, whose patterns hold the
+        # prefixes that they search for, and the two test files, whose
+        # fixtures are leaks on purpose with false identifiers. A new file
+        # in the test folder is scanned.
         leaks =
           pkgs.runCommand "leaks"
             {
@@ -573,7 +577,8 @@
                   ) publicNames.teams
                 } \
                 --exclude nix/scripts/leaks/rules.py \
-                --exclude nix/tests/leaks \
+                --exclude nix/tests/leaks/test_leak_rules.py \
+                --exclude nix/tests/leaks/test_leak_scan.py \
                 ${self}
               touch "$out"
             '';
