@@ -105,3 +105,5 @@ the entry.
   that must fail, then checks the exit status and the log.
 - [Adopt the hub in a repository](adopt-the-hub.md) describes the functions that
   a consumer calls.
+- [Run the synthetic consumer](run-the-synthetic-consumer.md) builds the checks
+  of a repository that calls them.

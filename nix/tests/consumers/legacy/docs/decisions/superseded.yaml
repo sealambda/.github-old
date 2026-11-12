@@ -1,0 +1,12 @@
+# Decision records that a pull request deleted. The entry below is synthetic:
+# the commit is not a commit of a real repository. It exists so that the check
+# `decisions` reads a valid ledger whose successor is a record in force. The
+# path names another folder, as the schema allows for a record that an earlier
+# layout kept elsewhere. A path below `docs` would be a citation of a page that
+# the hub's own check resolves against the files of the hub.
+- number: "0002"
+  title: Use a second folder for the fixture
+  commit: 0123456789abcdef0123456789abcdef01234567
+  path: adr/0002-use-a-second-folder.md
+  successor: "0001"
+  date: 2026-11-02

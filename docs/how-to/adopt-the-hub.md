@@ -5,6 +5,10 @@ needs. The sections that add a check or run a hub app use the hub input of
 [Add the toolchain](#add-the-toolchain). The community files need no step,
 because GitHub applies them.
 
+The hub builds the snippets of this page as a flake, the
+[synthetic consumer](run-the-synthetic-consumer.md). A change to a snippet
+changes `nix/tests/consumers/legacy/flake.nix` in the same commit.
+
 ## Add the toolchain
 
 Add the hub as a flake input that the repository's nixpkgs follows, so that
