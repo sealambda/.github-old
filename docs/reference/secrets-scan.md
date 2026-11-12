@@ -11,7 +11,7 @@ scanner is one argument of the function.
 | Command | What it scans | Where it runs |
 | ------- | ------------- | ------------- |
 | `secrets-scan history` | Every commit that the repository's refs reach, all branches included. | A CI step. |
-| `secrets-scan staged` | The changes in the index. | A `pre-commit` hook. |
+| `secrets-scan staged` | The changes in the index. | The `pre-commit` hook. |
 
 Both commands run at the top of the work tree, so a hook that starts in a
 subfolder finds the secrets and the `.gitleaksignore` file all the same. Any
@@ -250,9 +250,15 @@ don't guard the same way:
   at the top of the repository. The base configuration of the hub has the
   default rules, so the two scans use the same rules in a repository that has
   no such file.
-- A repository can run `secrets-scan history` in its own CI step and
-  `secrets-scan staged` in a hook. It then gets the hub's configuration, and a
-  `.gitleaks.toml` of the repository has no effect.
+- The hook `secrets-scan` of the hub's [Git hooks](hooks.md) runs
+  `secrets-scan staged` at `pre-commit`. A person can skip a hook, so the hook
+  stops a secret early, and a scan of the history in CI can catch what the hook
+  missed. The workflow `secrets.yml` misses some secrets that the command
+  finds, as [The workflow and the command](#the-workflow-and-the-command)
+  lists. A secret in a file with the attribute `-diff` passes the workflow.
+- A repository can run `secrets-scan history` in its own CI step. It then gets
+  the hub's configuration, and a `.gitleaks.toml` of the repository has no
+  effect.
 - The flake checks `secrets-scan-tests-gitleaks` and
   `secrets-scan-tests-betterleaks` run the command against Git repositories
   that the tests create. They scan no history of the hub.

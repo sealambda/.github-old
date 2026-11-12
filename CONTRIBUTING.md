@@ -23,7 +23,9 @@ Assisted-by: <tool> (<model>)
 - To undo a change, write `revert: <description>`. Git's default header,
   `Revert "<subject>"`, isn't a Conventional Commit.
 - The tool `gitpolicy` checks these rules. The hub's CI runs it on every pull
-  request, and a repository can run it from a `commit-msg` hook of its own.
+  request, and the hub's `commit-msg` hook runs it on your machine after you
+  enter the hub's `hooks` shell with `nix develop .#hooks`
+  ([Git hooks](https://github.com/sealambda/.github/blob/main/docs/reference/hooks.md)).
   [Git policy](https://github.com/sealambda/.github/blob/main/docs/reference/git-policy.md)
   lists them.
 - Say why in the body. The diff shows what.

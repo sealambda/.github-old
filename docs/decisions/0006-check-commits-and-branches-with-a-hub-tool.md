@@ -65,8 +65,9 @@ that the configuration is small, replaces this decision by a new record.
 The tool is the package `nix/scripts/gitpolicy`. Two pure functions hold the
 rules, `check_commit_message` and `check_branch_name`, and one constant holds
 the types for both. The hub's CI runs `gitpolicy range` and `gitpolicy branch`.
-A repository can run `gitpolicy commit-msg` from a `commit-msg` hook that it
-installs: the hub ships no hook. The hub exports the tool as
+A repository can run `gitpolicy commit-msg` from a `commit-msg` hook, and
+[ADR 0008](0008-offer-git-hooks-through-git-hooks-nix.md) adds the hooks that
+do so. The hub exports the tool as
 `lib.mkGitPolicyTool`, as `packages.<system>.gitpolicy` and as the app
 `gitpolicy`. The rules run where Git is present, in CI and in a hook, not in a
 flake check, and the flake check `check-gitpolicy-tests` tests them. The hub's

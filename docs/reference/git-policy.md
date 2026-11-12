@@ -16,9 +16,10 @@ with no repository. The rules therefore run where Git is present:
 
 - The CI job `git-policy` of the hub checks every commit of a pull request and
   the name of its head branch.
-- A repository can run the same command in a `commit-msg` hook or in its own
-  CI. The hub ships no hook: the command `commit-msg` is there for a
-  repository to call from the hook that it installs.
+- The hooks of the hub run `commit-msg` at the `commit-msg` stage and `branch`
+  at `pre-push`. A person can skip a hook, so the hooks show a problem early
+  and CI stays the gate. [Git hooks](hooks.md) lists them.
+- A repository can run the same commands in its own CI.
 
 The rules still travel with `flake.lock`, because the command comes from the
 hub input. The hub's flake check `check-gitpolicy-tests` tests the rules. It
