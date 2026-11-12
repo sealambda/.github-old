@@ -17,7 +17,7 @@ class PlanCommandTest(RepoTestCase):
         self.assertEqual(
             result.stdout,
             f"tag: v1.0.0\ncommit: {head}\nprevious release: none\n"
-            "--- notes ---\nrules changed: yes\n\n- feat: add the flake\n",
+            "--- notes ---\nrules changed: yes\n\n- `feat: add the flake`\n",
         )
         self.assertEqual(result.stderr, "")
 
@@ -59,7 +59,7 @@ class PlanCommandTest(RepoTestCase):
         self.assertEqual(
             result.stdout,
             f"tag: v1.3.1\ncommit: {head}\nprevious release: v1.3.0\n"
-            "--- notes ---\nrules changed: no\n\n- chore: empty commit\n",
+            "--- notes ---\nrules changed: no\n\n- `chore: empty commit`\n",
         )
 
     def test_commit_that_a_later_release_contains_is_covered(self) -> None:
@@ -132,7 +132,7 @@ class PublishCommandTest(RepoTestCase):
                         "--notes-file",
                         "-",
                     ],
-                    "rules changed: yes\n\n- feat: add the flake\n",
+                    "rules changed: yes\n\n- `feat: add the flake`\n",
                 )
             ],
         )
@@ -191,7 +191,7 @@ class PublishCommandTest(RepoTestCase):
                         "--notes-file",
                         "-",
                     ],
-                    "rules changed: no\n\n- docs: add a page\n",
+                    "rules changed: no\n\n- `docs: add a page`\n",
                 ),
             ],
         )
@@ -207,7 +207,7 @@ class PublishCommandTest(RepoTestCase):
         notes = self.gh.calls[-1][1]
         self.assertEqual(
             notes,
-            "rules changed: yes\n\n- docs: add another page\n- docs: add a page\n",
+            "rules changed: yes\n\n- `docs: add another page`\n- `docs: add a page`\n",
         )
 
     def test_missing_release_ignores_a_second_tag_on_the_same_commit(self) -> None:
@@ -221,7 +221,7 @@ class PublishCommandTest(RepoTestCase):
         self.run_cli("publish")
         call, notes = self.gh.calls[-1]
         self.assertEqual(call[2], "v1.1.1")
-        self.assertEqual(notes, "rules changed: yes\n\n- fix: change the flake\n")
+        self.assertEqual(notes, "rules changed: yes\n\n- `fix: change the flake`\n")
 
     def test_publish_stops_when_github_cannot_say_whether_the_release_exists(
         self,

@@ -122,14 +122,19 @@ templates.
 
 The first line is `rules changed: yes` or `rules changed: no`. A blank line
 follows, then one bullet with the subject of each commit since the previous
-release, the newest first:
+release, the newest first. Each subject is a Markdown code span:
 
 ```text
 rules changed: no
 
-- docs: fix a link in the adoption guide
-- docs(readme): list the release procedure
+- `docs: fix a link in the adoption guide`
+- `docs(readme): list the release procedure`
 ```
+
+GitHub renders the notes as Markdown, and the subject is the text of a
+contributor. Inside a code span, a link, an `@` mention and a `#` reference stay
+plain text. The fence of the span is one backtick longer than the longest run of
+backticks in the subject.
 
 The title of the release is its tag.
 

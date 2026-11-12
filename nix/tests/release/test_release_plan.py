@@ -31,7 +31,7 @@ class PlanReleaseTest(RepoTestCase):
         self.assertTrue(plan.rules_changed)
         self.assertEqual(
             plan.notes,
-            "rules changed: yes\n\n- docs: add a readme\n- docs: add a page\n",
+            "rules changed: yes\n\n- `docs: add a readme`\n- `docs: add a page`\n",
         )
 
     def test_documentation_only_change_raises_the_patch(self) -> None:
@@ -45,7 +45,7 @@ class PlanReleaseTest(RepoTestCase):
         self.assertEqual(plan.tag, "v1.4.3")
         self.assertEqual(plan.previous, "v1.4.2")
         self.assertFalse(plan.rules_changed)
-        self.assertEqual(plan.notes, "rules changed: no\n\n- docs: add a page\n")
+        self.assertEqual(plan.notes, "rules changed: no\n\n- `docs: add a page`\n")
 
     def test_rule_change_raises_the_minor_and_resets_the_patch(self) -> None:
         """A change of a rule path gives `yes` and the next minor."""
@@ -82,7 +82,7 @@ class PlanReleaseTest(RepoTestCase):
         self.assertTrue(plan.rules_changed)
         self.assertEqual(
             plan.notes,
-            "rules changed: yes\n\n- docs: add a page\n- fix: change the flake\n",
+            "rules changed: yes\n\n- `docs: add a page`\n- `fix: change the flake`\n",
         )
 
     def test_deleting_or_renaming_a_rule_path_changes_the_rules(self) -> None:
@@ -231,7 +231,7 @@ class PlanReleaseTest(RepoTestCase):
         plan = self.planned()
         self.assertFalse(plan.rules_changed)
         self.assertEqual(plan.tag, "v1.0.1")
-        self.assertEqual(plan.notes, "rules changed: no\n\n- chore: empty commit\n")
+        self.assertEqual(plan.notes, "rules changed: no\n\n- `chore: empty commit`\n")
 
     def test_commit_argument_names_the_commit_to_release(self) -> None:
         """The plan is for the named commit, not for `HEAD`."""
@@ -261,7 +261,7 @@ class PlanForExistingTagTest(RepoTestCase):
         self.assertTrue(plan.rules_changed)
         self.assertEqual(
             plan.notes,
-            "rules changed: yes\n\n- docs: add a page\n- fix: change the flake\n",
+            "rules changed: yes\n\n- `docs: add a page`\n- `fix: change the flake`\n",
         )
 
     def test_a_second_tag_on_the_commit_is_not_the_previous_release(self) -> None:
