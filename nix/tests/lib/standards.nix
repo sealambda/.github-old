@@ -129,6 +129,10 @@ let
       args.src = "tree/of/the/repository";
       message = "`src` must be a path, an absolute path string or a set with `outPath`, such as `self`, got `string`.";
     };
+    src-is-an-absolute-string-without-context = {
+      args.src = "/path/to/the/repository";
+      message = "`src` is an absolute path string without the context of a store path, so the build can't read it. Pass a path, `self` or the string `\"\${self}\"`.";
+    };
     name-is-not-a-string = {
       args.name = 1;
       message = "`name` must be a string, got `int`.";
@@ -582,10 +586,13 @@ in
       mustHold "The names ${builtins.toJSON refused} were refused." (refused == [ ]);
   };
 
-  # Requirement: a `src` that is a string holding an absolute path is a source,
-  # as `"${self}"` is, and all five checks accept it, because each one puts
-  # `src` into a command or reads it as a path. The row `src-is-a-relative-string`
-  # shows that a relative string is refused.
+  # Requirement: a `src` that is a string holding an absolute path with the
+  # context of a store path is a source, as `"${self}"` is, and all five checks
+  # accept it, because each one puts `src` into a command or reads it as a
+  # path. The row `src-is-a-relative-string` shows that a relative string is
+  # refused, and the row `src-is-an-absolute-string-without-context` shows that
+  # an absolute string without the context is refused too: the build can't
+  # read a path that is not one of its inputs.
   standards-absolute-path-string-is-a-source = {
     check = pkgs.linkFarm "standards-string-source" (standards { src = "${cleanTree}"; }).checks;
   };

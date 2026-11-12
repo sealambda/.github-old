@@ -119,8 +119,10 @@ in
     `src`
     : The source tree of the repository, normally the `self` of the calling
       flake. The checks read all of it. It is a path, a set with `outPath`, or
-      a string that holds an absolute path, such as `"${self}"`. A relative
-      string is an error.
+      a string that holds an absolute path with the context of a store path,
+      such as `"${self}"`. A relative string is an error, and so is an absolute
+      string without the context, such as `builtins.toString ./.`: the build
+      can't read it.
 
     `name`
     : The name of the repository on GitHub, without the owner, such as

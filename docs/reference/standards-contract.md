@@ -32,7 +32,7 @@ error.
 | Argument | Type | Meaning | Default |
 | -------- | ---- | ------- | ------- |
 | `pkgs` | Package set | The package set of one system. Only its system is used for the tools, and the formatter modules evaluate with it. | Required. |
-| `src` | Path, absolute path string or set with `outPath` | The source tree, normally the `self` of the flake. Every check reads all of it. A string works when it holds an absolute path, such as `"${self}"`. A relative string is an error. | Required. |
+| `src` | Path, absolute path string or set with `outPath` | The source tree, normally the `self` of the flake. Every check reads all of it. A string works when it holds an absolute path with the context of a store path, such as `"${self}"`. A relative string is an error, and so is an absolute string without the context, such as the result of `builtins.toString ./.`, because the build can't read it. | Required. |
 | `name` | String | The name of the repository on GitHub, without the owner: 1 to 100 letters, digits, `.`, `-` and `_`, and not `.` or `..`. The name `.github` is valid. The repository is `sealambda/<name>`, and the check `decisions` treats a citation of it as a citation of this repository. | Required. |
 | `treefmtModules` | List of modules | treefmt-nix modules of the repository. They add to the organization's formatter in `formatter`, in `checks.formatting` and in the hook `treefmt`. | `[ ]` |
 | `decisions` | Set | `{ exclude = [ "<path>" ]; }`, the paths that the citation scan of the check `decisions` skips. A path is relative to the root of the repository. No other key is valid. | `{ exclude = [ ]; }` |
@@ -146,6 +146,7 @@ line, so one evaluation shows every mistake.
 | `pkgs` is a set without `stdenv`, such as the flake `nixpkgs` and not its `legacyPackages.<system>` | `` `pkgs` must be a package set such as `nixpkgs.legacyPackages.<system>`, and this set has no `stdenv`. `` |
 | `pkgs` isn't a set | `` `pkgs` must be a package set, got `int`. `` |
 | `src` isn't a path, an absolute path string or a set with `outPath` | `` `src` must be a path, an absolute path string or a set with `outPath`, such as `self`, got `int`. `` |
+| `src` is an absolute path string without the context of a store path | `` `src` is an absolute path string without the context of a store path, so the build can't read it. Pass a path, `self` or the string `"${self}"`. `` |
 | `name` isn't a string | `` `name` must be a string, got `int`. `` |
 | `name` isn't a repository name: it's empty, longer than 100 characters, `.` or `..`, or it holds a character that a name can't hold | `` `name` must be a repository name of 1 to 100 letters, digits, `.`, `-` and `_`, and not `.` or `..`, got "a b". `` |
 | `treefmtModules` isn't a list | `` `treefmtModules` must be a list of modules, got `set`. `` |

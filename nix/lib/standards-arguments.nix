@@ -48,13 +48,32 @@ let
       ".."
     ]);
 
-  # The source tree: a path, a string that holds an absolute path such as
-  # `"${self}"`, or a set with `outPath`, as a flake's `self` or a derivation
-  # has. The checks put `src` into a command and the hooks read it as a path,
-  # so a string works when it is absolute: a relative string is no source.
+  # A string that holds an absolute path. It is a source only when it carries
+  # the context of a store path: the checks put `src` into a build command, and
+  # the build can read the path only when the context makes it an input of the
+  # build. The string `"${self}"` has the context, and the string that
+  # `builtins.toString ./.` returns has none.
+  isAbsolutePathString = src: lib.isString src && lib.hasPrefix "/" src;
+
+  # The source tree: a path, an absolute path string with the context of a
+  # store path, or a set with `outPath`, as a flake's `self` or a derivation
+  # has. The checks put `src` into a command and the hooks read it as a path.
+  # A relative string is no source.
   isSource =
     src:
-    lib.isPath src || (lib.isString src && lib.hasPrefix "/" src) || (lib.isAttrs src && src ? outPath);
+    lib.isPath src
+    || (isAbsolutePathString src && builtins.hasContext src)
+    || (lib.isAttrs src && src ? outPath);
+
+  # The message for a `src` that is no source. A string that holds an absolute
+  # path without a context gets its own message, because its type is right and
+  # its fault is not visible in the value.
+  srcMessage =
+    src:
+    if isAbsolutePathString src then
+      "`src` is an absolute path string without the context of a store path, so the build can't read it. Pass a path, `self` or the string `\"\${self}\"`."
+    else
+      wrongType "src" "a path, an absolute path string or a set with `outPath`, such as `self`" src;
 
   # The message for a `pkgs` that is not a package set. A set without `stdenv`
   # is typically the flake `nixpkgs` and not its `legacyPackages.<system>`, so
@@ -71,9 +90,7 @@ let
   problemsOfRequired =
     args:
     lib.optional (args ? pkgs && !(lib.isAttrs args.pkgs && args.pkgs ? stdenv)) (pkgsMessage args.pkgs)
-    ++ lib.optional (args ? src && !isSource args.src) (
-      wrongType "src" "a path, an absolute path string or a set with `outPath`, such as `self`" args.src
-    )
+    ++ lib.optional (args ? src && !isSource args.src) (srcMessage args.src)
     ++ lib.optional (args ? name && !isRepositoryName args.name) (
       if lib.isString args.name then
         "`name` must be a repository name of 1 to 100 letters, digits, `.`, `-` and `_`, and not `.` or `..`, got \"${args.name}\"."
