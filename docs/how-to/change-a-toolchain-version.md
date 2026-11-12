@@ -20,7 +20,8 @@ The version of Nix isn't a nixpkgs attribute. `versions.json` holds it
 ([Nix](../reference/versions.md#nix)). The jobs of `ci.yml` call the local
 action `.github/actions/setup-nix`, which reads the file
 ([Setup Nix action](../reference/setup-nix-action.md)). Only `secrets.yml`
-repeats the number, in `install_url`.
+repeats the number in a workflow, in `install_url`. Two documentation pages
+show it in an example, and no check reads them.
 
 1. Pick a release that has an installer. This command exits 0 when it does,
    and it exits with another status when the installer is missing:
@@ -36,9 +37,12 @@ repeats the number, in `install_url`.
    step in `.github/workflows/secrets.yml`. The action
    `.github/actions/setup-nix` needs no edit: it reads the new version from
    `versions.json`.
-4. Run `nix flake check`. The check `versions` lists each step whose address
+4. In the documentation, set the version in the examples of
+   `docs/reference/versions.md` (the JSON file and the `install_url`) and of
+   `docs/reference/secrets-scan.md` (the `install_url` of the workflow).
+5. Run `nix flake check`. The check `versions` lists each step whose address
    differs from `versions.json`, with its file and line. It also lists a step
    that installs Nix another way, as the
    [check](../reference/versions.md#the-check) describes.
-5. Open a pull request. A repository that calls `secrets.yml` runs the new
+6. Open a pull request. A repository that calls `secrets.yml` runs the new
    version when its `hub` pin moves to the merged revision.
