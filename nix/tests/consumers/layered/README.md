@@ -3,6 +3,9 @@
 This folder is a repository that takes the documentation rules from the hub and
 holds no copy of them. Its flake calls `mkTreefmt`, `mkDocsCheck`,
 `mkDecisionsCheck` and `mkWorkflowsCheck`, and it has no `config-in-sync` check.
+It also calls `mkHooks`: its `hooks` shell installs the Git hooks, and its
+check `pre-commit` runs them on the files of this folder. The file `.gitignore`
+lists the link that the `hooks` shell writes.
 
 The folder adds two things to the hub's rules. The file `.vale.ini` lists the
 vocabulary `Repository`, which holds the term Dialyxir, and Vale's dictionary
