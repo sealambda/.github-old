@@ -20,6 +20,7 @@ shows. A repository can switch a rule off in its own `.vale.ini`, as
 | `Sealambda.History` | suggestion | A word of a history. |
 | `Sealambda.DefineAcronyms` | warning | An acronym with no definition. |
 | `Sealambda.OneSpelling` | warning | The unused spelling of a word pair. |
+| `Sealambda.FillerWords` | warning | A word that adds no fact. |
 
 The `docs` check runs Vale with `--minAlertLevel=error`. A finding of level
 error fails the check. A finding of level warning or suggestion doesn't fail
@@ -163,6 +164,36 @@ off for the passage, with the reason in a comment before it:
 <!-- vale Sealambda.OneSpelling = NO -->
 The book is called "The Work Flow".
 <!-- vale Sealambda.OneSpelling = YES -->
+```
+
+## Filler words
+
+`Sealambda.FillerWords` flags these words and phrases:
+
+- `just`, `simply`, `basically`, `actually`
+- `obviously`, `clearly`, `of course`, `literally`
+- `merely`, `essentially`, `needless to say`
+- `please note that`, `it should be noted that`, `it is important to note that`
+
+A filler word adds length and no fact. Words such as `simply` and `obviously`
+also tell a reader who struggles that the step is easy. Delete the word. The
+sentence keeps its meaning.
+
+The rule matches whole words in any letter case. It doesn't flag the term
+`just-in-time`. The Microsoft style already flags `very`, `really` and
+`in order to`, so the list leaves them out.
+
+### A true use of a filler word
+
+Some listed words have a true meaning. In `a just cause`, `just` means fair,
+and in a quotation the wording isn't yours. Turn the rule off for the passage,
+with the reason in a comment before it:
+
+```markdown
+<!-- This sentence names the principle of a just cause. -->
+<!-- vale Sealambda.FillerWords = NO -->
+The charter requires a just cause for a dismissal.
+<!-- vale Sealambda.FillerWords = YES -->
 ```
 
 ## Test the rules

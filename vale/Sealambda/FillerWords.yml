@@ -1,0 +1,30 @@
+# A filler word adds length and no fact, and words such as "simply" and
+# "obviously" tell a reader who struggles that the step is easy
+# (docs/reference/writing-style.md#filler-words).
+#
+# The match is whole-word in any letter case. Code spans and code blocks
+# aren't checked. The list leaves out the words that Microsoft.Adverbs and
+# Microsoft.Wordiness already flag, such as "very" and "in order to". The
+# pattern `just(?!-in-time)` keeps the term "just-in-time". Every token is a
+# fixed string, so the matcher can't backtrack without limit.
+# Level: warning. Tests: FillerWords.test.yml.
+extends: existence
+message: "Delete '%s'. It adds no fact."
+link: https://github.com/sealambda/.github/blob/main/docs/reference/writing-style.md#filler-words
+level: warning
+ignorecase: true
+tokens:
+  - just(?!-in-time)
+  - simply
+  - basically
+  - actually
+  - obviously
+  - of course
+  - clearly
+  - literally
+  - merely
+  - essentially
+  - needless to say
+  - please note that
+  - it should be noted that
+  - it is important to note that
