@@ -70,7 +70,8 @@ commit <hash> changes no path that the series releases since actions-v1.4.2: no 
 
 The line ends with `: no release` and names no previous tag for a tree
 without a workflow or action file (`commit <hash> has no path that starts the
-series: no release`). The hub series never prints this line: it releases every commit.
+series: no release`). The hub series never prints this line: it releases every
+commit.
 
 A release of the actions series isn't the latest release of the repository.
 `publish` adds `--latest=false` to `gh release create`, so the hub release
@@ -90,6 +91,11 @@ change, so a commit marked `!` still gets the next minor number, for example
    maintainer does this: the tool has no command that names a major number.
    The ruleset of the organization blocks the update and the deletion of a
    tag, so a wrong tag stays. Check the commit and the name before the push.
+   A tag push doesn't start the `release` job, so `actions-v2.0.0` has no
+   GitHub release yet. Re-run the `release` job of the merge commit, or run
+   `nix run .#release -- publish --series actions --commit <hash>` with
+   `GH_TOKEN` set. Either way `publish` finds the tag without a release and
+   creates it ([Commands](#commands), case 1).
 3. The next plan counts from the highest tag that the commit contains, which
    is `actions-v2.0.0`: a change of an action file gives `actions-v2.1.0` and a
    change of `versions.json` alone gives `actions-v2.0.1`. The tag of the old
