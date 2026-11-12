@@ -28,239 +28,32 @@
       # Applies `f` to the package set of each supported system.
       eachSystem = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
 
-      # The hub's own package set for the system of the caller's `pkgs`. A check
-      # that builds its tools from this set, and not from the caller's `pkgs`,
-      # runs the same tool versions in every consumer, whatever nixpkgs the
-      # consumer follows. `mkDocsCheck` and `mkDecisionsCheck` use it. Only the
-      # system is taken from `pkgs`, so the call of a consumer keeps working.
-      hubPackagesFor = pkgs: nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system};
-
-      /**
-        Evaluates the organization's treefmt module and returns the treefmt-nix
-        evaluation. Use `.config.build.wrapper` as `formatter` and
-        `.config.build.check self` as `checks.formatting`.
-
-        # Inputs
-
-        `pkgs`
-        : The package set of one system.
-
-        `extraModules`
-        : A list of treefmt-nix modules that the calling repository adds, for
-          example its own formatters and excludes.
-
-        # Type
-
-        ```
-        mkTreefmt :: AttrSet -> [Module] -> AttrSet
-        ```
-      */
-      mkTreefmt =
-        pkgs: extraModules:
-        treefmt-nix.lib.evalModule pkgs {
-          imports = [ ./treefmt.nix ] ++ extraModules;
-        };
+      # The functions of `lib` and the tools that the apps and the checks run
+      # are in `nix/lib`. Each file starts with a comment that says what it
+      # holds and who calls it. This file composes them into the outputs.
+      inherit (import ./nix/lib/hub-packages.nix { inherit nixpkgs; }) hubPackagesFor;
+      inherit (import ./nix/lib/treefmt.nix { inherit treefmt-nix; }) mkTreefmt;
+      inherit (import ./nix/lib/config.nix { inherit (nixpkgs) lib; }) mkSyncConfig mkConfigCheck;
+      inherit
+        (import ./nix/lib/docs.nix {
+          inherit (nixpkgs) lib;
+          inherit hubPackagesFor;
+        })
+        mkDocsTools
+        mkDocsCheck
+        ;
+      tools = import ./nix/lib/tools.nix { inherit (nixpkgs) lib; };
+      inherit
+        (import ./nix/lib/decisions.nix {
+          inherit (nixpkgs) lib;
+          inherit hubPackagesFor tools;
+        })
+        mkDecisionsCheck
+        ;
 
       treefmtFor = eachSystem (pkgs: mkTreefmt pkgs [ ]);
 
-      # The rule files of the Sealambda Vale style, without their test cases.
-      # A change to a test case then doesn't rebuild the style.
-      valeStyleRules = nixpkgs.lib.fileset.toSource {
-        root = ./vale/Sealambda;
-        fileset = nixpkgs.lib.fileset.fileFilter (
-          file: file.hasExt "yml" && !(nixpkgs.lib.hasSuffix ".test.yml" file.name)
-        ) ./vale/Sealambda;
-      };
-
-      # The Sealambda Vale style as a package with the layout of the styles in
-      # nixpkgs: `share/vale/styles/Sealambda`. `vale.withStyles` links it next
-      # to the styles of nixpkgs. The source is `vale/Sealambda`, because
-      # `.gitignore` hides the style directories under `.vale/styles`.
-      mkValeStyleSealambda =
-        pkgs:
-        pkgs.runCommand "vale-style-sealambda" { } ''
-          install -D -m 644 -t "$out/share/vale/styles/Sealambda" ${valeStyleRules}/*.yml
-        '';
-
-      /**
-        Builds the documentation tools from one package set: the three tools of
-        the `docs` dev shell and of `mkDocsCheck`, and the `check-docs` command
-        that runs them. The Vale of these tools has the styles Microsoft and
-        Readability from nixpkgs and the hub's own style Sealambda.
-
-        # Inputs
-
-        `pkgs`
-        : The package set of one system. The hub's `docs` shell and
-          `mkDocsCheck` pass the hub's own package set.
-
-        # Type
-
-        ```
-        mkDocsTools :: AttrSet -> { valeWithStyles :: Derivation; checkDocs :: Derivation; tools :: [Derivation]; }
-        ```
-      */
-      mkDocsTools =
-        pkgs:
-        let
-          # Vale and the styles that `BasedOnStyles` in `config/vale.ini` names:
-          # keep both lists the same. A difference fails loudly, because Vale
-          # reports "Style isn't on StylesPath". The styles of nixpkgs are
-          # pinned by `flake.lock`, the style Sealambda is in this repository,
-          # and no run downloads a style. `withStyles` sets `VALE_STYLES_PATH` to
-          # its `share/vale/styles`, and Vale finds the styles there. The
-          # project `StylesPath` holds only the vocabularies. Vale ignores that
-          # variable when it runs with `--no-global`.
-          valeWithStyles = pkgs.vale.withStyles (styles: [
-            styles.microsoft
-            styles.readability
-            (mkValeStyleSealambda pkgs)
-          ]);
-
-          # The three documentation tools, listed once for `checkDocs` and for
-          # the `docs` dev shell.
-          tools = [
-            pkgs.lychee
-            pkgs.markdownlint-cli2
-            valeWithStyles
-          ];
-
-          # The `check-docs` command: the three tools with the flags in
-          # `nix/scripts/check-docs.sh`. `writeShellApplication` lints the script
-          # with shellcheck, and its header describes the script.
-          checkDocs = pkgs.writeShellApplication {
-            name = "check-docs";
-            runtimeInputs = tools;
-            # The trust store that lychee needs at startup. The reason is in the
-            # header of `nix/scripts/check-docs.sh`.
-            runtimeEnv.SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-            text = builtins.readFile ./nix/scripts/check-docs.sh;
-          };
-        in
-        {
-          inherit valeWithStyles checkDocs tools;
-        };
-
       docsToolsFor = eachSystem mkDocsTools;
-
-      # Tool configuration that a tool reads only from a file in the
-      # repository. Each name is the path in the consumer; each value is the
-      # hub's copy. `sync-config` writes the copies and `mkConfigCheck`
-      # compares them.
-      configFiles = {
-        ".editorconfig" = ./config/editorconfig;
-        ".markdownlint-cli2.yaml" = ./config/markdownlint-cli2.yaml;
-        ".vale.ini" = ./config/vale.ini;
-        ".vale/styles/config/vocabularies/Sealambda/accept.txt" = ./config/vale-vocabulary.txt;
-        "lychee.toml" = ./config/lychee.toml;
-      };
-
-      # Writes the copies into the current directory. `-m 644` makes each copy
-      # writable, because the source is read-only in the Nix store. `-D` creates
-      # the parent directories.
-      mkSyncConfig =
-        pkgs:
-        pkgs.writeShellApplication {
-          name = "sync-config";
-          runtimeInputs = [ pkgs.coreutils ];
-          text = nixpkgs.lib.concatStringsSep "\n" (
-            nixpkgs.lib.mapAttrsToList (
-              path: source: "install -D -m 644 ${source} ${nixpkgs.lib.escapeShellArg path}"
-            ) configFiles
-          );
-        };
-
-      /**
-        Builds a check that fails when a synced tool configuration file of a
-        repository differs from the hub's file or is missing. The failure
-        message names the `sync-config` command that repairs it: the pinned hub
-        app of a calling repository, and the local app of the hub itself.
-
-        # Inputs
-
-        `pkgs`
-        : The package set of one system.
-
-        `src`
-        : The source tree to compare, normally the `self` of the calling flake.
-
-        # Type
-
-        ```
-        mkConfigCheck :: AttrSet -> (Path | AttrSet) -> Derivation
-        ```
-      */
-      mkConfigCheck =
-        pkgs: src:
-        pkgs.runCommand "config-in-sync" { nativeBuildInputs = [ pkgs.diffutils ]; } ''
-          status=0
-          ${nixpkgs.lib.concatStringsSep "\n" (
-            nixpkgs.lib.mapAttrsToList (
-              path: source: "diff -u ${source} ${src}/${path} || status=1"
-            ) configFiles
-          )}
-          if [ "$status" -ne 0 ]; then
-            echo "A tool configuration differs from the hub." >&2
-            echo "Run: nix run --inputs-from . hub#sync-config" >&2
-            echo "In the hub repository itself, run: nix run .#sync-config" >&2
-          fi
-          touch "$out"
-          exit "$status"
-        '';
-
-      /**
-        Builds a check that lints the Markdown files of a source tree with
-        markdownlint-cli2, lychee and Vale, and fails when a tool reports a
-        problem. The tools come from the hub's own nixpkgs, whatever nixpkgs the
-        calling flake uses: the function takes only the system from `pkgs`, the
-        same as `mkDecisionsCheck`. Every consumer then runs one version of each
-        tool and of each Vale style, so the same page gets the same result in
-        every repository, and a consumer needs no `nixpkgs.follows =
-        "hub/nixpkgs"` for this check. A bump of the hub in `flake.lock` updates
-        the tools. Where the Nix sandbox is enabled, which it always is on Linux
-        CI, the check reads each tool's configuration from `src` and no personal
-        configuration of the user, and it needs no network: lychee runs offline,
-        the Vale styles are in the Nix store, and the trust store that lychee
-        loads at startup comes from Nix too. The same command runs locally and
-        in CI: `nix flake check`, or `nix build .#checks.<system>.docs -L`. A
-        local re-run on an unchanged `src` reuses the result by the hash of
-        `src`.
-
-        Pass the whole `self` of the calling flake, not a set of Markdown
-        files, because lychee also checks links to files that are not
-        Markdown. The calling repository needs the files that `sync-config`
-        writes, and the `Repository` Vale vocabulary.
-
-        # Inputs
-
-        `pkgs`
-        : The package set of one system. Only its system is used.
-
-        `src`
-        : The source tree to check, normally the `self` of the calling flake.
-
-        # Type
-
-        ```
-        mkDocsCheck :: AttrSet -> (Path | AttrSet) -> Derivation
-        ```
-      */
-      mkDocsCheck =
-        pkgs: src:
-        let
-          hubPkgs = hubPackagesFor pkgs;
-        in
-        hubPkgs.runCommand "docs" { } ''
-          HOME="$TMPDIR" ${nixpkgs.lib.getExe (mkDocsTools hubPkgs).checkDocs} ${src}
-          touch "$out"
-        '';
-
-      # The Python package `decisions` without the rest of `nix/scripts`, so a
-      # change to `check-docs.sh` does not rebuild the decisions tool.
-      decisionsSource = nixpkgs.lib.fileset.toSource {
-        root = ./nix/scripts;
-        fileset = ./nix/scripts/decisions;
-      };
 
       # What `python-quality` reads: the package, its tests and the ruff and mypy
       # settings. A change to any other file of the hub does not rerun the check.
@@ -279,69 +72,6 @@
         ];
       };
 
-      # The Python package `release`. It uses only the standard library.
-      releaseSource = nixpkgs.lib.fileset.toSource {
-        root = ./nix/scripts;
-        fileset = ./nix/scripts/release;
-      };
-
-      # What `release` finds at run time: itself. Python cannot write byte code
-      # into the Nix store.
-      releaseEnv = {
-        PYTHONPATH = "${releaseSource}";
-        PYTHONDONTWRITEBYTECODE = "1";
-      };
-
-      # The `release` command: `python -m release`, the code in
-      # `nix/scripts/release`. It plans and creates the release of a commit of
-      # the hub. `git` answers the questions about the history, and `gh`
-      # creates the release.
-      mkReleaseTool =
-        pkgs:
-        pkgs.writeShellApplication {
-          name = "release";
-          runtimeInputs = [
-            pkgs.python3
-            pkgs.git
-            pkgs.gh
-          ];
-          runtimeEnv = releaseEnv;
-          # `-P` keeps the current directory off `sys.path`: the command runs in
-          # the repository of the caller, and a file there must not replace a
-          # module of the standard library or the package `release`.
-          text = ''exec python -P -m release "$@"'';
-        };
-
-      # The Python package `leaks`, and the package `decisions`. `leaks`
-      # imports only `decisions.walk` and `decisions.findings`, which use only
-      # the standard library: this environment has no `pyyaml` or
-      # `jsonschema`, which the other modules of `decisions` need.
-      leaksSource = nixpkgs.lib.fileset.toSource {
-        root = ./nix/scripts;
-        fileset = nixpkgs.lib.fileset.unions [
-          ./nix/scripts/decisions
-          ./nix/scripts/leaks
-        ];
-      };
-
-      # What `leaks` finds at run time: itself. Python cannot write byte code
-      # into the Nix store.
-      leaksEnv = {
-        PYTHONPATH = "${leaksSource}";
-        PYTHONDONTWRITEBYTECODE = "1";
-      };
-
-      # The `leaks` command: `python -m leaks`, the code in `nix/scripts/leaks`.
-      # It reports the private facts of an organization in a source tree.
-      mkLeaksTool =
-        pkgs:
-        pkgs.writeShellApplication {
-          name = "leaks";
-          runtimeInputs = [ pkgs.python3 ];
-          runtimeEnv = leaksEnv;
-          text = ''exec python -m leaks "$@"'';
-        };
-
       # What the hub, a public repository, may name: the organization's public
       # repositories and the team of `.github/CODEOWNERS`. Every other
       # repository or team name fails the `leaks` check. The list holds public
@@ -355,132 +85,6 @@
         ];
         teams = [ "maintainers" ];
       };
-
-      # What the package finds at run time: itself, and the JSON Schemas. Python
-      # cannot write byte code into the Nix store.
-      decisionsEnv = {
-        PYTHONPATH = "${decisionsSource}";
-        DECISIONS_SCHEMA_DIR = "${./schemas}";
-        PYTHONDONTWRITEBYTECODE = "1";
-      };
-
-      # The Python with the two libraries that `decisions` imports. The quality
-      # check adds mypy and the type stubs of both libraries.
-      decisionsPython =
-        pkgs:
-        pkgs.python3.withPackages (ps: [
-          ps.pyyaml
-          ps.jsonschema
-        ]);
-
-      # The Python package `versions`, and the package `decisions` whose
-      # findings, schema loading and file listing it imports.
-      versionsSource = nixpkgs.lib.fileset.toSource {
-        root = ./nix/scripts;
-        fileset = nixpkgs.lib.fileset.unions [
-          ./nix/scripts/decisions
-          ./nix/scripts/versions
-        ];
-      };
-
-      # What `versions` finds at run time: itself, and the JSON Schemas, which
-      # `decisions.schemas` reads from `DECISIONS_SCHEMA_DIR`. Python cannot
-      # write byte code into the Nix store.
-      versionsEnv = {
-        PYTHONPATH = "${versionsSource}";
-        DECISIONS_SCHEMA_DIR = "${./schemas}";
-        PYTHONDONTWRITEBYTECODE = "1";
-      };
-
-      # The `versions` command: `python -m versions`, the code in
-      # `nix/scripts/versions`. It needs the two libraries of `decisions`.
-      mkVersionsTool =
-        pkgs:
-        pkgs.writeShellApplication {
-          name = "versions";
-          runtimeInputs = [ (decisionsPython pkgs) ];
-          runtimeEnv = versionsEnv;
-          text = ''exec python -m versions "$@"'';
-        };
-
-      # The `decisions` command: `python -m decisions`, the code in
-      # `nix/scripts/decisions`, with the schemas in `schemas`. `git` lists the
-      # files of a work tree, so the check skips the ignored ones, and it is
-      # for the `retire` subcommand.
-      mkDecisionsTool =
-        pkgs:
-        pkgs.writeShellApplication {
-          name = "decisions";
-          runtimeInputs = [
-            (decisionsPython pkgs)
-            pkgs.git
-          ];
-          runtimeEnv = decisionsEnv;
-          text = ''exec python -m decisions "$@"'';
-        };
-
-      /**
-        Builds a check that fails when the decision records, the specs or the
-        citations of a source tree are wrong. It reads the records in
-        `docs/decisions/` and the ledger `docs/decisions/superseded.yaml`, and it
-        reads every text file for citations of records, specs and `docs/` pages.
-        Each finding prints as `path:line: message`, and one run prints all of
-        them. The checks and the citation forms are in
-        `docs/reference/decision-records.md`. The check needs no network. The
-        same command runs locally and in CI: `nix flake check`, or
-        `nix build .#checks.<system>.decisions -L`.
-
-        The tool comes from the hub's own nixpkgs, whatever nixpkgs the calling
-        flake uses: the function takes only the system from `pkgs`. Every
-        consumer then gets one version of the tool and of its Python libraries.
-        `mkDocsCheck` does the same.
-
-        Pass the whole `self` of the calling flake.
-
-        # Inputs
-
-        `pkgs`
-        : The package set of one system. Only its system is used.
-
-        `src`
-        : The source tree to check, normally the `self` of the calling flake.
-
-        `repository`
-        : The `owner/name` of the repository that holds `src`, for example
-          `sealambda/.github`. A citation that another repository qualifies, as
-          in `sealambda/<repo> ADR NNNN`, is about that repository, and the
-          check skips it.
-
-        `exclude`
-        : A list of paths relative to the root of `src`, default empty. The
-          citation scan skips each path and the files below it. A path matches
-          whole components, so `a/b` skips `a/b/c.py` and not `a/bc.py`. Use it
-          for files that hold citations on purpose, such as test fixtures.
-
-        # Type
-
-        ```
-        mkDecisionsCheck :: AttrSet -> (Path | AttrSet) -> { repository :: String; exclude :: [String]; } -> Derivation
-        ```
-      */
-      mkDecisionsCheck =
-        pkgs: src:
-        {
-          repository,
-          exclude ? [ ],
-        }:
-        let
-          hubPkgs = hubPackagesFor pkgs;
-          excludeFlags = nixpkgs.lib.concatMapStringsSep " " (
-            path: "--exclude ${nixpkgs.lib.escapeShellArg path}"
-          ) exclude;
-        in
-        hubPkgs.runCommand "decisions" { } ''
-          ${nixpkgs.lib.getExe (mkDecisionsTool hubPkgs)} check \
-            --repository ${nixpkgs.lib.escapeShellArg repository} \
-            ${excludeFlags} ${src}
-          touch "$out"
-        '';
     in
     {
       lib = {
@@ -502,7 +106,7 @@
         # The tool comes from the hub's nixpkgs, like `mkDecisionsCheck`.
         decisions = {
           type = "app";
-          program = nixpkgs.lib.getExe (mkDecisionsTool pkgs);
+          program = nixpkgs.lib.getExe (tools.decisions.mkTool pkgs);
         };
       });
 
@@ -513,7 +117,7 @@
       # result in a later step, so that Nix runs without the token that
       # `publish` needs. The tool comes from the hub's nixpkgs.
       packages = eachSystem (pkgs: {
-        release = mkReleaseTool pkgs;
+        release = tools.release.mkTool pkgs;
       });
 
       # Version policy: a toolchain version is the name of a nixpkgs attribute
@@ -613,10 +217,10 @@
           pkgs.runCommand "check-decisions-tests"
             {
               nativeBuildInputs = [
-                (decisionsPython pkgs)
+                (tools.decisionsPython pkgs)
                 pkgs.git
               ];
-              env = decisionsEnv;
+              env = tools.decisions.env;
             }
             ''
               export HOME="$TMPDIR"
@@ -638,7 +242,7 @@
         leaks =
           pkgs.runCommand "leaks"
             {
-              nativeBuildInputs = [ (mkLeaksTool pkgs) ];
+              nativeBuildInputs = [ (tools.leaks.mkTool pkgs) ];
             }
             ''
               leaks \
@@ -666,7 +270,7 @@
           pkgs.runCommand "check-leaks-tests"
             {
               nativeBuildInputs = [ pkgs.python3 ];
-              env = leaksEnv;
+              env = tools.leaks.env;
             }
             ''
               export HOME="$TMPDIR"
@@ -721,7 +325,7 @@
         versions =
           pkgs.runCommand "versions"
             {
-              nativeBuildInputs = [ (mkVersionsTool pkgs) ];
+              nativeBuildInputs = [ (tools.versions.mkTool pkgs) ];
             }
             ''
               versions ${self}
@@ -734,8 +338,8 @@
         check-versions-tests =
           pkgs.runCommand "check-versions-tests"
             {
-              nativeBuildInputs = [ (decisionsPython pkgs) ];
-              env = versionsEnv;
+              nativeBuildInputs = [ (tools.decisionsPython pkgs) ];
+              env = tools.versions.env;
             }
             ''
               export HOME="$TMPDIR"
@@ -763,7 +367,7 @@
                 pkgs.python3
                 pkgs.git
               ];
-              env = releaseEnv // {
+              env = tools.release.env // {
                 HUB_RELEASES_DOC = "${./docs/reference/hub-releases.md}";
               };
             }
@@ -771,7 +375,7 @@
               export HOME="$TMPDIR"
               python -m unittest discover -v -s ${./nix/tests/release}
 
-              release=${mkReleaseTool pkgs}/bin/release
+              release=${tools.release.mkTool pkgs}/bin/release
               mkdir "$TMPDIR/smoke"
               cd "$TMPDIR/smoke"
               git init --quiet --initial-branch=main
