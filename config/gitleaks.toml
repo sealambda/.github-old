@@ -1,0 +1,12 @@
+# The hub's base configuration for the secret scanner. The `secrets-scan`
+# command of `nix/lib/secrets-scan.nix` passes this file to the scanner with
+# `--config`. A scanner that gets `--config` reads no other configuration file,
+# so a `.gitleaks.toml` in a repository has no effect: a repository suppresses a
+# finding with a fingerprint in `.gitleaksignore`, or with a `gitleaks:allow`
+# comment on the line. `docs/reference/secrets-scan.md` states the rules.
+#
+# `useDefault` makes the scanner keep its own default rules, so the rule set
+# follows the version of the scanner that the hub pins.
+
+[extend]
+useDefault = true
