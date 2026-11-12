@@ -59,8 +59,9 @@ The pages follow [Diátaxis](https://diataxis.fr/).
   [Change a toolchain version](docs/how-to/change-a-toolchain-version.md),
   [Retire a decision record](docs/how-to/retire-a-decision-record.md),
   [Add third-party content](docs/how-to/add-third-party-content.md),
-  [Release the hub](docs/how-to/release-the-hub.md) and
-  [Test a hub function](docs/how-to/test-a-hub-function.md).
+  [Release the hub](docs/how-to/release-the-hub.md),
+  [Test a hub function](docs/how-to/test-a-hub-function.md) and
+  [Run the synthetic consumer](docs/how-to/run-the-synthetic-consumer.md).
 - **Reference.** [Toolchain versions](docs/reference/versions.md),
   [Elixir quality checks](docs/reference/elixir-qa.md), the
   [Renovate preset](docs/reference/renovate-preset.md),
