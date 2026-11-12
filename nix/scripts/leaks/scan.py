@@ -1,29 +1,42 @@
 """Apply the rules to the files of a tree and report each leak as a finding."""
 
+import codecs
 from bisect import bisect_right
 from collections.abc import Sequence
 from pathlib import Path, PurePosixPath
 
 from decisions.findings import Finding
-from decisions.walk import is_excluded, list_files
+from decisions.walk import SNIFF_BYTES, is_excluded, list_files
 from leaks.rules import Policy, Rule, build_rules
+
+_REPLACEMENT = "�"
+"""What a stray NUL byte of a text file becomes."""
 
 
 def read_text(path: Path) -> str | None:
     """Read a file as text, or return `None` when it is binary.
 
-    A file with a NUL byte is binary, as an image is. Every other file is
-    read whatever its size, and a byte that is not UTF-8 becomes a replacement
-    character: a private fact is plain ASCII, so it stays readable next to
-    such a byte.
+    A file that starts with a UTF-16 byte order mark is text: a UTF-16 file
+    has a NUL byte after each ASCII character, and a reader sees its text. Any
+    other file with a NUL byte in its first `SNIFF_BYTES` bytes is binary, as
+    an image is, the same rule as in `decisions.walk`. A NUL byte after that
+    point is a stray byte in a text file, so the file is read and the byte
+    becomes a replacement character: the rules use the NUL character as a
+    placeholder. Every file is read whatever its size, and a byte that is not
+    UTF-8 becomes a replacement character: a private fact is plain ASCII, so it
+    stays readable next to such a byte.
 
     Args:
         path: The file to read.
     """
     data = path.read_bytes()
-    if b"\0" in data:
+    if data.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        text = data.decode("utf-16", errors="replace")
+    elif b"\0" in data[:SNIFF_BYTES]:
         return None
-    return data.decode("utf-8", errors="replace")
+    else:
+        text = data.decode("utf-8", errors="replace")
+    return text.replace("\0", _REPLACEMENT)
 
 
 def scan_text(text: str, path: str, rules: Sequence[Rule]) -> list[Finding]:

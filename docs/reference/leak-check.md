@@ -188,8 +188,11 @@ repository only when it's public on GitHub.
 | `nix/scripts/leaks/rules.py` | The patterns hold the prefixes that they search for. |
 | `nix/tests/leaks` | The fixtures are leaks on purpose, with false identifiers. |
 
-The check skips a file with a NUL byte, because it's binary, and it doesn't
-follow a symbolic link. It reads every other file, lock files included.
+The check skips a file with a NUL byte in its first 8 KiB, because it's binary,
+and it doesn't follow a symbolic link. It reads every other file, lock files
+included. A NUL byte after the first 8 KiB doesn't hide a file: the check reads
+the file and treats the byte as a replacement character. A file that starts
+with a UTF-16 byte order mark is text, and the check decodes it.
 
 ## Findings
 
@@ -218,6 +221,9 @@ private fact, reword the text.
   check reads a key, the commit address and the installation address.
 - An account identifier of AWS written with spaces, such as `1234 5678 9012`,
   isn't read.
+- A file that the check takes for binary isn't read: a stray NUL byte in its
+  first 8 KiB, UTF-16 without a byte order mark, UTF-32, and text inside a
+  container such as a PDF or an archive.
 - An IPv6 unique local address (`fc00::/7`) isn't read.
 - A name that joins the organization and a repository with a separator other
   than a slash, such as `<organization>_<name>`, isn't read. The `bucket`

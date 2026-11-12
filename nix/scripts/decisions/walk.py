@@ -10,7 +10,7 @@ from pathlib import Path, PurePosixPath
 MAX_FILE_BYTES = 1024 * 1024
 """A file larger than this is not read: it is generated or data, not prose."""
 
-_SNIFF_BYTES = 8192
+SNIFF_BYTES = 8192
 """How many leading bytes are searched for a NUL byte to detect a binary file."""
 
 _SKIPPED_DIRECTORY = ".git"
@@ -186,7 +186,7 @@ def read_text_file(path: Path) -> str | None:
     if path.stat().st_size > MAX_FILE_BYTES:
         return None
     data = path.read_bytes()
-    if b"\0" in data[:_SNIFF_BYTES]:
+    if b"\0" in data[:SNIFF_BYTES]:
         return None
     try:
         return data.decode("utf-8")

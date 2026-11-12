@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from decisions.walk import SNIFF_BYTES
 from leaks.cli import EXIT_CLEAN, EXIT_FINDINGS, EXIT_USAGE, main
 
 ACCOUNT_LINE = "account 123456789012\n"
@@ -107,6 +108,25 @@ class ScanTest(ScanTestCase):
         status, lines, _ = self.run_cli()
         self.assertEqual(status, EXIT_FINDINGS)
         self.assertEqual([line.split(":")[0] for line in lines], ["latin1.txt"])
+
+    def test_utf16_file_with_a_byte_order_mark_is_read(self) -> None:
+        """A UTF-16 file holds a NUL byte per character, and it is still text."""
+        self.write("utf16le.md", b"\xff\xfe" + ACCOUNT_LINE.encode("utf-16-le"))
+        self.write("utf16be.md", b"\xfe\xff" + ACCOUNT_LINE.encode("utf-16-be"))
+        self.write("no-mark.bin", ACCOUNT_LINE.encode("utf-16-le"))
+        status, lines, _ = self.run_cli()
+        self.assertEqual(status, EXIT_FINDINGS)
+        self.assertEqual(
+            sorted(line.split(":")[0] for line in lines), ["utf16be.md", "utf16le.md"]
+        )
+
+    def test_nul_byte_after_the_first_block_does_not_hide_a_file(self) -> None:
+        """Only a NUL byte in the first 8 KiB makes a file binary."""
+        self.write("late.txt", b"x" * SNIFF_BYTES + b"\0\n" + ACCOUNT_LINE.encode())
+        self.write("early.txt", b"x\0\n" + ACCOUNT_LINE.encode())
+        status, lines, _ = self.run_cli()
+        self.assertEqual(status, EXIT_FINDINGS)
+        self.assertEqual([line.split(":")[0] for line in lines], ["late.txt"])
 
     def test_symbolic_link_is_not_followed(self) -> None:
         """A link is not read, so a file outside the tree is never scanned."""
