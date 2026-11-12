@@ -1,8 +1,7 @@
 # The Python tools of the hub: `decisions`, `leaks`, `versions`, `workflows`,
 # `presetcompat`, `gitpolicy` and `release`, each the package of the same name
 # below `nix/scripts`. `flake.nix` imports this file for the apps and the
-# checks, and
-# `decisions.nix`, `workflows.nix` and `git-policy.nix` build
+# checks, and `decisions.nix`, `workflows.nix` and `git-policy.nix` build
 # `mkDecisionsCheck`, `mkWorkflowsCheck` and `mkGitPolicyTool` on their tools.
 #
 # The set holds one entry for each tool: the result of `mkPythonTool`
