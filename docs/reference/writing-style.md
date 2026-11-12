@@ -231,6 +231,9 @@ and the rule reads that file. The rule flags a heading when fewer than 80
 percent of its words are in the expected case, so a single name that the lists
 don't know can pass in a long heading and fail in a short one.
 
+The word after a colon starts a new sentence, so it takes a capital letter.
+`Note: Install hooks` passes, and `Note: install hooks` is flagged.
+
 The Microsoft style has a rule of the same kind, `Microsoft.Headings`, with
 the level suggestion. Both rules report a heading that isn't in sentence case,
 so one heading can get two findings. The two rules keep different lists of

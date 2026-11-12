@@ -18,6 +18,8 @@
 # heading aren't checked.
 # `Microsoft.Headings` is a suggestion with the same mechanism and its own list
 # of names (docs/reference/writing-style.md#heading-case).
+# The colon in `indicators` makes the word after a colon start a sentence, as
+# in `Microsoft.Headings`.
 # The acronym pattern starts with `(?-i)`. Without it, Vale 3.25 flags correct
 # headings such as "Third-party content" in a run that has a vocabulary, and
 # the rule's own test run, which has none, can't show that.

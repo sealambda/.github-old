@@ -1,6 +1,6 @@
 # Cases for HeadingCase.yml: a heading is in sentence case. The rule accepts an
-# acronym, a listed tool name and a MADR section heading, and it checks only
-# headings. The cases use `contains` because the flake check loads the style
+# acronym, a listed tool name and a MADR section heading, it expects a capital
+# letter after a colon, and it checks only headings. The cases use `contains` because the flake check loads the style
 # under a name that has a store hash.
 - name: title-case-heading-is-flagged
   rule: HeadingCase.yml
@@ -79,6 +79,18 @@
 
     The Install The Git Hooks Step Is Short.
   want: ""
+
+- name: capital-letter-after-a-colon-is-clean
+  rule: HeadingCase.yml
+  input: |
+    # Note: Install hooks
+  want: ""
+
+- name: lowercase-word-after-a-colon-is-flagged
+  rule: HeadingCase.yml
+  input: |
+    # Note: install hooks
+  contains: "Sealambda.HeadingCase:Write 'Note: install hooks' in sentence case."
 
 - name: code-in-a-heading-is-clean
   rule: HeadingCase.yml
