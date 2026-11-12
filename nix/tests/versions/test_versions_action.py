@@ -5,9 +5,10 @@ action, `.github/actions/setup-nix/action.yml`, may build the address from the
 output of an earlier step, and only when that step is the canonical step that
 `versions.action_output` holds. The tests write small actions into a temporary
 tree. Most of them are probes: each changes the step, or the place of the
-action, in a way that installs another Nix version than `versions.json`. The
-probes of the review pass a rule that reads the shape of the step, so each
-must give one finding here. One test runs the real action of the hub
+action, in a way that installs another Nix version than `versions.json`, and
+each must give one finding. The inline-script probes replace the call of
+`read-version.sh` by a script of the action that writes another version than
+the manifest holds. One test runs the real action of the hub
 (`SETUP_NIX_ACTION`, set by the flake check) through the same check, so the
 rule and the action can't drift apart.
 """
@@ -46,8 +47,8 @@ CANONICAL_RUN = (
 CANONICAL_ENV = "${{ github.action_path }}"
 """The value of `ACTION_DIR` in the canonical step."""
 
-LOOSE_ENV = "${{ github.action_path }}/../../../versions.json"
-"""The manifest path that the probes pass in `MANIFEST`, as the earlier rule read it."""
+INLINE_SCRIPT_ENV = "${{ github.action_path }}/../../../versions.json"
+"""The manifest path that an inline script reads from the variable `MANIFEST`."""
 
 DIFFERS = "isn't READ_VERSION_STEP of nix/scripts/versions/action_output.py: "
 """The start of the message for a step that isn't the canonical one."""
@@ -90,9 +91,13 @@ def producer_step(
     return "\n".join(lines) + "\n"
 
 
-def loose_step(*script: str) -> str:
-    """Return a step as the earlier rule read it: `MANIFEST` and an inline script."""
-    return producer_step(run=script, env_name="MANIFEST", env_value=LOOSE_ENV)
+def inline_script_step(*script: str) -> str:
+    """Return a step that runs an inline script on the manifest in `MANIFEST`.
+
+    The step has the id `version` and the shell `bash`, but its `env` and `run`
+    keys differ from the canonical step.
+    """
+    return producer_step(run=script, env_name="MANIFEST", env_value=INLINE_SCRIPT_ENV)
 
 
 def installer_in_action(url: str) -> str:
@@ -159,8 +164,9 @@ class ExpressionInSetupActionTest(TreeTestCase):
     def test_scripts_that_install_another_version_are_findings(self) -> None:
         """Each inline script writes a version other than the one in the manifest.
 
-        These are the probes of the review. The earlier rule read the shape of
-        the step, and each of them passed it.
+        The scripts read another key, change the value, write the output twice,
+        ignore the manifest or hardcode a version. Each one must differ from
+        the canonical step in `env` and `run`, so the rule names both keys.
         """
         probes = {
             "reads the key nix2": (
@@ -189,7 +195,7 @@ class ExpressionInSetupActionTest(TreeTestCase):
         }
         for name, script in probes.items():
             with self.subTest(probe=name):
-                self.assert_step_differs(loose_step(*script), "env, run")
+                self.assert_step_differs(inline_script_step(*script), "env, run")
 
     def test_canonical_run_with_a_changed_step_is_a_finding(self) -> None:
         """A key that the canonical step lacks, or a changed one, is named."""
