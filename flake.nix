@@ -422,8 +422,11 @@
         # `needs` and event, it runs `always()`, and nothing in it continues on
         # error. Other tests read the job `git-policy`: its condition, the range
         # and the branch name that its two commands check, and the whole history
-        # of its checkout. The tests need `jq` and the path of the workflow, and
-        # they reach no network.
+        # of its checkout. Further tests read the concurrency group: no run
+        # cancels another run, and the group of a pull request run names the
+        # head commit, so two runs for one head commit share a group and leave
+        # no failed `ci` behind. The tests need `jq` and the path of the
+        # workflow, and they reach no network.
         check-ci-tests =
           pkgs.runCommand "check-ci-tests"
             {

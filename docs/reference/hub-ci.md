@@ -44,6 +44,10 @@ skipping it, and GitHub reports a skipped required check as a success.
 | A needed job fails. | `ci` fails. |
 | A person cancels the run. | `ci` fails. |
 | A needed job is skipped. | `ci` fails. |
+| The job `git-policy` is skipped on a push. | `ci` succeeds. |
+
+The job `git-policy` runs on pull requests only, so a push to `main` skips it.
+That skip is the only one that `ci` accepts.
 
 A run that GitHub cancels because a newer run took its place leaves a failed
 `ci` on the head commit, beside the `ci` of the newer run. GitHub doesn't

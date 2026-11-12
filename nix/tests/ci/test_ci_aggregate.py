@@ -46,10 +46,17 @@ JQ_TRUE = 0
 JQ_FALSE = 1
 
 
+def load_workflow() -> dict[str, Any]:
+    """Return the parsed workflow file that `CI_WORKFLOW` names."""
+    workflow: dict[str, Any] = yaml.safe_load(
+        Path(os.environ["CI_WORKFLOW"]).read_text("utf-8")
+    )
+    return workflow
+
+
 def load_jobs() -> dict[str, dict[str, Any]]:
     """Return every job of the workflow that `CI_WORKFLOW` names, by its id."""
-    workflow = yaml.safe_load(Path(os.environ["CI_WORKFLOW"]).read_text("utf-8"))
-    jobs: dict[str, dict[str, Any]] = workflow["jobs"]
+    jobs: dict[str, dict[str, Any]] = load_workflow()["jobs"]
     return jobs
 
 
