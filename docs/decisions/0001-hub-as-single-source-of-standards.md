@@ -59,7 +59,7 @@ versions stay in the lock file of each application.
   hub update.
 - Bad, because a consumer cannot edit a synced file. A new setting belongs in
   the hub, for every repository, or in a file that the tool reads besides the
-  synced one, such as the Vale `Repository` vocabulary.
+  synced one. The Vale `Repository` vocabulary is an example.
 
 ### Confirmation
 

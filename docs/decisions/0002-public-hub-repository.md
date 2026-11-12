@@ -26,7 +26,7 @@ organization consume. Should the hub be a public or a private repository?
 ## Decision Outcome
 
 Chosen option: "A public hub" because the default community files and the
-consumption without credentials need a public repository, and the content is a
+consumption without credentials need a public repository. Also, the content is a
 set of standards, not operational data.
 
 The hub holds only generic standards. It names no private repository, account,

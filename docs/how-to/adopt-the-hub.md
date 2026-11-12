@@ -16,7 +16,7 @@ every repository evaluates one nixpkgs revision.
    treefmt-nix modules in the list that `mkTreefmt` takes.
 
    The snippet defines every output for the three systems that the hub supports.
-   `forAllSystems` applies a function to the package set of each system, and the
+   `forAllSystems` applies a function to the package set of each system. The
    later snippets of this page add their checks to the set that `checks` builds
    with it. CI runs `nix flake check` on Linux, so a check that only
    `aarch64-darwin` defines does not run there.
@@ -139,7 +139,7 @@ hub's version of each file into the repository.
    If an earlier `vale sync` left a style directory such as
    `.vale/styles/Google`, delete each style directory but keep `config`:
    `rm -rf -- .vale/styles/Google`. Vale takes a rule from the Nix style when
-   both paths hold a rule of the same name, but a stale rule that only the old
+   both paths hold a rule of the same name. A stale rule that only the old
    directory has still runs. Keep, or add, these two rules in the repository's
    `.gitignore`, so that nobody commits a leftover style directory:
 
@@ -217,10 +217,17 @@ The Vale style `Sealambda` keeps a page in the present tense.
   shows in an editor that runs Vale.
 - `Sealambda.Contractions` has the level error. It fails the check on a
   contraction.
+- `Sealambda.SentenceLength` has the level error. It fails the check on a
+  sentence of more than 25 words in a Markdown file.
+- `Sealambda.Filler` has the level error. It fails the check on a filler word,
+  such as `simply` or `actually`, in Markdown and in code comments.
+- `Google.Will` has the level error. It fails the check on the future tense,
+  such as `will work`.
 
-The synced `.vale.ini` turns `Sealambda.CurrentState` off for `docs/decisions/`
-and `docs/specs/`. To keep a listed word that is true in one passage, turn the
-rule off for that passage with a Vale comment, as the reference shows.
+The synced `.vale.ini` turns `Sealambda.CurrentState` and `Google.Will` off for
+`docs/decisions/` and `docs/specs/`. A word that `Sealambda.CurrentState` lists
+can be true in one passage. Turn the rule off for that passage with a Vale
+comment, as the reference shows.
 
 The synced `lychee.toml` also checks the anchors of local links. A link such as
 `page.md#heading`, or `#heading` in the same file, fails when the page has no
@@ -242,8 +249,9 @@ repository whose pages break them.
 
 ### Take the hub revision with the prose standard
 
-A hub revision that refuses contractions and formats Markdown with Prettier
-changes the result of the `docs` and `formatting` checks of a repository.
+A hub revision that adds the prose rules changes the result of the `docs` and
+`formatting` checks of a repository. It refuses contractions, long sentences,
+filler words and the future tense, and it formats Markdown with Prettier.
 
 1. Run `nix flake update hub`, then `nix run --inputs-from . hub#sync-config`.
    Commit the files that it writes.
@@ -253,7 +261,10 @@ changes the result of the `docs` and `formatting` checks of a repository.
 3. Replace each contraction with its full form in Markdown and in the comments
    of `.py`, `.ex`, `.exs`, `.ts`, `.tsx`, `.js`, `.mjs`, `.go` and `.rs` files.
    Run `nix build .#checks.<system>.docs -L` to list them.
-4. Run `nix fmt` once. Commit the result.
+4. In the same run, split each sentence of more than 25 words in Markdown, and
+   write each future-tense sentence in Markdown in the present tense. Delete
+   each filler word, in Markdown and in code comments.
+5. Run `nix fmt` once. Commit the result.
 
 ## Call the reusable workflow
 

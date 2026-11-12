@@ -71,9 +71,9 @@ use one term for one concept.
 - Delete a dead document in the pull request that makes it dead.
 - A design spec (`docs/specs/`) describes work that is not built yet. The pull
   request that implements a spec moves its verified behavior into reference or
-  explanation pages, moves its decisions into decision records, opens issues for
-  what remains, and deletes the spec. Code cites the current pages, never a
-  spec.
+  explanation pages and its decisions into decision records. The same pull
+  request opens issues for what remains and deletes the spec. Code cites the
+  current pages, never a spec.
 - The Vale rule `Sealambda.CurrentState` fails the `docs` check. The rule
   `Sealambda.History` shows only in an editor that runs Vale, because the check
   runs Vale with `--minAlertLevel=error`.
@@ -97,15 +97,15 @@ defines the format of a record and of the ledger. These rules apply:
 - A changed decision is a new record that restates the whole current decision.
   In the same pull request, delete the old record and list it in
   `docs/decisions/superseded.yaml` with the commit of its last text and its
-  successor, and change each citation of the old record to cite the successor.
-  The reviewer opens the permalink of the entry.
+  successor. In the same pull request, change each citation of the old record to
+  cite the successor. The reviewer opens the permalink of the entry.
 - A decision that no longer applies, with no replacement, is deleted into the
   ledger the same way, as withdrawn: its entry has no successor.
 - A `rejected` record stays only while it holds reasoning that no other record
   holds.
 - A record states a decision, not an inventory. A list that changes, such as
   modules, layers or owners, lives in its source of truth, a code file or a
-  reference page, and the record links to it.
+  reference page. The record links to it.
 
 The hub explains this deviation from the usual practice of keeping a replaced
 record in

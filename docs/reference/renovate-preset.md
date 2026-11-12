@@ -32,10 +32,10 @@ Renovate recommends over its deprecated text syntax. The minutes field is always
 | `minimumReleaseAge`   | 7 days, for every package that has a release date. A withdrawn or compromised release is less likely to reach a repository. |
 
 Renovate cannot check the age of a lock file maintenance, a pin, a replacement,
-a bump, a lock file update or a rollback, nor of a Nix flake input that follows
-a Git ref, because none has a release date. The age check stays pending for them
-and Renovate never creates the branch, so two rules set `minimumReleaseAge` to
-`null` for these updates.
+a bump, a lock file update or a rollback. It cannot check the age of a Nix flake
+input that follows a Git ref either. None of these updates has a release date.
+The age check stays pending for them and Renovate never creates the branch, so
+two rules set `minimumReleaseAge` to `null` for these updates.
 
 A repository that runs Renovate once a day needs a window of several hours,
 because Renovate acts only when a run falls inside the window. A repository that

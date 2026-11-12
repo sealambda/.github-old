@@ -33,16 +33,16 @@ that no longer applies unless they check its status.
 ## Decision Outcome
 
 Chosen option: "Delete the record and list it in a ledger" because the folder
-and the code then hold only records in force, and git keeps every old text.
+and the code then hold only records in force. Also, git keeps every old text.
 
 A record that a new record replaces is deleted in the pull request that adds the
 new record. The new record restates the whole current decision, so a reader
 needs no other record to understand it. The ledger
-`docs/decisions/superseded.yaml` gets one entry for the deleted record: its
-number, title, the commit of its last text, its path in that commit, its
-successor and the date. The commit gives a permalink to the last text. A
-decision that no longer applies and has no replacement is deleted the same way,
-without a successor.
+`docs/decisions/superseded.yaml` gets one entry for the deleted record. The
+entry holds its number, title, the commit of its last text, its path in that
+commit, its successor and the date. The commit gives a permalink to the last
+text. A decision that no longer applies and has no replacement is deleted the
+same way, without a successor.
 
 The [decision records reference](../reference/decision-records.md) defines the
 format of the record and the ledger. The hub's
@@ -71,8 +71,9 @@ record 0038. This record makes the rule that of every Sealambda repository.
 ### Confirmation
 
 A pull request that deletes a record also adds its ledger entry. The reviewer
-opens the permalink and confirms that it shows the last text of the record, and
-that no file cites the deleted record except the ledger and its successor.
+opens the permalink and confirms that it shows the last text of the record. The
+reviewer also confirms that no file cites the deleted record except the ledger
+and its successor.
 
 ## Pros and Cons of the Options
 

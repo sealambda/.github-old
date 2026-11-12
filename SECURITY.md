@@ -53,6 +53,6 @@ bounty.
 
 ## Legal
 
-Sealambda appreciates good-faith research that follows this policy and will work
+Sealambda appreciates good-faith research that follows this policy and works
 with the reporter. This policy gives no authorization beyond what the law
 already allows. It makes no safe-harbor promise.

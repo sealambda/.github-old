@@ -28,8 +28,9 @@ keeps its own facts.
   `sync-config` app copies the files, and the `config-in-sync` check fails when
   a copy differs.
 - **CI building blocks.** The reusable workflow `secrets.yml` (gitleaks) and the
-  flake check `lib.mkDocsCheck` (markdownlint-cli2, lychee and Vale with the
-  Google style and the hub's own style, which keeps pages in the present tense).
+  flake check `lib.mkDocsCheck`. The flake check runs markdownlint-cli2, lychee
+  and Vale with the Google style and the hub's own style. The hub's style keeps
+  pages in the present tense.
 
 ## Documentation
 
