@@ -36,7 +36,7 @@ error.
 | `name` | String | The name of the repository on GitHub, without the owner: 1 to 100 letters, digits, `.`, `-` and `_`, and not `.` or `..`. The name `.github` is valid. The repository is `sealambda/<name>`, and the check `decisions` treats a citation of it as a citation of this repository. | Required. |
 | `treefmtModules` | List of modules | treefmt-nix modules of the repository. They add to the organization's formatter in `formatter`, in `checks.formatting` and in the hook `treefmt`. | `[ ]` |
 | `decisions` | Set | `{ exclude = [ "<path>" ]; }`, the paths that the citation scan of the check `decisions` skips. A path is relative to the root of the repository. No other key is valid. | `{ exclude = [ ]; }` |
-| `hooks` | Set | Hooks of the repository, in the format of git-hooks.nix. They add to the hooks of the hub, as `extraHooks` does in `lib.mkHooks`. | `{ }` |
+| `extraHooks` | Set | Hooks of the repository, in the format of git-hooks.nix. They add to the hooks of the hub. The argument is the `extraHooks` of `lib.mkHooks`, and the result attribute `hooks` is another thing: the evaluation that holds all the hooks. | `{ }` |
 | `scanner` | Package | The secret scanner of `packages.secrets-scan` and of the hook `secrets-scan`. It needs `meta.mainProgram`, and [Secrets scan](secrets-scan.md) lists what else it must support. | gitleaks of the hub's nixpkgs |
 
 ## Result
@@ -89,8 +89,8 @@ and the workflow check twice: once in the check of that name and once in
 - The check of each name reports one gate, and a branch protection can require
   it by name.
 - The check `pre-commit` shows that the hook set builds and passes on the tree,
-  with the hooks that the repository adds through `hooks`. Only this check runs
-  a hook of the repository.
+  with the hooks that the repository adds through `extraHooks`. Only this check
+  runs a hook of the repository.
 
 Removing the hooks from the check would drop that proof, and removing the other
 checks would drop the named gates, so the function keeps all five. The cost is
@@ -141,7 +141,7 @@ line, so one evaluation shows every mistake.
 | Situation | Problem line |
 | --------- | ------------ |
 | The argument isn't a set, such as `null` or a list. The function reports this problem and no other. | `` `mkStandards` takes one set of arguments, got `null`. `` |
-| An unknown name | ``Unknown arguments: `foo`. The arguments are `decisions`, `hooks`, `name`, `pkgs`, `scanner`, `src`, `treefmtModules`.`` |
+| An unknown name | ``Unknown arguments: `foo`. The arguments are `decisions`, `extraHooks`, `name`, `pkgs`, `scanner`, `src`, `treefmtModules`.`` |
 | A required argument is missing | ``Missing required arguments: `name`.`` |
 | `pkgs` is a set without `stdenv`, such as the flake `nixpkgs` and not its `legacyPackages.<system>` | `` `pkgs` must be a package set such as `nixpkgs.legacyPackages.<system>`, and this set has no `stdenv`. `` |
 | `pkgs` isn't a set | `` `pkgs` must be a package set, got `int`. `` |
@@ -150,17 +150,17 @@ line, so one evaluation shows every mistake.
 | `name` isn't a string | `` `name` must be a string, got `int`. `` |
 | `name` isn't a repository name: it's empty, longer than 100 characters, `.` or `..`, or it holds a character that a name can't hold | `` `name` must be a repository name of 1 to 100 letters, digits, `.`, `-` and `_`, and not `.` or `..`, got "a b". `` |
 | `treefmtModules` isn't a list | `` `treefmtModules` must be a list of modules, got `set`. `` |
-| `hooks` isn't a set | `` `hooks` must be a set of hooks, got `list`. `` |
+| `extraHooks` isn't a set | `` `extraHooks` must be a set of hooks, got `list`. `` |
 | `decisions` isn't a set | `` `decisions` must be a set, got `list`. `` |
 | `decisions` has another key | `` `decisions` has the unknown keys `include`. Its only key is `exclude`. `` |
 | `decisions.exclude` isn't a list of strings | `` `decisions.exclude` must be a list of strings, got `list`. `` |
 | `scanner` isn't a package | `` `scanner` must be a package, got `string`. `` |
 | `scanner` has no `meta.mainProgram` | `` `scanner` must have `meta.mainProgram`, so that `lib.getExe` finds its command. `` |
 
-Two errors come from the functions that `mkStandards` calls. A name in `hooks`
-that a hub hook uses stops the evaluation with the message of `lib.mkHooks`,
-which lists the names. A module in `treefmtModules` that treefmt-nix rejects
-stops it with the message of treefmt-nix.
+Two errors come from the functions that `mkStandards` calls. A name in
+`extraHooks` that a hub hook uses stops the evaluation with the message of
+`lib.mkHooks`, which lists the names. A module in `treefmtModules` that
+treefmt-nix rejects stops it with the message of treefmt-nix.
 
 ## Limits
 
@@ -182,12 +182,12 @@ stops it with the message of treefmt-nix.
   `packages.secrets-scan`, and it doesn't reach `secrets.yml`. [Ways a
   repository switches the scan off](secrets-scan.md#ways-a-repository-switches-the-scan-off)
   lists which files can silence the scan.
-- The attribute `hooks` of the call adds hooks. It can't replace a hub hook or
+- The argument `extraHooks` adds hooks. It can't replace a hub hook or
   switch one off, as the options of [Git hooks](hooks.md#options) say.
 - The owner of the repository is `sealambda`, and the argument `name` has no
   place for another owner.
 - The check of the arguments reads the shape of each value. It doesn't read the
-  modules of `treefmtModules` or the hooks of `hooks`: treefmt-nix and
+  modules of `treefmtModules` or the hooks of `extraHooks`: treefmt-nix and
   git-hooks.nix check them when the function builds the result.
 - `pkgs` must be the package set of one system. A call for another system needs
   another call, which `forAllSystems` makes.

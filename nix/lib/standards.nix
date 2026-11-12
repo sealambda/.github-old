@@ -33,7 +33,7 @@ let
       name,
       treefmtModules ? [ ],
       decisions ? { },
-      hooks ? { },
+      extraHooks ? { },
       scanner ? defaultScanner pkgs,
     }:
     let
@@ -46,8 +46,8 @@ let
           src
           treefmt
           scanner
+          extraHooks
           ;
-        extraHooks = hooks;
       };
     in
     {
@@ -108,7 +108,7 @@ in
     `workflows` again, and it scans no secret, because the check commits the
     source before the hook reads the staged changes. A wrong argument stops the
     evaluation with one message that lists every problem, and a name that a hub
-    hook uses in `hooks` stops it with the message of `lib.mkHooks`.
+    hook uses in `extraHooks` stops it with the message of `lib.mkHooks`.
 
     # Inputs
 
@@ -142,9 +142,11 @@ in
       decisions check skips, as in `lib.mkDecisionsCheck`. Default
       `{ exclude = [ ]; }`.
 
-    `hooks`
+    `extraHooks`
     : Hooks of the repository, in the format of git-hooks.nix. They add to the
-      hub's hooks, as `extraHooks` does in `lib.mkHooks`. Default empty.
+      hub's hooks, and the argument is the `extraHooks` of `lib.mkHooks`. The
+      result attribute `hooks` is another thing: it is the evaluation that
+      holds all the hooks, the hub's and these. Default empty.
 
     `scanner`
     : The package of the secret scanner, with the requirements that
@@ -161,7 +163,7 @@ in
       name :: String;
       treefmtModules :: [Module] ? [ ];
       decisions :: { exclude :: [String] ? [ ]; } ? { exclude = [ ]; };
-      hooks :: AttrSet ? { };
+      extraHooks :: AttrSet ? { };
       scanner :: Derivation ? <hub gitleaks>;
     } -> {
       checks :: { formatting; docs; decisions; workflows; pre-commit :: Derivation; };

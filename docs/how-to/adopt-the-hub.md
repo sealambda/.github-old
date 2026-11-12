@@ -144,7 +144,7 @@ shape.
 
 To add to the rules, pass the optional arguments. `treefmtModules` adds the
 repository's treefmt-nix modules. `decisions.exclude` lists the paths that the
-citation scan skips. `hooks` adds hooks of the repository, and `scanner`
+citation scan skips. `extraHooks` adds hooks of the repository, and `scanner`
 replaces the secret scanner. The repository's own `.vale.ini`,
 `.markdownlint-cli2.yaml` or `lychee.toml` layers over the hub's base, as
 [Layer your own configuration](#layer-your-own-configuration) says.
@@ -568,7 +568,7 @@ at each stage and what the installer does.
 Pass `extraHooks` to `mkHooks` to add a hook of the repository. A name that a
 hub hook uses is an error. A repository that
 [takes the standards in one call](#take-the-standards-in-one-call) already has
-the hooks as `standards.hooks` and passes the extra hooks as `hooks`.
+the hooks as `standards.hooks` and passes the extra hooks as `extraHooks`.
 
 ## Call the reusable workflow
 

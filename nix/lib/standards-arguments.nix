@@ -14,7 +14,7 @@ let
   optional = [
     "treefmtModules"
     "decisions"
-    "hooks"
+    "extraHooks"
     "scanner"
   ];
 
@@ -98,14 +98,14 @@ let
         wrongType "name" "a string" args.name
     );
 
-  # The problems of `treefmtModules` and `hooks`.
+  # The problems of `treefmtModules` and `extraHooks`.
   problemsOfCollections =
     args:
     lib.optional (args ? treefmtModules && !lib.isList args.treefmtModules) (
       wrongType "treefmtModules" "a list of modules" args.treefmtModules
     )
-    ++ lib.optional (args ? hooks && !lib.isAttrs args.hooks) (
-      wrongType "hooks" "a set of hooks" args.hooks
+    ++ lib.optional (args ? extraHooks && !lib.isAttrs args.extraHooks) (
+      wrongType "extraHooks" "a set of hooks" args.extraHooks
     );
 
   # The problems of `decisions`: a set whose only key is `exclude`, a list of

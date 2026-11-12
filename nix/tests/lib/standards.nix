@@ -111,7 +111,7 @@ let
   invalid = {
     unknown-argument = {
       args.foo = 1;
-      message = "Unknown arguments: `foo`. The arguments are `decisions`, `hooks`, `name`, `pkgs`, `scanner`, `src`, `treefmtModules`.";
+      message = "Unknown arguments: `foo`. The arguments are `decisions`, `extraHooks`, `name`, `pkgs`, `scanner`, `src`, `treefmtModules`.";
     };
     pkgs-is-a-set-without-stdenv = {
       args.pkgs = { };
@@ -161,9 +161,9 @@ let
       args.treefmtModules = { };
       message = "`treefmtModules` must be a list of modules, got `set`.";
     };
-    hooks-is-not-a-set = {
-      args.hooks = [ ];
-      message = "`hooks` must be a set of hooks, got `list`.";
+    extra-hooks-is-not-a-set = {
+      args.extraHooks = [ ];
+      message = "`extraHooks` must be a set of hooks, got `list`.";
     };
     decisions-is-not-a-set = {
       args.decisions = [ ];
@@ -450,11 +450,12 @@ in
     expectedLog = [ "fixtures/cites.md:3: decision record ${missingNumber} does not exist" ];
   };
 
-  # Requirement: a hook in `hooks` runs in addition to the hooks of the hub.
+  # Requirement: a hook in `extraHooks` runs in addition to the hooks of the
+  # hub.
   standards-extra-hook-is-added = {
     check =
       let
-        ids = hookIds { hooks.my-hook = failingHook; };
+        ids = hookIds { extraHooks.my-hook = failingHook; };
       in
       mustHold "The hooks are ${builtins.toJSON ids}, and my-hook or a hub hook is missing." (
         builtins.all (id: builtins.elem id ids) [
@@ -469,21 +470,22 @@ in
       );
   };
 
-  # Requirement: a hook in `hooks` runs in the check `pre-commit`. The hook
-  # always fails, and the log names it. The tree is clean, so the hook of the
-  # repository is the only one that fails: `standards-clean-tree-passes` shows
-  # that the same tree passes without it.
+  # Requirement: a hook in `extraHooks` runs in the check `pre-commit`. The
+  # hook always fails, and the log names it. The tree is clean, so the hook of
+  # the repository is the only one that fails: `standards-clean-tree-passes`
+  # shows that the same tree passes without it.
   standards-extra-hook-runs-in-pre-commit = {
-    check = (standards { hooks.my-hook = failingHook; }).checks.pre-commit;
+    check = (standards { extraHooks.my-hook = failingHook; }).checks.pre-commit;
     expectedLog = [ "my-hook" ];
   };
 
-  # Requirement: a hook in `hooks` that has the name of a hub hook is an error,
-  # as in `mkHooks`, so a repository can't replace a rule by accident. The
-  # case before this one shows that a hook with another name works.
+  # Requirement: a hook in `extraHooks` that has the name of a hub hook is an
+  # error, as in `mkHooks`, so a repository can't replace a rule by accident.
+  # The case `standards-extra-hook-is-added` shows that a hook with another
+  # name works.
   standards-extra-hook-with-a-hub-name-is-refused = {
-    check = mustHold "hooks with the name docs was accepted." (
-      !evaluates (standards { hooks.docs = failingHook; }).hooks.config.rawConfig
+    check = mustHold "extraHooks with the name docs was accepted." (
+      !evaluates (standards { extraHooks.docs = failingHook; }).hooks.config.rawConfig
     );
   };
 
@@ -528,7 +530,7 @@ in
         (standards {
           treefmtModules = [ excludeExample ];
           decisions.exclude = [ "fixtures" ];
-          hooks.my-hook = {
+          extraHooks.my-hook = {
             enable = true;
             entry = "${pkgs.coreutils}/bin/true";
           };

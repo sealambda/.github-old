@@ -105,11 +105,12 @@
             src = citationSrc;
           };
 
-          # `hooks`: a hook of the repository runs in the check `pre-commit`.
+          # `extraHooks`: a hook of the repository runs in the check
+          # `pre-commit`.
           withHook = hub.lib.mkStandards {
             inherit pkgs name;
             src = self;
-            hooks.my-hook = {
+            extraHooks.my-hook = {
               enable = true;
               entry = "${pkgs.coreutils}/bin/false";
             };
