@@ -284,6 +284,7 @@ failure to CI.
 | `src` | The source tree, normally the `self` of the flake. The check `pre-commit` runs on it. | Required. |
 | `treefmt` | The evaluation that `lib.mkTreefmt` returns, with the modules of the repository. | `mkTreefmt pkgs [ ]` |
 | `extraHooks` | Hooks of the repository, in the format of git-hooks.nix. They add to the hub's hooks. | `{ }` |
+| `scanner` | The package of the secret scanner that the hook `secrets-scan` runs. [Secrets scan](secrets-scan.md) lists what it must support. | gitleaks of the hub's nixpkgs |
 
 A name in `extraHooks` that a hub hook uses is an evaluation error that lists the
 names. A repository can't replace a hub hook or switch it off in a call. It
@@ -327,7 +328,8 @@ the ones that a repository uses:
   is assembled when the test runs, so no file holds it.
 - The flake check `dev-shells` fails when a dev shell other than `hooks`
   carries a shell hook, or when `default` isn't `base`.
-- The flake check `lib-functions` has two cases for `extraHooks`.
+- The flake check `lib-functions` has two cases for `extraHooks` and two for
+  `scanner`.
 - The `consumer` job of the CI builds the check `pre-commit` of the layered
   synthetic consumer, so a change that a consumer can't build fails the job.
   The legacy consumer doesn't call `mkHooks`, so the hooks change nothing for a

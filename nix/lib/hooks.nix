@@ -14,6 +14,7 @@
   mkTreefmt,
   mkDocsTools,
   mkSecretsScan,
+  defaultScanner,
   mkGitPolicyTool,
   tools,
 }:
@@ -68,6 +69,11 @@
       the hooks of the hub. A name that a hub hook already uses is an error,
       so a repository can't replace or switch off a rule by accident.
 
+    `scanner`
+    : The package of the secret scanner that the hook `secrets-scan` runs,
+      with the requirements that `mkSecretsScan` lists. The default is the
+      default of `mkSecretsScan`, gitleaks of the hub's nixpkgs.
+
     # Type
 
     ```
@@ -76,6 +82,7 @@
       src :: Path | AttrSet;
       treefmt :: AttrSet ? <mkTreefmt pkgs [ ]>;
       extraHooks :: AttrSet ? { };
+      scanner :: Derivation ? <hub gitleaks>;
     } -> Derivation
     ```
   */
@@ -85,6 +92,7 @@
       src,
       treefmt ? mkTreefmt pkgs [ ],
       extraHooks ? { },
+      scanner ? defaultScanner pkgs,
     }:
     let
       hubPkgs = hubPackagesFor pkgs;
@@ -132,6 +140,7 @@
           entry = "${
             lib.getExe (mkSecretsScan {
               pkgs = hubPkgs;
+              inherit scanner;
             })
           } staged";
           always_run = true;

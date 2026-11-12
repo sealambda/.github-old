@@ -77,6 +77,7 @@
           inherit hubPackagesFor;
         })
         mkSecretsScan
+        defaultScanner
         ;
       inherit
         (import ./nix/lib/hooks.nix {
@@ -87,6 +88,7 @@
             mkTreefmt
             mkDocsTools
             mkSecretsScan
+            defaultScanner
             mkGitPolicyTool
             tools
             ;

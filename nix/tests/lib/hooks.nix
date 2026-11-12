@@ -1,5 +1,5 @@
-# The cases of `lib.mkHooks` that need no Git: what `extraHooks` does. The
-# stages and the refusals of the hooks run in real Git in
+# The cases of `lib.mkHooks` that need no Git: what `extraHooks` and `scanner`
+# do. The stages and the refusals of the hooks run in real Git in
 # `nix/tests/hooks.sh`. `default.nix` in this folder collects the cases below.
 # A case that must fail with an evaluation error can't use `expectedLog`,
 # because that only reads the log of a failed build, so these cases evaluate
@@ -42,6 +42,23 @@ let
   accepts =
     extraHooks:
     (builtins.tryEval (builtins.seq (hub.mkHooks { inherit pkgs src extraHooks; }) true)).success;
+
+  # The command of the hook `secrets-scan` in the configuration of `mkHooks`
+  # with the arguments `args` added to the call.
+  secretsHookEntry =
+    args:
+    let
+      hooks = hub.mkHooks ({ inherit pkgs src; } // args);
+      hook = builtins.head (
+        builtins.filter (hook: hook.id == "secrets-scan") (builtins.head hooks.config.rawConfig.repos).hooks
+      );
+    in
+    hook.entry;
+
+  # The command that a hook of the scanner `scanner` must run: the command of
+  # `mkSecretsScan` with that scanner, and the subcommand for the index.
+  secretsScanCommand =
+    scanner: "${pkgs.lib.getExe (hub.mkSecretsScan { inherit pkgs scanner; })} staged";
 
   # A derivation that builds when `condition` is true and fails the evaluation
   # with `message` when it is false.
@@ -90,5 +107,28 @@ in
         "gitpolicy-branch"
       ]
     );
+  };
+
+  # Requirement: without `scanner`, the hook `secrets-scan` runs the command
+  # with gitleaks, the default of `mkSecretsScan`.
+  hooks-default-scanner-is-gitleaks = {
+    check =
+      mustHold "The hook secrets-scan runs ${secretsHookEntry { }}, not the command with gitleaks."
+        (secretsHookEntry { } == secretsScanCommand pkgs.gitleaks);
+  };
+
+  # Requirement: the `scanner` of the call is the scanner of the hook
+  # `secrets-scan`. The command with betterleaks differs from the command with
+  # gitleaks, so the case can tell the two apart.
+  hooks-scanner-reaches-the-secrets-hook = {
+    check =
+      mustHold
+        "The hook secrets-scan runs ${
+          secretsHookEntry { scanner = pkgs.betterleaks; }
+        }, not the command with betterleaks."
+        (
+          secretsHookEntry { scanner = pkgs.betterleaks; } == secretsScanCommand pkgs.betterleaks
+          && secretsScanCommand pkgs.betterleaks != secretsScanCommand pkgs.gitleaks
+        );
   };
 }
