@@ -280,6 +280,32 @@ repository follows. Every repository then runs the same version of the tool, and
 `nix flake update hub` updates it. [ADR 0005](../decisions/0005-check-decision-records-with-a-hermetic-flake-check.md)
 gives the reasons.
 
+## Gate the workflows
+
+The `workflows` check fails when a job that doesn't call a reusable workflow has
+no `timeout-minutes`, and when a workflow that a pull request event triggers has
+no `concurrency` group. [Workflow checks](../reference/workflow-checks.md)
+defines each rule.
+
+1. Add the check to the set that `checks` defines through `forAllSystems` in the
+   repository's `flake.nix`. Pass `self`, because the check reads the workflow
+   files of the whole tree.
+
+   ```nix
+   workflows = hub.lib.mkWorkflowsCheck pkgs self;
+   ```
+
+2. Run `nix build .#checks.<system>.workflows -L`. Each finding is a line
+   `path:line: message`. CI needs no separate job: the job that runs
+   `nix flake check` runs this check too.
+3. Fix the findings of the first run. Set `timeout-minutes` on each job to
+   several times the longest run that the job has had. Set a top-level
+   `concurrency` group on each pull request workflow.
+
+The check has no option and no exclusion. It builds its tool from the hub's own
+nixpkgs, whatever nixpkgs the repository follows, so every repository runs the
+same version.
+
 ## Call the reusable workflow
 
 The hub offers the reusable workflow `secrets.yml`. It runs its tool from the
@@ -287,7 +313,8 @@ repository's flake. The comment at the top of the workflow file states what the
 flake must expose.
 
 1. Call the workflow from a job. Pin it to a commit SHA, which Renovate bumps.
-   The `runs-on` input is optional. It takes JSON.
+   The `runs-on` input is optional. It takes JSON. The `timeout-minutes` input
+   is optional too. It takes a whole number of minutes.
 
    ```yaml
    jobs:
@@ -297,7 +324,19 @@ flake must expose.
          contents: read
        with:
          runs-on: '["ubuntu-24.04-arm"]'
+         timeout-minutes: 15
    ```
 
 2. List the job in the `needs` of the repository's `ci` job, as the hub's
    `.github/workflows/ci.yml` does.
+
+A job that calls a reusable workflow can't set `timeout-minutes`, so the
+workflow sets the limit of its own job from the input `timeout-minutes`. The
+default is 360 minutes, the limit that GitHub gives a job that sets none, so a
+caller that passes nothing keeps that limit. Pass a limit of several times
+the longest scan of the repository, as [Gate the workflows](#gate-the-workflows)
+advises for a job.
+
+The input accepts any number that a caller passes, a value above 360 included.
+The 1 to 360 rule of the `workflows` check covers the workflows of the checked
+repository only, so it doesn't judge the value of the input.

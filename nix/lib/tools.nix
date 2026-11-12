@@ -1,7 +1,8 @@
-# The Python tools of the hub: `decisions`, `leaks`, `versions` and `release`,
-# each the package of the same name below `nix/scripts`. `flake.nix` imports
-# this file for the apps and the checks, and `decisions.nix` builds
-# `mkDecisionsCheck` on the `decisions` tool.
+# The Python tools of the hub: `decisions`, `leaks`, `versions`, `workflows` and
+# `release`, each the package of the same name below `nix/scripts`.
+# `flake.nix` imports this file for the apps and the checks, and
+# `decisions.nix` and `workflows.nix` build `mkDecisionsCheck` and
+# `mkWorkflowsCheck` on their tools.
 #
 # The set holds one entry for each tool: the result of `mkPythonTool`
 # (`python-tool.nix`), with `env`, the run-time environment for the tests of
@@ -67,6 +68,17 @@ in
     name = "versions";
     uses = [ "decisions" ];
     inherit schemaDir;
+    runtimeInputs = pkgs: [ (decisionsPython pkgs) ];
+  };
+
+  # The `workflows` command: `python -P -m workflows`, the code in
+  # `nix/scripts/workflows`. It checks the time limits and the concurrency
+  # groups of the workflows. The package imports the findings, the YAML reader
+  # and the file selection of the package `decisions`, so it needs the library
+  # of `decisions` that reads YAML.
+  workflows = mkPythonTool {
+    name = "workflows";
+    uses = [ "decisions" ];
     runtimeInputs = pkgs: [ (decisionsPython pkgs) ];
   };
 

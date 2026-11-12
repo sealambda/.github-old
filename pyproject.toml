@@ -12,6 +12,7 @@ src = [
   "nix/tests/leaks",
   "nix/tests/release",
   "nix/tests/versions",
+  "nix/tests/workflows",
 ]
 
 [tool.ruff.lint]

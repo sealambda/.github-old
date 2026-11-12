@@ -47,6 +47,7 @@
           repository = "sealambda/.github";
           exclude = [ ];
         };
+        workflows = hub.lib.mkWorkflowsCheck pkgs self;
       });
     };
 }

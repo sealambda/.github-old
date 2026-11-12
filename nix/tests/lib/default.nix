@@ -20,6 +20,7 @@ let
     ./decisions.nix
     ./docs.nix
     ./treefmt.nix
+    ./workflows.nix
   ];
 
   # `unionOfDisjoint` fails on a name that two files both use. A plain merge
