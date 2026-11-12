@@ -86,6 +86,7 @@ four reads it.
 | `.github/CODEOWNERS` | GitHub reads the file of each repository and doesn't inherit one. It sets the reviewers of the hub only. |
 | `.github/workflows/ci.yml` | The hub's own CI. It has no `workflow_call` trigger, so no consumer calls it. |
 | `.gitignore` | The ignore list of the hub's own work tree. |
+| `.github/actions/**`, `.github/workflows/standards.yml`, `versions.json` | The paths of the actions series. A consumer reads them by the tag of that series, and none of the four readers above reads them: the actions series decides their release, and the hub series gives a patch. `versions.json` holds the pinned version of Nix. The hub series gave `yes` for it before the actions series existed. No function of the flake reads the file. Only the hub's own `versions` check and the action `setup-nix` read it. The hub has no file `standards.yml`, so that pattern matches no file. |
 
 Every other tracked path stays `yes`. This table groups them by the reader
 that makes them rules:
@@ -101,7 +102,6 @@ that makes them rules:
 | `schemas/**` | The `decisions` tool validates records against them. |
 | `.github/workflows/secrets.yml` | The reusable workflow that consumers call. |
 | `default.json`, `v2.json` | The Renovate presets that consumers extend. |
-| `versions.json` | The pinned version of Nix that workflows install. |
 | `templates/**` | People copy them into consumers, and the `versions` check reads the workflows below `templates/`. |
 | `.editorconfig`, `.markdownlint-cli2.yaml`, `.vale.ini`, `.vale/**`, `lychee.toml`, `.github/.markdownlint-cli2.yaml` | The hub's own copies of the files in `config/`. The check `config-in-sync` keeps the copies equal, and the source in `config/` is the rule. |
 | `renovate.json`, `pyproject.toml` | The hub's own Renovate and Python settings. No consumer reads them, and no one has classified them as free: they stay `yes`. |
