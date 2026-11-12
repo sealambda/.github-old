@@ -180,7 +180,12 @@ readonly WARNING_RULES=(
   StepLength
 )
 
-# Writes the page `warnings.md` into the project. It has one finding for each
+# The page of `add_every_warning`, a path relative to the project. It is in
+# `docs/how-to/`, because the hub's base turns HowToTitle and StepLength on only
+# there.
+readonly WARNINGS_PAGE=docs/how-to/warnings.md
+
+# Writes the page WARNINGS_PAGE into the project. It has one finding for each
 # rule in WARNING_RULES and no finding of the level error:
 # - the title `Using the hub` starts with a gerund (HowToTitle);
 # - the heading `Title Case Heading` is not in sentence case (HeadingCase);
@@ -191,7 +196,8 @@ readonly WARNING_RULES=(
 # - the bulleted list has 1 item (ListLength);
 # - the first numbered step has 27 words (StepLength).
 add_every_warning() {
-  cat >"$PROJECT/warnings.md" <<'EOF'
+  mkdir -p "$PROJECT/$(dirname -- "$WARNINGS_PAGE")"
+  cat >"$PROJECT/$WARNINGS_PAGE" <<'EOF'
 # Using the hub
 
 ## Title Case Heading
@@ -382,6 +388,14 @@ case_history_term_does_not_fail() {
   assert_output_contains "Sealambda.History:'previously' may describe history"
 }
 
+# Runs `vale` without the level flag, as an editor does, on the files $1 and
+# later, paths relative to the project. Sets STATUS to its exit status and
+# writes its output to OUT, one finding per line.
+run_vale_plain() {
+  STATUS=0
+  (cd "$PROJECT" && vale --output=line "$@") >"$OUT" 2>&1 || STATUS=$?
+}
+
 # Asserts, in the project that holds the page of `add_every_warning`, that the
 # findings of level warning don't change the gate. The check passes and prints
 # no finding of the style `Sealambda`. A Vale run without the level flag, which
@@ -395,8 +409,7 @@ assert_warnings_leave_the_gate_unchanged() {
   assert_status 0
   assert_output_lacks "Sealambda."
 
-  STATUS=0
-  (cd "$PROJECT" && vale --output=line warnings.md) >"$OUT" 2>&1 || STATUS=$?
+  run_vale_plain "$WARNINGS_PAGE"
 
   assert_status 0
   for rule in "${WARNING_RULES[@]}"; do
@@ -423,6 +436,65 @@ case_warning_rules_do_not_fail_a_bare_project() {
   add_every_warning
 
   assert_warnings_leave_the_gate_unchanged
+}
+
+# Writes the page $1, a path relative to the project, that has a finding of
+# HowToTitle (the title `Using the hub`) and one of StepLength (a first step of
+# 27 words) wherever the two rules are on. The list has two items, so
+# ListLength has no finding. The long step is also a sentence of more than 25
+# words, so SentenceLength has a finding on every page: it shows that Vale ran
+# the style, and not only that two rules stayed silent.
+write_how_to_findings_page() {
+  mkdir -p "$(dirname -- "$PROJECT/$1")"
+  cat >"$PROJECT/$1" <<'EOF'
+# Using the hub
+
+1. Open the file and read each line of the long text that follows, then write
+   down every word that you find in it before you go on.
+2. Stop.
+EOF
+}
+
+# Asserts, in the project of the running case, that HowToTitle and StepLength
+# are on for the pages of a `how-to` folder, also under another folder, and off
+# for any other page. Each page runs alone, so a finding names its page.
+assert_how_to_rules_follow_the_folder() {
+  local page
+
+  for page in docs/how-to/page.md services/api/docs/how-to/page.md; do
+    write_how_to_findings_page "$page"
+    run_vale_plain "$page"
+    assert_status 0
+    assert_output_contains "Sealambda.HowToTitle"
+    assert_output_contains "Sealambda.StepLength"
+  done
+
+  for page in docs/reference/page.md docs/explanation/page.md page.md; do
+    write_how_to_findings_page "$page"
+    run_vale_plain "$page"
+    assert_status 0
+    assert_output_contains "Sealambda.SentenceLength"
+    assert_output_lacks "Sealambda.HowToTitle"
+    assert_output_lacks "Sealambda.StepLength"
+  done
+}
+
+# The two rules that check how-to pages are on for a page in `docs/how-to/` and
+# off for any other page, in a legacy project. The hub's base file has a
+# section for the folder, so the two rules don't flag a reference page or an
+# explanation page. Mutation: deleting the section `docs/how-to` from
+# `config/vale.ini` makes this case fail.
+case_how_to_rules_apply_only_in_how_to_pages_of_a_legacy_project() {
+  new_project how-to-legacy
+
+  assert_how_to_rules_follow_the_folder
+}
+
+# The same holds in a bare project, whose base comes from the wrapper.
+case_how_to_rules_apply_only_in_how_to_pages_of_a_bare_project() {
+  new_bare_project how-to-bare
+
+  assert_how_to_rules_follow_the_folder
 }
 
 # The rule `Sealambda.CurrentState` is off for the decision records and the
@@ -1083,6 +1155,8 @@ main() {
     case_history_term_does_not_fail
     case_warning_rules_do_not_fail_a_legacy_project
     case_warning_rules_do_not_fail_a_bare_project
+    case_how_to_rules_apply_only_in_how_to_pages_of_a_legacy_project
+    case_how_to_rules_apply_only_in_how_to_pages_of_a_bare_project
     case_current_state_is_off_for_decisions_and_specs
     case_local_anchors_are_checked
     case_no_local_file_applies_the_hub_rules

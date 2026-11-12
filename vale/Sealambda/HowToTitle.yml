@@ -1,15 +1,15 @@
 # The title of a how-to page starts with an imperative verb that names the task,
 # such as "Adopt the hub" (docs/reference/writing-style.md#how-to-titles).
 #
-# The rule checks the title of every page, the heading of level 1, because a
-# Vale rule can't be limited to a folder: only a section of the `.vale.ini`
-# can do that. So the rule flags the openers that no page title needs: a
-# question or a label ("How to", "Guide to", "Tutorial") and a gerund that
-# names an activity ("Using", "Setting up"). It doesn't check that the first
-# word is a verb. The list of gerunds leaves out the words that are also
-# nouns, such as "Writing" in "Writing style". A reference or explanation page
-# that starts with a listed gerund renames the title or turns the rule off for
-# it.
+# The rule checks the title of a page, the heading of level 1. A rule file
+# can't name a folder, so the hub's `config/vale.ini` turns the rule on for
+# `docs/how-to/` only, in a section of that file. The rule flags the openers
+# that no how-to title needs: a question or a label ("How to", "Guide to",
+# "Tutorial") and a gerund that names an activity ("Using", "Setting up"). It
+# doesn't check that the first word is a verb. The list of gerunds leaves out
+# the words that are also nouns, such as "Writing" in "Writing style". A how-to
+# page that starts with a listed gerund renames the title or turns the rule off
+# for it.
 # The match is case-insensitive and anchored at the start of the title. Every
 # alternative is a fixed string, so the matcher can't backtrack without limit.
 # Level: warning. Tests: HowToTitle.test.yml.

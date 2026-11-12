@@ -380,9 +380,10 @@ style. [Writing style](../reference/writing-style.md) defines its rules:
   warning rule leaves the result of the check unchanged.
 
 The hub's Vale configuration turns `Sealambda.CurrentState` off for
-`docs/decisions/` and `docs/specs/`. To keep a listed word that's true in one
-passage, turn the rule off for that passage with a Vale comment, as the
-reference shows.
+`docs/decisions/` and `docs/specs/`. It turns `Sealambda.HowToTitle` and
+`Sealambda.StepLength` on for `docs/how-to/` only. To keep a listed word that's
+true in one passage, turn the rule off for that passage with a Vale comment, as
+the reference shows.
 
 The hub's lychee configuration also checks the anchors of local links. A link
 such as `page.md#heading`, or `#heading` in the same file, fails when the page

@@ -256,17 +256,21 @@ names the task, such as `Adopt the hub`. These openers are flagged:
 A reader scans a list of titles for the task to do, and a verb at the start
 says what the page does.
 
+### Where the rule is on
+
+The hub's Vale base, `config/vale.ini`, turns `Sealambda.HowToTitle` off for
+every page and on again in `docs/how-to/`. The folder can sit under another
+folder, so `services/api/docs/how-to/` counts too. A reference page and an
+explanation page aren't checked.
+
 ### What the rule can't tell
 
-Vale can't limit a rule to a folder. Only a section of the `.vale.ini` can do
-that, and the hub's base file, `config/vale.ini`, has no section for
-`docs/how-to/`. So the rule checks the title of every page. It flags an opener
-that no title needs, and it doesn't check that the first word is a verb. The
-list of gerunds leaves out a word that's also a noun, such as `Writing` in
-`Writing style`.
+The rule flags an opener that no title needs, and it doesn't check that the
+first word is a verb. The list of gerunds leaves out a word that's also a noun,
+such as `Writing` in `Writing style`.
 
-A reference or explanation page whose title starts with a listed gerund has two
-choices. Rename the title to a noun phrase, or turn the rule off for it:
+A how-to page whose title starts with a listed gerund has two choices. Rename
+the title to start with a verb, or turn the rule off for it:
 
 ```markdown
 <!-- vale Sealambda.HowToTitle = NO -->
@@ -364,9 +368,9 @@ The rule counts the words of each item of a numbered list, and it doesn't count
 code. It counts the first paragraph of a step. A second paragraph and a nested
 list under a step aren't counted. A bulleted list isn't checked.
 
-Vale can't limit a rule to a folder, and the hub's base file, `config/vale.ini`,
-has no section for `docs/how-to/`. So the rule checks every numbered list on
-every page, not only the steps of a how-to page.
+The hub's Vale base, `config/vale.ini`, turns the rule off for every page and
+on again in `docs/how-to/`, as it does for `Sealambda.HowToTitle`. A numbered
+list on another page isn't checked.
 
 ### A true use of a long step
 
