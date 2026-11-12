@@ -121,6 +121,10 @@ and that step equals the constant `READ_VERSION_STEP` in
 `read-version.sh` of the action folder on the `versions.json` at the root of
 the tree. It has no other key, so no condition, working directory or ignored
 failure can change it. A finding names the keys in which the step differs.
+The check holds only that step. The other steps of the action, such as one
+between the step `version` and the installer, and the keys of the installer
+step other than `install_url`, aren't held: review covers them, and the run-time
+assertion that the next list describes is the backstop.
 The same expression in any other file, a workflow or another `action.yml`, is a
 finding like any other address that differs from the version. A literal
 address stays valid in every file.
@@ -134,7 +138,7 @@ The guarantee has three parts, and each part proves a different thing:
   it with `jq` on valid and invalid manifests.
 - The job `flake-check` of `ci.yml` asserts at run time that the installed
   `nix --version` and the output of the action equal the value in
-  `versions.json`.
+  `versions.json`. No other job asserts it.
 
 The use of the action from another repository isn't verified: see
 [Not verified](setup-nix-action.md#not-verified).

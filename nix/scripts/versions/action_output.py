@@ -7,8 +7,8 @@ This module accepts that one expression in that one file. The expression is
 `EXPRESSION_URL`: the installer address in which the version is
 `${{ steps.version.outputs.nix }}`.
 
-The check holds the file to a fixed shape, not to a description of it. The
-expression passes only when both conditions hold:
+The check holds the step `version` to a fixed shape: it must equal a constant.
+The expression passes only when both conditions hold:
 
 1. The file is `.github/actions/setup-nix/action.yml`, at that path from the
    checked root. No other file may use the expression.
@@ -21,9 +21,13 @@ A step that equals the constant has no room for another command, another key
 of the manifest, another file or a condition. The step holds no logic: the
 logic is the file `read-version.sh`, which its own unit tests run against
 manifests. So the check proves that the action runs that file on the root
-manifest. It doesn't read the file, and it doesn't run the action. The job
+manifest. It doesn't read the file, and it doesn't run the action.
+
+The check holds only the step `version`. It doesn't read the other steps of
+the action, such as one between that step and the installer, or the keys of
+the installer step other than `install_url`. Review covers those. The job
 `flake-check` of the hub's `ci.yml` asserts at run time that the installed
-`nix` has the version of the manifest.
+`nix` has the version of the manifest, and no other job asserts it.
 """
 
 from decisions.findings import Finding

@@ -65,11 +65,11 @@ every pull request, so a bad manifest rarely reaches a run.
 
 ## Requirements
 
-The action needs `bash` and `jq`. The Ubuntu 24.04 image that GitHub hosts has
-both. Its [software list][runner-list], at image version 20261101.360.1, holds
-`jq 1.7` under the heading Tools and the apt package `jq` at version
-1.7.1-3ubuntu0.24.04.2. A self-hosted runner needs its own `jq`. The hub's
-jobs run on a runner that GitHub hosts.
+The action needs `bash` and `jq`. The Ubuntu images that GitHub hosts have
+both, and the [software list][runner-list] of the image names `jq`. The hub's
+jobs use the label `ubuntu-latest`, which GitHub moves to newer images, so this
+page names no image or package version. A self-hosted runner needs its own
+`jq`.
 
 ## The `versions` check
 
@@ -88,6 +88,10 @@ hold:
   `read-version.sh` on the root `versions.json`. It has no other key, so no
   condition, working directory or ignored failure can change it.
 
+The check holds only that step. It doesn't read the other steps of the action
+or the keys of the installer step other than `install_url`: review covers
+them.
+
 A finding names the keys in which the step differs. A workflow never gets the
 expression form: its `install_url` must be the exact address.
 
@@ -97,7 +101,7 @@ script and doesn't run the action. The script has unit tests of its own, in the
 flake check `check-versions-tests`: they run it with `jq` on manifests that
 are valid and invalid. At run time, the job `flake-check` of `ci.yml` asserts
 that `nix --version` and the output `version` both equal the value in
-`versions.json`. The rules are in
+`versions.json`. No other job asserts it. The rules are in
 [Toolchain versions](versions.md#the-check).
 
 ## Not verified
