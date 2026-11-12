@@ -101,16 +101,14 @@ let
       # and merges the `.vale.ini` of the repository over it: `Vocab` and
       # `BasedOnStyles` append, and each `[glob]` section applies. The
       # wrapper sets the variable, so the hub's base is the global file.
-      # `--config` and `VALE_CONFIG_PATH` name one file and don't merge, so the
-      # wrapper uses neither. It also unsets `VALE_CONFIG_PATH`, because Vale
-      # reads that file instead of the repository's `.vale.ini`, which would
-      # drop the repository's layer. Two sources stay that the wrapper can't
-      # remove: Vale takes the nearest `.vale.ini` from the working directory
-      # upward, up to the home folder, so a `.vale.ini` above the repository or
-      # in the home folder applies when the repository has none of its own.
-      # `docs/reference/wrapped-tools.md` states both. The wrapper runs the
-      # Vale with the styles by its store path, so a `vale` of the same name on
-      # `PATH` never starts a loop.
+      # `--config` and `VALE_CONFIG_PATH` replace the project file that Vale
+      # finds from the working directory upward, so a wrapper that sets either
+      # one would drop the repository's layer unless it found that file
+      # itself. The wrapper uses neither, and it unsets `VALE_CONFIG_PATH`
+      # for the same reason. Two sources of configuration stay that the
+      # wrapper can't remove: `docs/reference/wrapped-tools.md` states them.
+      # The wrapper runs the Vale with the styles by its store path, so a
+      # `vale` of the same name on `PATH` never starts a loop.
       vale = pkgs.writeShellApplication {
         name = "vale";
         runtimeEnv.XDG_CONFIG_HOME = "${mkValeBase pkgs}/config";
