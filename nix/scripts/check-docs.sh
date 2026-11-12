@@ -11,9 +11,9 @@
 # `.vale.ini`, the repository's own `Repository` Vale vocabulary, and the
 # nested `.markdownlint-cli2.yaml` files. The flake check `config-in-sync`
 # guarantees that the synced files match the hub. This script is the only
-# place that holds the flags of the three tools. `flake.nix` wraps it with
-# `writeShellApplication`, which also runs shellcheck on it, and builds the
-# flake check `docs` and the function `lib.mkDocsCheck` on it. The flake
+# place that holds the flags of the three tools. `nix/lib/docs.nix` wraps it
+# with `writeShellApplication`, which also runs shellcheck on it, and builds
+# the flake check `docs` and the function `lib.mkDocsCheck` on it. The flake
 # check `check-docs-tests` runs `nix/tests/check-docs.sh` against it.
 #
 # The script runs all three tools even when an earlier one fails, so that one
@@ -25,9 +25,9 @@
 # other two tools only read. This matters because SRC can be read-only.
 #
 # lychee builds its HTTP client at startup, even when it runs offline, and the
-# client needs a trust store. The Nix sandbox has none, so `flake.nix` sets
-# `SSL_CERT_FILE` to the pinned `cacert` bundle when it wraps this script. No
-# request ever uses that bundle.
+# client needs a trust store. The Nix sandbox has none, so `nix/lib/docs.nix`
+# sets `SSL_CERT_FILE` to the pinned `cacert` bundle when it wraps this
+# script. No request ever uses that bundle.
 #
 # Exit status: 0 when every tool passes, 1 when at least one tool fails, 2
 # when the arguments are wrong or SRC is not a directory.

@@ -64,6 +64,8 @@ READ_BY_CONSUMERS: dict[str, str] = {
     "flake.nix": "the flake of every consumer",
     "flake.lock": "the pins of the flake",
     "treefmt.nix": "imported by lib.mkTreefmt",
+    "nix/lib/docs.nix": "builds lib.mkDocsCheck",
+    "nix/lib/tools.nix": "builds the tools that the apps and the checks run",
     "config/vale.ini": "copied by sync-config",
     "config/lychee.toml": "copied by sync-config",
     "vale/Sealambda/CurrentState.yml": "the Vale style of mkDocsCheck",
