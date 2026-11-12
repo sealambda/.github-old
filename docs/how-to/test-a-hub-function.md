@@ -55,7 +55,8 @@ functions.
    that's a bare file name can match the store path of the fixture, so give
    the entry a slash before the name, or keep the name out of the fixture.
    The case expects exit status 1. A function that ends with another status
-   for the failure under test needs `expectedExitCode` too, for example 2.
+   for the failure under test needs `expectedExitCode` too, as the case
+   `renovate-config-missing-preset-fails` does with 2.
 
    ```nix
    docs-broken-link-fails = {

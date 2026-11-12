@@ -20,6 +20,7 @@ let
     ./decisions.nix
     ./docs.nix
     ./hooks.nix
+    ./renovate-config.nix
     ./standards.nix
     ./treefmt.nix
     ./workflows.nix

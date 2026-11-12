@@ -66,6 +66,13 @@
         mkWorkflowsCheck
         ;
       inherit
+        (import ./nix/lib/renovate-config.nix {
+          inherit (nixpkgs) lib;
+          inherit hubPackagesFor;
+        })
+        mkRenovateConfigCheck
+        ;
+      inherit
         (import ./nix/lib/git-policy.nix {
           inherit hubPackagesFor tools;
         })
@@ -198,6 +205,7 @@
           mkDocsCheck
           mkDecisionsCheck
           mkWorkflowsCheck
+          mkRenovateConfigCheck
           mkGitPolicyTool
           mkSecretsScan
           mkHooks
@@ -577,6 +585,15 @@
         # `docs/reference/workflow-checks.md`. The check needs no network: it
         # reads files.
         workflows = mkWorkflowsCheck pkgs self;
+
+        # Fails when the Renovate configuration of the hub is not valid:
+        # `renovate.json`, which the hub's own repository uses, and the shared
+        # preset `default.json`. The rules are in
+        # `docs/reference/renovate-config-check.md`. The check needs no
+        # network: it reads files.
+        renovate-config = mkRenovateConfigCheck pkgs self {
+          presets = [ "default.json" ];
+        };
 
         # Runs the unit tests of `nix/scripts/workflows`: each rule with
         # workflows that it accepts and workflows that it rejects, the three
