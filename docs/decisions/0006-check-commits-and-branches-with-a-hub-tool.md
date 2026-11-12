@@ -84,8 +84,9 @@ CI job `git-policy` runs the tool on every pull request.
   reading has tests on temporary repositories.
 - Bad, because the hub owns a small parser that `conform` would have
   provided.
-- Bad, because the rules run in CI and in a hook that a repository installs,
-  so `nix flake check` doesn't show a bad commit message.
+- Bad, because the rules run in CI and in the hooks of `lib.mkHooks`
+  ([ADR 0008](0008-offer-git-hooks-through-git-hooks-nix.md)), so
+  `nix flake check` doesn't show a bad commit message.
 - Bad, because the limit of 100 characters can reject a Renovate commit. The
   number is the `header-max-length` of the `commitlint` configuration
   `config-conventional`, not a limit that Renovate sets. The Renovate
