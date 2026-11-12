@@ -28,11 +28,13 @@ work, or when you change such a copy. These cases aren't third-party:
 2. Add the file to the repository.
 3. Add a table at the end of `REUSE.toml`, after the table for all files. The
    last table that matches a file is the only one that applies to it, so its
-   keys list every copyright notice and the whole license expression:
+   keys list every copyright notice and the whole license expression. Set
+   `precedence = "override"`, so that the table wins over any text in the file:
 
    ```toml
    [[annotations]]
    path = "templates/example.md.tmpl"
+   precedence = "override"
    SPDX-FileCopyrightText = [
      "2020 Jane Doe",
      "2026 Sealambda",
@@ -74,13 +76,16 @@ copyright notices and the license expression that apply.
 
 - **Missing licenses.** A license that a table names has no text in
   `LICENSES/`. Run step 4.
+- **A file takes its notice or license from its own text.** The file holds the
+  word `Copyright` followed by a space, or an SPDX tag, and its table doesn't
+  win. Set `precedence = "override"` in the table of the file.
 - **Unused licenses.** `LICENSES/` holds a text that no table names. Delete
   the text, or fix the expression in the table.
 - **Bad licenses.** A file in `LICENSES/` has a name that isn't an SPDX
   identifier followed by an extension. Rename it, or delete it when it isn't a
   license text.
 - **`LICENSE differs from LICENSES/MPL-2.0.txt`.** Copy `LICENSES/MPL-2.0.txt`
-  over `LICENSE`.
+  over `LICENSE`. The check ignores a space or a tab at the end of a line.
 
 ## Related
 

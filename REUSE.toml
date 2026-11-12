@@ -10,9 +10,12 @@
 # lists every copyright notice of its file and the whole license expression,
 # because it replaces the first table and does not add to it.
 #
-# `precedence` stays at its default `closest`: a file that holds its own
-# copyright or license tags keeps them, and this file covers only the files
-# without tags. The hub has no such file.
+# Each table sets `precedence = "override"`, so the data of this file wins
+# over any text in a file. The default, `closest`, takes the data of a file
+# that holds a copyright notice from the file: the tool reads the word
+# `Copyright` followed by a space, anywhere in a line, as a notice, and a
+# table row or a sentence of a page then replaces the notice of this file. The
+# hub states its license here and nowhere else.
 #
 # `LICENSE` and the folder `LICENSES/` are not covered files, so the tool
 # reads no table for them. `LICENSES/` holds the text of each license that a
@@ -24,6 +27,7 @@ version = 1
 # Everything that Sealambda wrote.
 [[annotations]]
 path = "**"
+precedence = "override"
 SPDX-FileCopyrightText = "2026 Sealambda"
 SPDX-License-Identifier = "MPL-2.0"
 
@@ -35,6 +39,7 @@ SPDX-License-Identifier = "MPL-2.0"
 # file is under the same terms, so the expression is the upstream one.
 [[annotations]]
 path = "templates/adr.md.tmpl"
+precedence = "override"
 SPDX-FileCopyrightText = [
   "2017-2022 Oliver Kopp, Olaf Zimmermann",
   "2026 Sealambda",

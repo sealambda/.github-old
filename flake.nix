@@ -601,20 +601,34 @@
         # license that `REUSE.toml` names has no text in `LICENSES/`, or when
         # `LICENSES/` holds a text that nothing uses: `reuse lint` checks the
         # tree against the REUSE specification. It also fails when the root
-        # `LICENSE`, which GitHub reads, differs from `LICENSES/MPL-2.0.txt`.
-        # The check needs no network and no Git history: the tool reads the
+        # `LICENSE`, which GitHub reads, differs from `LICENSES/MPL-2.0.txt`
+        # apart from the space at the end of a line, which an editor may trim
+        # (`.editorconfig`), or when a file takes a notice or an expression from its own text and
+        # not from `REUSE.toml`: the tool reads any `Copyright` followed by a
+        # space as a notice, and then it drops the data of `REUSE.toml`. The
+        # check needs no network and no Git history: the tool reads the
         # source tree in the Nix store. It cannot tell that a new file is
         # third-party content (`docs/reference/licensing.md`).
         licenses =
           pkgs.runCommand "licenses"
             {
-              nativeBuildInputs = [ pkgs.reuse ];
+              nativeBuildInputs = [
+                pkgs.reuse
+                pkgs.jq
+              ];
             }
             ''
               export HOME="$TMPDIR"
               cd ${self}
               reuse lint
-              if ! cmp LICENSE LICENSES/MPL-2.0.txt; then
+              if ! reuse lint --json | jq -e '
+                [.files[] | (.copyrights[], .spdx_expressions[]) | .source_type]
+                | all(. == "reuse-toml")' > /dev/null; then
+                echo "licenses: a file takes its notice or license from its own text" >&2
+                echo "licenses: set precedence = \"override\" in its table of REUSE.toml" >&2
+                exit 1
+              fi
+              if ! diff -Z LICENSE LICENSES/MPL-2.0.txt; then
                 echo "licenses: LICENSE differs from LICENSES/MPL-2.0.txt" >&2
                 exit 1
               fi

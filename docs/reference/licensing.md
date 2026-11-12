@@ -11,12 +11,14 @@ check `licenses` checks the licensing data of every file.
 | License | `MPL-2.0` |
 | Copyright | 2026 Sealambda |
 | Text | `LICENSES/MPL-2.0.txt`, copied from the SPDX License List |
-| Copy for GitHub | `LICENSE`, the same bytes as `LICENSES/MPL-2.0.txt` |
+| Copy for GitHub | `LICENSE`, the same text as `LICENSES/MPL-2.0.txt` |
 | Declaration | `REUSE.toml`, in the format of [REUSE 3.3](https://reuse.software/spec-3.3/) |
 
 GitHub reads `LICENSE` to show the license of the repository. `REUSE.toml`
 declares the copyright and the license of each file, so no file has a license
-header. A contribution is under the license of the repository that it changes
+header. `REUSE.toml` sets `precedence = "override"` in each table, so its data
+wins over any text in a file. A contribution is under the license of the
+repository that it changes
 ([CONTRIBUTING.md](../../CONTRIBUTING.md#pull-requests)).
 
 ## Third-party content
@@ -52,9 +54,15 @@ network access and without Git history. It fails when:
 - A license that a file names has no text in `LICENSES/`.
 - `LICENSES/` holds a text that no file uses, or a file whose name isn't the
   SPDX identifier of a license followed by an extension.
-- `LICENSE` and `LICENSES/MPL-2.0.txt` differ.
+- A file takes a copyright notice or a license expression from its own text
+  and not from `REUSE.toml`. The tool reads the word `Copyright` followed by a
+  space, anywhere in a line, as a notice, and a table without
+  `precedence = "override"` then loses to it.
+- `LICENSE` and `LICENSES/MPL-2.0.txt` differ, apart from a space or a tab at
+  the end of a line.
 
-`reuse lint` checks the first four rules. The `cmp` command checks the last.
+`reuse lint` checks the first four rules, and its report in JSON, read by
+`jq`, checks the fifth. The `diff` command checks the last.
 
 ## What the check can't verify
 
